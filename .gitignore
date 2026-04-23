@@ -1,0 +1,12 @@
+# Archivos de desarrollo local
+serve.ps1
+server.ps1
+fix_profile.ps1
+RED.code-workspace
+
+# Archivos de test
+test_supabase.html
+test_iglesias.html
+
+# Schema de base de datos
+supabase_schema.sql

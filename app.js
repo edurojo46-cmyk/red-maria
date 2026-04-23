@@ -1,0 +1,739 @@
+const app = {
+    currentScreen: 'screen-splash',
+    screens: ['screen-splash','screen-register','screen-login','screen-forgot-password','screen-reset-password','screen-map','screen-intenciones','screen-create-rosary','screen-rosary-detail','screen-rezo','screen-event','screen-live','screen-como-rezar','screen-profile','screen-porque-rezar','screen-chat','screen-apariciones','screen-cenaculo','screen-iglesias'],
+    pickerMap: null, pickerMarker: null, pickerLocation: null,
+    detailMap: null,
+    buscarMap: null,
+    ROSARY_STORAGE_KEY: 'redmaria_rosaries',
+    JOINED_ROSARIES_KEY: 'redmaria_joined',
+    CONTINUO_KEY: 'redmaria_continuo',
+    continuoDate: new Date(),
+    recoveryEmail: null,
+    recoveryCode: null,
+
+    init() {
+        this.generateSplashBeads();
+        this.renderContinuo();
+        this.generateParticipants();
+        this.loadRosaryCards();
+        authUI.init();
+        this.setupCreateRosaryForm();
+        this.setupForgotPasswordForm();
+        this.setupResetPasswordForm();
+        this.setupResetStrengthMeter();
+        if (auth.isAuthenticated()) this.updateUserUI();
+
+        this.updateNavVisibility(this.currentScreen);
+        document.querySelectorAll('.header-nav a').forEach(a => a.addEventListener('click', e => e.preventDefault()));
+    },
+
+    loadRosaryCards() {
+        const list = document.getElementById('rosary-list'); if (!list) return;
+        this.getRosaries().forEach(r => this.addRosaryCard(r));
+    },
+
+    initPickerMap() {
+        if (this.pickerMap) { this.pickerMap.invalidateSize(); return; }
+        this.pickerMap = L.map('picker-map', { zoomControl: false, attributionControl: false }).setView([-34.5955,-58.3739], 13);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(this.pickerMap);
+        L.control.zoom({ position: 'topright' }).addTo(this.pickerMap);
+        this.pickerMap.on('click', e => this.setPickerLocation(e.latlng.lat, e.latlng.lng));
+    },
+
+    initBuscarMap() {
+        if (this.buscarMap) { this.buscarMap.invalidateSize(); return; }
+        this.buscarMap = L.map('buscar-map', { zoomControl: false, attributionControl: false }).setView([-34.5955, -58.3739], 13);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(this.buscarMap);
+        L.control.zoom({ position: 'topright' }).addTo(this.buscarMap);
+
+        // Add sample markers for rosaries
+        const sampleMarkers = [
+            { id: 'sample_1', lat: -34.5955, lng: -58.3739, name: 'Plaza San Martín', time: '19:00', mystery: 'Gozosos', intention: 'Por la Paz del Mundo', participants: 24 },
+            { id: 'sample_2', lat: -34.6037, lng: -58.3816, name: 'Plaza de Mayo', time: '18:00', mystery: 'Dolorosos', intention: 'Por los enfermos', participants: 15 },
+            { id: 'sample_3', lat: -34.5875, lng: -58.3921, name: 'Plaza Francia', time: '17:30', mystery: 'Gloriosos', intention: 'Por las familias', participants: 12 },
+            { id: 'sample_4', lat: -34.6083, lng: -58.3712, name: 'Plaza Dorrego', time: '20:00', mystery: 'Luminosos', intention: 'Por la juventud', participants: 8 },
+            { id: 'sample_5', lat: -34.5794, lng: -58.4199, name: 'Plaza Serrano', time: '19:30', mystery: 'Gozosos', intention: 'Por las vocaciones', participants: 18 },
+        ];
+        sampleMarkers.forEach(m => {
+            const icon = L.divIcon({ className: 'custom-marker-wrapper', html: '<div class="custom-map-marker"><i class="ri-map-pin-fill" style="font-size:1.2rem;color:white"></i><span class="marker-count">' + m.participants + '</span></div>', iconSize: [40, 48], iconAnchor: [20, 48] });
+            const marker = L.marker([m.lat, m.lng], { icon }).addTo(this.buscarMap);
+            marker.bindPopup(() => this._buildMapPopup(m.id, m.name, m.time, m.mystery, m.intention, m.participants), { className: 'rosary-map-popup', maxWidth: 260 });
+        });
+
+        // Add saved rosaries markers
+        this.getRosaries().forEach(r => {
+            if (r.lat && r.lng) {
+                const pCount = r.participants || 1;
+                const icon = L.divIcon({ className: 'custom-marker-wrapper', html: '<div class="custom-map-marker user-marker"><i class="ri-map-pin-fill" style="font-size:1rem;color:white"></i><span class="marker-count">' + pCount + '</span></div>', iconSize: [36, 44], iconAnchor: [18, 44] });
+                const marker = L.marker([r.lat, r.lng], { icon }).addTo(this.buscarMap);
+                marker.bindPopup(() => this._buildMapPopup(r.id, r.place, r.time, r.mystery, r.intention, r.participants || 1), { className: 'rosary-map-popup', maxWidth: 260 });
+            }
+        });
+    },
+
+    _buildMapPopup(id, name, time, mystery, intention, participants) {
+        const joined = this.getJoinedRosaries();
+        const isJoined = joined.some(j => j.id === id);
+        const btnClass = isJoined ? 'popup-btn-leave' : 'popup-btn-join';
+        const btnText = isJoined ? '<i class="ri-close-circle-line"></i> Salir' : '<i class="ri-add-circle-line"></i> Unirme';
+        const btnAction = isJoined
+            ? 'app.leaveRosary(\'' + id + '\')'
+            : 'app.joinRosary(\'' + id + '\',\'' + name.replace(/'/g, "\\'") + '\',\'' + time + '\',\'' + mystery + '\',\'' + intention.replace(/'/g, "\\'") + '\',' + participants + ')';
+        return '<div class="map-popup-content">' +
+            '<h4 class="map-popup-name">' + name + '</h4>' +
+            '<div class="map-popup-detail"><i class="ri-time-line"></i> Hoy ' + time + ' hs</div>' +
+            '<div class="map-popup-detail"><i class="ri-sparkling-line"></i> Misterios ' + mystery + '</div>' +
+            '<div class="map-popup-detail"><i class="ri-candle-line"></i> ' + intention + '</div>' +
+            '<div class="map-popup-detail"><i class="ri-group-line"></i> ' + participants + ' participantes</div>' +
+            '<button class="map-popup-btn ' + btnClass + '" onclick="' + btnAction + '">' + btnText + '</button>' +
+            '</div>';
+    },
+
+    getJoinedRosaries() {
+        try { return JSON.parse(localStorage.getItem(this.JOINED_ROSARIES_KEY)) || []; } catch { return []; }
+    },
+
+    joinRosary(id, name, time, mystery, intention, participants) {
+        if (!auth.isAuthenticated()) { this.navigate('screen-login'); return; }
+        const joined = this.getJoinedRosaries();
+        if (joined.some(j => j.id === id)) return;
+        joined.push({ id, name, time, mystery, intention, participants, joinedAt: new Date().toISOString() });
+        localStorage.setItem(this.JOINED_ROSARIES_KEY, JSON.stringify(joined));
+        // Sync with Supabase
+        if (typeof db !== 'undefined' && db.joinRosary) {
+            const user = auth.getCurrentUser();
+            if (user) db.joinRosary(id, user.id).catch(e => console.error('Join sync error:', e));
+        }
+        // Close and reopen popup to refresh button
+        if (this.buscarMap) this.buscarMap.closePopup();
+        this.renderProfileJoined();
+    },
+
+    leaveRosary(id) {
+        let joined = this.getJoinedRosaries();
+        joined = joined.filter(j => j.id !== id);
+        localStorage.setItem(this.JOINED_ROSARIES_KEY, JSON.stringify(joined));
+        // Sync with Supabase
+        if (typeof db !== 'undefined' && db.leaveRosary) {
+            const user = auth.getCurrentUser();
+            if (user) db.leaveRosary(id, user.id).catch(e => console.error('Leave sync error:', e));
+        }
+        if (this.buscarMap) this.buscarMap.closePopup();
+        this.renderProfileJoined();
+    },
+
+    renderProfileJoined() {
+        const container = document.getElementById('profile-joined-rosaries'); if (!container) return;
+        const joined = this.getJoinedRosaries();
+        if (joined.length === 0) {
+            container.innerHTML = '<div class="profile-no-slots glass card"><i class="ri-map-pin-line"></i><p>Aún no te uniste a ningún rosario</p><button class="btn btn-primary" onclick="app.navigate(\'screen-map\')"><i class="ri-search-line"></i> Buscar Rosario</button></div>';
+            return;
+        }
+        let html = '';
+        joined.forEach(r => {
+            html += '<div class="profile-slot-card glass card">' +
+                '<div class="profile-slot-left">' +
+                    '<div class="profile-slot-icon" style="background:linear-gradient(135deg,#56d992,#27ae60)"><i class="ri-map-pin-fill"></i></div>' +
+                    '<div class="profile-slot-info">' +
+                        '<h4>' + r.name + '</h4>' +
+                        '<p><i class="ri-time-line"></i> Hoy ' + r.time + ' hs</p>' +
+                        '<span class="profile-slot-people"><i class="ri-candle-fill"></i> ' + r.intention + '</span>' +
+                    '</div>' +
+                '</div>' +
+                '<button class="profile-slot-cancel" onclick="app.leaveRosary(\'' + r.id + '\'); app.renderProfileJoined();" title="Salir del rosario"><i class="ri-close-circle-line"></i></button>' +
+            '</div>';
+        });
+        container.innerHTML = html;
+    },
+
+    setPickerLocation(lat, lng) {
+        if (this.pickerMarker) this.pickerMap.removeLayer(this.pickerMarker);
+        const icon = L.divIcon({ className: 'custom-marker-wrapper', html: '<div class="custom-map-marker picker-pin"><i class="ri-map-pin-add-fill" style="font-size:1.2rem"></i></div>', iconSize: [48,56], iconAnchor: [24,56] });
+        this.pickerMarker = L.marker([lat, lng], { icon }).addTo(this.pickerMap);
+        this.pickerLocation = { lat, lng };
+        const ov = document.getElementById('picker-overlay'); if (ov) ov.style.display = 'none';
+        const co = document.getElementById('picker-coords'); if (co) { co.innerHTML = '<i class="ri-map-pin-fill"></i> ' + lat.toFixed(4) + ', ' + lng.toFixed(4); co.classList.add('visible'); }
+        const er = document.getElementById('rosary-location-error'); if (er) er.textContent = '';
+    },
+
+    getRosaries() { try { return JSON.parse(localStorage.getItem(this.ROSARY_STORAGE_KEY)) || []; } catch { return []; } },
+    saveRosary(r) {
+        // Save locally
+        const a = this.getRosaries(); a.push(r); localStorage.setItem(this.ROSARY_STORAGE_KEY, JSON.stringify(a));
+        // Sync to Supabase
+        if (typeof db !== 'undefined' && db.createRosary) {
+            db.createRosary({
+                id: r.id, place: r.place, address: r.address || '', date: r.date, time: r.time,
+                mystery: r.mystery, intention: r.intention, lat: r.lat, lng: r.lng,
+                creator_id: null,
+                creator_name: r.creatorName || 'Anónimo', participants: r.participants || 1
+            }).then(function() { console.log('✅ Rosario guardado en Supabase'); })
+              .catch(function(e) { console.error('❌ Error guardando rosario en Supabase:', e.message || e); });
+        }
+    },
+
+
+    addRosaryCard(rosary) {
+        const list = document.getElementById('rosary-list'); if (!list) return;
+        const ds = this.formatDate(rosary.date);
+        const card = document.createElement('div');
+        card.className = 'rosary-card glass card';
+        card.onclick = () => { app._currentRosaryCreatorId = rosary.creatorId || null; app.navigate('screen-rezo'); };
+        var addrHtml = rosary.address ? '<div class="rosary-card-detail"><i class="ri-road-map-fill"></i> ' + rosary.address + '</div>' : '';
+        card.innerHTML = '<div class="rosary-card-header"><div class="rosary-card-icon"><i class="ri-map-pin-fill"></i></div><div class="rosary-card-info"><h3>' + rosary.place + '</h3><p>' + ds + ' ' + rosary.time + ' hs · Misterios ' + rosary.mystery + '</p></div></div><div class="rosary-card-details">' + addrHtml + '<div class="rosary-card-detail"><i class="ri-candle-fill"></i> ' + rosary.intention + '</div><div class="rosary-card-detail"><i class="ri-group-fill"></i> ' + (rosary.participants || 1) + ' Participantes</div></div><button class="btn btn-primary btn-join" onclick="app.navigate(\'screen-rezo\')">Unirme</button>';
+        list.appendChild(card);
+    },
+
+    formatDate(s) {
+        if (!s) return '';
+        const d = new Date(s + 'T00:00:00'), t = new Date(); t.setHours(0,0,0,0);
+        if (d.getTime() === t.getTime()) return 'Hoy';
+        if (d.getTime() === t.getTime() + 86400000) return 'Mañana';
+        return d.getDate() + ' ' + ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'][d.getMonth()];
+    },
+
+    setupCreateRosaryForm() {
+        const form = document.getElementById('create-rosary-form'); if (!form) return;
+        const di = document.getElementById('rosary-date'); if (di) { const td = new Date().toISOString().split('T')[0]; di.min = td; di.value = td; }
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const place = document.getElementById('rosary-place').value.trim(), date = document.getElementById('rosary-date').value, time = document.getElementById('rosary-time').value, mystery = document.getElementById('rosary-mystery').value, intention = document.getElementById('rosary-intention').value.trim();
+            let hasErr = false;
+            [{id:'rosary-place',v:place,m:'Obligatorio'},{id:'rosary-date',v:date,m:'Obligatoria'},{id:'rosary-time',v:time,m:'Obligatoria'},{id:'rosary-mystery',v:mystery,m:'Selecciona uno'},{id:'rosary-intention',v:intention,m:'Obligatoria'}].forEach(f => {
+                const el = document.getElementById(f.id), g = el?.closest('.auth-field'), er = g?.querySelector('.field-error');
+                if (!f.v) { if (g) g.classList.add('has-error'); if (er) er.textContent = f.m; hasErr = true; }
+                else { if (g) { g.classList.remove('has-error'); g.classList.add('has-success'); } if (er) er.textContent = ''; }
+            });
+            if (!this.pickerLocation) { const le = document.getElementById('rosary-location-error'); if (le) le.textContent = 'Marca una ubicación'; hasErr = true; }
+            if (hasErr) { form.classList.add('shake'); setTimeout(() => form.classList.remove('shake'), 500); return; }
+            const btn = form.querySelector('.btn-auth-submit'); btn.classList.add('loading'); btn.disabled = true;
+            await new Promise(r => setTimeout(r, 800));
+            const user = auth.getCurrentUser();
+            const address = document.getElementById('rosary-address') ? document.getElementById('rosary-address').value.trim() : '';
+            const rosary = { id: Date.now().toString(36)+Math.random().toString(36).substr(2), place: auth.sanitize(place), address: auth.sanitize(address), date, time, mystery, intention: auth.sanitize(intention), lat: this.pickerLocation.lat, lng: this.pickerLocation.lng, creatorId: user?.id||'anon', creatorName: user?.name||'Anónimo', createdAt: new Date().toISOString(), participants: 1 };
+            this.saveRosary(rosary); this.addRosaryCard(rosary);
+            btn.classList.remove('loading'); btn.disabled = false;
+            form.reset(); this.pickerLocation = null;
+            if (this.pickerMarker && this.pickerMap) { this.pickerMap.removeLayer(this.pickerMarker); this.pickerMarker = null; }
+            const ov = document.getElementById('picker-overlay'); if (ov) ov.style.display = '';
+            const co = document.getElementById('picker-coords'); if (co) { co.textContent = ''; co.classList.remove('visible'); }
+            form.querySelectorAll('.auth-field').forEach(f => { f.classList.remove('has-success','has-error'); const e = f.querySelector('.field-error'); if (e) e.textContent = ''; });
+            this.showRosaryDetail(rosary);
+        });
+    },
+
+    showRosaryDetail(rosary) {
+        const ds = this.formatDate(rosary.date);
+        const user = auth.getCurrentUser();
+        const details = document.getElementById('create-success-details');
+        details.innerHTML = '<div class="success-detail-row"><i class="ri-map-pin-fill"></i> ' + rosary.place + '</div>' +
+            (rosary.address ? '<div class="success-detail-row"><i class="ri-road-map-fill"></i> ' + rosary.address + '</div>' : '') +
+            '<div class="success-detail-row"><i class="ri-calendar-fill"></i> ' + ds + ' ' + rosary.time + ' hs</div>' +
+            '<div class="success-detail-row"><i class="ri-sparkling-fill"></i> Misterios ' + rosary.mystery + '</div>' +
+            '<div class="success-detail-row"><i class="ri-candle-fill"></i> ' + rosary.intention + '</div>' +
+            '<div class="success-detail-row"><i class="ri-user-fill"></i> Organizado por: ' + (user?.name || 'Tú') + '</div>';
+        document.getElementById('create-rosary-form-wrapper').style.display = 'none';
+        document.getElementById('create-success-banner').style.display = '';
+    },
+
+    resetCreateForm() {
+        document.getElementById('create-success-banner').style.display = 'none';
+        document.getElementById('create-rosary-form-wrapper').style.display = '';
+        const form = document.getElementById('create-rosary-form');
+        if (form) form.reset();
+        this.pickerLocation = null;
+        if (this.pickerMarker && this.pickerMap) { this.pickerMap.removeLayer(this.pickerMarker); this.pickerMarker = null; }
+        const ov = document.getElementById('picker-overlay'); if (ov) ov.style.display = '';
+        const co = document.getElementById('picker-coords'); if (co) { co.textContent = ''; co.classList.remove('visible'); }
+    },
+
+    // ---- Forgot / Reset Password ----
+    setupForgotPasswordForm() {
+        const form = document.getElementById('forgot-password-form'); if (!form) return;
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('forgot-email').value.trim();
+            const group = document.getElementById('forgot-email').closest('.auth-field');
+            const errEl = group.querySelector('.field-error');
+            if (!email || !auth.validators.email(email)) {
+                group.classList.add('has-error'); errEl.textContent = 'Ingresa un email válido';
+                return;
+            }
+            group.classList.remove('has-error'); group.classList.add('has-success'); errEl.textContent = '';
+            const btn = form.querySelector('.btn-auth-submit'); btn.classList.add('loading'); btn.disabled = true;
+            await new Promise(r => setTimeout(r, 1200));
+            btn.classList.remove('loading'); btn.disabled = false;
+            // Check user exists
+            const users = auth.getUsers();
+            const user = users.find(u => u.email === email.toLowerCase());
+            if (!user) {
+                group.classList.add('has-error'); errEl.textContent = 'No existe una cuenta con ese email';
+                return;
+            }
+            // Generate 6-digit code
+            this.recoveryEmail = email.toLowerCase();
+            this.recoveryCode = Math.floor(100000 + Math.random() * 900000).toString();
+            // Navigate to reset screen and show code
+            this.navigate('screen-reset-password');
+            document.getElementById('recovery-code-value').textContent = this.recoveryCode;
+        });
+    },
+
+    setupResetPasswordForm() {
+        const form = document.getElementById('reset-password-form'); if (!form) return;
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const code = document.getElementById('reset-code').value.trim();
+            const password = document.getElementById('reset-password').value;
+            const confirm = document.getElementById('reset-confirm').value;
+            let hasErr = false;
+            // Validate code
+            const codeGroup = document.getElementById('reset-code').closest('.auth-field');
+            const codeErr = codeGroup.querySelector('.field-error');
+            if (code !== this.recoveryCode) {
+                codeGroup.classList.add('has-error'); codeErr.textContent = 'Código incorrecto'; hasErr = true;
+            } else { codeGroup.classList.remove('has-error'); codeGroup.classList.add('has-success'); codeErr.textContent = ''; }
+            // Validate password
+            const pwGroup = document.getElementById('reset-password').closest('.auth-field');
+            const pwErr = pwGroup.querySelector('.field-error');
+            if (!auth.validators.password(password)) {
+                pwGroup.classList.add('has-error'); pwErr.textContent = 'Min 8 chars, mayúscula, minúscula, número y especial'; hasErr = true;
+            } else { pwGroup.classList.remove('has-error'); pwGroup.classList.add('has-success'); pwErr.textContent = ''; }
+            // Validate confirm
+            const cfGroup = document.getElementById('reset-confirm').closest('.auth-field');
+            const cfErr = cfGroup.querySelector('.field-error');
+            if (password !== confirm) {
+                cfGroup.classList.add('has-error'); cfErr.textContent = 'Las contraseñas no coinciden'; hasErr = true;
+            } else { cfGroup.classList.remove('has-error'); cfGroup.classList.add('has-success'); cfErr.textContent = ''; }
+            if (hasErr) { form.classList.add('shake'); setTimeout(() => form.classList.remove('shake'), 500); return; }
+            const btn = form.querySelector('.btn-auth-submit'); btn.classList.add('loading'); btn.disabled = true;
+            // Update password
+            const result = await auth.resetPassword(this.recoveryEmail, password);
+            btn.classList.remove('loading'); btn.disabled = false;
+            if (result.success) {
+                let sb = form.querySelector('.form-success-banner');
+                if (!sb) { sb = document.createElement('div'); sb.className = 'form-success-banner'; form.prepend(sb); }
+                sb.innerHTML = '<i class="ri-checkbox-circle-fill"></i> ¡Contraseña actualizada!'; sb.classList.add('visible');
+                this.recoveryCode = null; this.recoveryEmail = null;
+                setTimeout(() => { sb.classList.remove('visible'); this.navigate('screen-login'); }, 2000);
+            } else {
+                let eb = form.querySelector('.form-error-banner');
+                if (!eb) { eb = document.createElement('div'); eb.className = 'form-error-banner'; form.prepend(eb); }
+                eb.innerHTML = '<i class="ri-error-warning-fill"></i> ' + result.error; eb.classList.add('visible');
+                setTimeout(() => eb.classList.remove('visible'), 3000);
+            }
+        });
+    },
+
+    setupResetStrengthMeter() {
+        const pw = document.getElementById('reset-password'); if (!pw) return;
+        pw.addEventListener('input', () => {
+            const s = auth.getPasswordStrength(pw.value);
+            const meter = document.getElementById('reset-strength-meter');
+            const label = document.getElementById('reset-strength-label');
+            if (!meter || !label) return;
+            const bars = meter.querySelectorAll('.strength-bar');
+            bars.forEach((b, i) => { b.className = 'strength-bar'; if (i < s.level) b.classList.add('active', s.level === 1 ? 'weak' : s.level === 2 ? 'medium' : 'strong'); });
+            label.textContent = s.label; label.className = 'password-strength-label ' + (s.level === 1 ? 'weak' : s.level === 2 ? 'medium' : 'strong');
+        });
+    },
+
+    isDesktop() { return window.innerWidth >= 1024; },
+
+    navigate(screenId) {
+        if (!this.screens.includes(screenId)) return;
+        if (auth.isProtected(screenId) && !auth.isAuthenticated()) screenId = 'screen-login';
+        const ac = document.getElementById('app-container');
+        const single = ['screen-splash','screen-live','screen-rezo','screen-register','screen-login','screen-forgot-password','screen-reset-password','screen-map','screen-intenciones','screen-create-rosary','screen-rosary-detail','screen-como-rezar','screen-profile','screen-porque-rezar','screen-chat','screen-apariciones','screen-cenaculo','screen-iglesias'];
+        const isDash = !single.includes(screenId);
+        document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+        if (this.isDesktop() && isDash) {
+            ac.classList.add('dashboard-mode');
+            ['screen-map','screen-profile'].forEach(s => document.getElementById(s).classList.add('active'));
+        } else {
+            ac.classList.remove('dashboard-mode');
+            document.getElementById(screenId).classList.add('active');
+        }
+        this.currentScreen = screenId;
+        this.updateHeaderNav(screenId); this.updateNavVisibility(screenId);
+
+        if (screenId === 'screen-create-rosary') setTimeout(() => this.initPickerMap(), 400);
+        if (screenId === 'screen-map') setTimeout(() => this.initBuscarMap(), 400);
+        if (screenId === 'screen-rosary-detail' && this.detailMap) setTimeout(() => this.detailMap.invalidateSize(), 350);
+        if (screenId === 'screen-rezo' && !this._counterStarted) { this._counterStarted = true; this.startOnlineCounter(); }
+        if (screenId === 'screen-rezo' && typeof updateVideoCallButton === 'function') { updateVideoCallButton(this._currentRosaryCreatorId || null); }
+        if (screenId === 'screen-live') this.renderContinuo();
+        if (screenId === 'screen-como-rezar') this.highlightTodayMystery();
+        if (screenId === 'screen-cenaculo') setTimeout(function() { if (typeof initCenaculoMap === 'function') initCenaculoMap(); }, 400);
+        if (screenId === 'screen-profile' || isDash) this.updateUserUI();
+    },
+
+    updateHeaderNav(s) {
+        // Desktop header (now with dropdown: Inicio, Buscar, Crear, Continuo, [Rezar dropdown trigger + 4 sub], Apariciones, Mensajes, Perfil)
+        document.querySelectorAll('.header-nav > a, .header-dropdown-trigger, .header-dropdown-menu a').forEach(a => a.classList.remove('active'));
+        const h = document.querySelectorAll('.header-nav > a');
+        const dd = document.querySelectorAll('.header-dropdown-menu a');
+        const dt = document.querySelector('.header-dropdown-trigger');
+        if (s === 'screen-splash') h[0]?.classList.add('active');
+        else if (s === 'screen-map') h[1]?.classList.add('active');
+        else if (s === 'screen-create-rosary') h[2]?.classList.add('active');
+        else if (s === 'screen-live') h[3]?.classList.add('active');
+        else if (s === 'screen-rezo') { h[4]?.classList.add('active'); }
+        else if (s === 'screen-intenciones') { dd[0]?.classList.add('active'); if(dt) dt.classList.add('active'); }
+        else if (s === 'screen-como-rezar') { dd[1]?.classList.add('active'); if(dt) dt.classList.add('active'); }
+        else if (s === 'screen-porque-rezar') { dd[2]?.classList.add('active'); if(dt) dt.classList.add('active'); }
+        else if (s === 'screen-apariciones') { dd[3]?.classList.add('active'); if(dt) dt.classList.add('active'); }
+        else if (s === 'screen-iglesias') h[5]?.classList.add('active');
+        else if (s === 'screen-cenaculo') h[6]?.classList.add('active');
+        else if (s === 'screen-chat') h[7]?.classList.add('active');
+        else if (s === 'screen-profile') h[8]?.classList.add('active');
+        // Mobile header
+        document.querySelectorAll('.mobile-header-nav a').forEach(a => a.classList.remove('active'));
+        const m = document.querySelectorAll('.mobile-header-nav a');
+        if (s === 'screen-splash') m[0]?.classList.add('active');
+        else if (s === 'screen-map') m[1]?.classList.add('active');
+        else if (s === 'screen-create-rosary') m[2]?.classList.add('active');
+        else if (s === 'screen-rezo') m[3]?.classList.add('active');
+        else if (s === 'screen-como-rezar') m[4]?.classList.add('active');
+        else if (s === 'screen-porque-rezar') m[5]?.classList.add('active');
+        else if (s === 'screen-apariciones') m[6]?.classList.add('active');
+        else if (s === 'screen-iglesias') m[7]?.classList.add('active');
+        else if (s === 'screen-cenaculo') m[8]?.classList.add('active');
+        else if (s === 'screen-chat') m[9]?.classList.add('active');
+        else if (s === 'screen-profile') m[10]?.classList.add('active');
+    },
+
+    toggleMobileMenu() {
+        const nav = document.getElementById('mobile-nav-links');
+        const btn = document.querySelector('#hamburger-btn i');
+        nav.classList.toggle('open');
+        btn.className = nav.classList.contains('open') ? 'ri-close-line' : 'ri-menu-line';
+    },
+
+    mobileNav(screenId) {
+        this.navigate(screenId);
+        const nav = document.getElementById('mobile-nav-links');
+        const btn = document.querySelector('#hamburger-btn i');
+        nav.classList.remove('open');
+        btn.className = 'ri-menu-line';
+    },
+
+    updateNavVisibility(s) {
+        const nav = document.getElementById('main-nav');
+        const hide = ['screen-splash','screen-live','screen-rezo','screen-register','screen-login','screen-forgot-password','screen-reset-password','screen-create-rosary','screen-rosary-detail'];
+        if (hide.includes(s)) { nav.style.transform='translateY(100%)'; nav.style.opacity='0'; nav.style.pointerEvents='none'; }
+        else { nav.style.transform='translateY(0)'; nav.style.opacity='1'; nav.style.pointerEvents='all';
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            if (s==='screen-map') document.querySelectorAll('.nav-item')[0].classList.add('active');
+            if (s==='screen-profile') document.querySelectorAll('.nav-item')[1].classList.add('active');
+        }
+    },
+
+    onAuthSuccess() { this.updateUserUI(); this.navigate('screen-profile'); this.requestGeolocation(); },
+    handleLogout() { auth.logoutUser(); this.navigate('screen-splash'); },
+
+    requestGeolocation() {
+        if (!navigator.geolocation) return;
+        navigator.geolocation.getCurrentPosition(
+            function(pos) {
+                const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                localStorage.setItem('redmaria_location', JSON.stringify(loc));
+                // Reverse geocode to get city name
+                fetch('https://nominatim.openstreetmap.org/reverse?lat=' + loc.lat + '&lon=' + loc.lng + '&format=json&accept-language=es')
+                    .then(r => r.json())
+                    .then(data => {
+                        const city = data.address?.city || data.address?.town || data.address?.village || data.address?.state || '';
+                        if (city) {
+                            const pc = document.getElementById('profile-user-city');
+                            if (pc) pc.textContent = city;
+                            localStorage.setItem('redmaria_user_city', city);
+                        }
+                    }).catch(function(){});
+            },
+            function(err) {
+                console.log('Geolocation denied:', err.message);
+            },
+            { enableHighAccuracy: true, timeout: 10000 }
+        );
+    },
+
+    updateUserUI() {
+        const u = auth.getCurrentUser(); if (!u) return;
+        const pn = document.getElementById('profile-user-name'), pc = document.getElementById('profile-user-city'), pa = document.getElementById('profile-avatar-placeholder');
+        if (pn) pn.textContent = u.name; if (pc) pc.textContent = u.city; if (pa) pa.textContent = u.name.charAt(0).toUpperCase();
+        const hn = document.getElementById('header-user-name'); if (hn) hn.textContent = u.name;
+        const hm = document.getElementById('header-avatar-mini'); if (hm) hm.textContent = u.name.charAt(0).toUpperCase();
+        // Restore saved city from geolocation
+        const savedCity = localStorage.getItem('redmaria_user_city');
+        if (savedCity && pc) pc.textContent = savedCity;
+        this.renderProfileSlots();
+        this.renderProfileJoined();
+    },
+
+    renderProfileSlots() {
+        const container = document.getElementById('profile-my-slots'); if (!container) return;
+        const session = auth.isAuthenticated() ? JSON.parse(localStorage.getItem('redmaria_session')) : null;
+        if (!session) return;
+        const userName = session.name;
+        const all = JSON.parse(localStorage.getItem(this.CONTINUO_KEY) || '{}');
+        const days = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+        const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+        const mySlots = [];
+
+        for (const dateKey in all) {
+            const slots = all[dateKey];
+            for (const h in slots) {
+                let people = slots[h];
+                if (typeof people === 'string') people = [people];
+                if (people.includes(userName)) {
+                    const d = new Date(dateKey + 'T00:00:00');
+                    const today = new Date(); today.setHours(0,0,0,0);
+                    const tomorrow = new Date(today.getTime() + 86400000);
+                    let dayLabel;
+                    if (d.getTime() === today.getTime()) dayLabel = 'Hoy';
+                    else if (d.getTime() === tomorrow.getTime()) dayLabel = 'Mañana';
+                    else dayLabel = days[d.getDay()] + ' ' + d.getDate() + ' ' + months[d.getMonth()];
+                    const hour = parseInt(h);
+                    const hourStr = hour.toString().padStart(2, '0') + ':00';
+                    const nextHourStr = ((hour + 1) % 24).toString().padStart(2, '0') + ':00';
+                    mySlots.push({ dateKey, date: d, dayLabel, hour, hourStr, nextHourStr, count: people.length });
+                }
+            }
+        }
+
+        // Sort by date and hour
+        mySlots.sort((a, b) => a.date - b.date || a.hour - b.hour);
+
+        if (mySlots.length === 0) {
+            container.innerHTML = '<div class="profile-no-slots glass card"><i class="ri-calendar-line"></i><p>Aún no te anotaste a ningún turno</p><button class="btn btn-primary" onclick="app.navigate(\'screen-live\')"><i class="ri-add-line"></i> Anotarme</button></div>';
+            return;
+        }
+
+        let html = '';
+        mySlots.forEach(s => {
+            html += '<div class="profile-slot-card glass card">' +
+                '<div class="profile-slot-left">' +
+                    '<div class="profile-slot-icon"><i class="ri-time-line"></i></div>' +
+                    '<div class="profile-slot-info">' +
+                        '<h4>' + s.hourStr + ' - ' + s.nextHourStr + '</h4>' +
+                        '<p><i class="ri-calendar-event-fill"></i> ' + s.dayLabel + '</p>' +
+                        '<span class="profile-slot-people"><i class="ri-group-fill"></i> ' + s.count + ' persona' + (s.count > 1 ? 's' : '') + '</span>' +
+                    '</div>' +
+                '</div>' +
+                '<button class="profile-slot-cancel" onclick="app.cancelSlot(\'' + s.dateKey + '\',' + s.hour + '); app.renderProfileSlots();" title="Cancelar turno"><i class="ri-close-circle-line"></i></button>' +
+            '</div>';
+        });
+        container.innerHTML = html;
+    },
+
+    generateSplashBeads() { const c = document.getElementById('splash-beads'); for (let i=0;i<44;i++) { const a=(i/44)*Math.PI*2; if(a>Math.PI*0.35&&a<Math.PI*0.65)continue; const b=document.createElement('div'); b.className='rosary-bead'; b.style.left=(90+80*Math.cos(a))+'px'; b.style.top=(90+80*Math.sin(a))+'px'; c.appendChild(b); } },
+    generateLiveBeads() { const c=document.getElementById('live-beads'); for(let i=0;i<7;i++){const b=document.createElement('div');b.className='live-bead';if(i===3)b.classList.add('active');c.appendChild(b);} },
+    generateParticipants() {
+        const g=document.getElementById('participants-grid'); if(!g)return;
+        const n=['María G.','Juan R.','Laura M.','Pedro F.','Sofía L.','Carlos A.','Ana P.','Diego S.','Valentina B.','Martín H.','Camila R.','Lucas T.','Isabella N.','Mateo V.','Emma C.','Santiago D.','Mía F.','Sebastián G.','Catalina J.','Nicolás K.','Lucía M.','Tomás P.','Julieta Q.','Benjamín R.'];
+        const c=['#A8C4DE','#F4D35E','#B5D6A7','#E8A0BF','#C4B5FD','#8FACC5','#FFB4A2','#89CFF0','#B2F2BB','#FFD6A5','#FDCFE8','#A0C4FF','#BDB2FF','#FFC6FF','#CAFFBF','#9BF6FF','#FDD7AA','#D4A5A5','#A5DEE5','#E0BBE4','#957DAD','#D291BC','#FEC8D8','#FFDFD3'];
+        n.forEach((name,i)=>{ const p=document.createElement('div');p.className='participant-item';p.style.animationDelay=i*0.05+'s'; const on=Math.random()>0.15; p.innerHTML='<div class="participant-avatar" style="background:'+c[i%c.length]+'">'+name.charAt(0)+(on?'<span class="online-dot"></span>':'')+'</div><span class="participant-name">'+name+'</span>'; g.appendChild(p); });
+    },
+    startOnlineCounter() { const c=document.getElementById('online-count'); if(!c)return; setInterval(()=>{const v=parseInt(c.textContent);c.textContent=Math.max(35,Math.min(99,v+(Math.random()>0.4?1:-1)));},3000); },
+
+    // ---- ROSARIO CONTINUO ----
+    continuoChangeDay(delta) {
+        this.continuoDate.setDate(this.continuoDate.getDate() + delta);
+        this.renderContinuo();
+    },
+
+    getContinuoSlots(dateKey) {
+        const all = JSON.parse(localStorage.getItem(this.CONTINUO_KEY) || '{}');
+        if (!all[dateKey]) {
+            // Generate random pre-filled slots for this date
+            const slots = {};
+            const names = ['María G.','Juan R.','Laura M.','Pedro F.','Sofía L.','Carlos A.','Ana P.','Diego S.'];
+            for (let h = 0; h < 24; h++) {
+                const people = [];
+                const count = Math.floor(Math.random() * 4);
+                const shuffled = [...names].sort(() => Math.random() - 0.5);
+                for (let i = 0; i < count; i++) people.push(shuffled[i]);
+                if (people.length > 0) slots[h] = people;
+            }
+            all[dateKey] = slots;
+            localStorage.setItem(this.CONTINUO_KEY, JSON.stringify(all));
+        } else {
+            // Migrate legacy single-string format to array format
+            let migrated = false;
+            for (const h in all[dateKey]) {
+                if (typeof all[dateKey][h] === 'string') {
+                    all[dateKey][h] = [all[dateKey][h]];
+                    migrated = true;
+                }
+            }
+            if (migrated) localStorage.setItem(this.CONTINUO_KEY, JSON.stringify(all));
+        }
+        return all[dateKey];
+    },
+
+    renderContinuo() {
+        const d = this.continuoDate;
+        const today = new Date();
+        const isToday = d.toDateString() === today.toDateString();
+        const isTomorrow = new Date(today.getTime() + 86400000).toDateString() === d.toDateString();
+        const days = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+        const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+        const titleEl = document.getElementById('continuo-date-title');
+        const subEl = document.getElementById('continuo-date-sub');
+        titleEl.textContent = isToday ? 'Hoy' : (isTomorrow ? 'Mañana' : days[d.getDay()]);
+        subEl.textContent = d.getDate() + ' de ' + months[d.getMonth()] + ', ' + d.getFullYear();
+
+        const dateKey = d.toISOString().split('T')[0];
+        const slots = this.getContinuoSlots(dateKey);
+        const user = auth.isAuthenticated() ? JSON.parse(localStorage.getItem('redmaria_session')).name : null;
+        const grid = document.getElementById('continuo-grid');
+        grid.innerHTML = '';
+        let totalPeople = 0;
+
+        for (let h = 0; h < 24; h++) {
+            const card = document.createElement('div');
+            const hour = h.toString().padStart(2, '0') + ':00';
+            const nextHour = ((h + 1) % 24).toString().padStart(2, '0') + ':00';
+            const people = slots[h] || [];
+            const count = people.length;
+            const isMine = user && people.includes(user);
+            totalPeople += count;
+
+            if (count > 0) {
+                card.className = 'slot-card ' + (isMine ? 'mine' : 'taken');
+                card.innerHTML = '<div class="slot-hour">' + hour + '</div><div class="slot-count">' + count + '</div><div class="slot-status">' + (isMine ? '🙏 Tú + ' + (count - 1) : count + ' persona' + (count > 1 ? 's' : '')) + '</div>';
+                card.onclick = () => this.showSlotSignup(dateKey, h, hour, nextHour);
+            } else {
+                card.className = 'slot-card free';
+                card.innerHTML = '<div class="slot-hour">' + hour + '</div><div class="slot-count">0</div><div class="slot-status">Libre</div>';
+                card.onclick = () => this.showSlotSignup(dateKey, h, hour, nextHour);
+            }
+            grid.appendChild(card);
+        }
+
+        document.getElementById('continuo-taken').textContent = totalPeople;
+
+        // Mis Turnos
+        const mySection = document.getElementById('continuo-my-slots');
+        const myList = document.getElementById('continuo-my-list');
+        myList.innerHTML = '';
+        let hasSlots = false;
+        for (let h = 0; h < 24; h++) {
+            const people = slots[h] || [];
+            if (user && people.includes(user)) {
+                hasSlots = true;
+                const hour = h.toString().padStart(2, '0') + ':00';
+                const nextHour = ((h + 1) % 24).toString().padStart(2, '0') + ':00';
+                const item = document.createElement('div');
+                item.className = 'my-slot-item';
+                item.innerHTML = '<div class="my-slot-info"><div class="my-slot-icon"><i class="ri-time-line"></i></div><div class="my-slot-text"><h4>' + hour + ' - ' + nextHour + '</h4><p>' + subEl.textContent + '</p></div></div><button class="my-slot-cancel" onclick="app.cancelSlot(\'' + dateKey + '\',' + h + ')">Cancelar</button>';
+                myList.appendChild(item);
+            }
+        }
+        mySection.style.display = hasSlots ? 'block' : 'none';
+    },
+
+    showSlotSignup(dateKey, hour, hourStr, nextHourStr) {
+        if (!auth.isAuthenticated()) { this.navigate('screen-login'); return; }
+        const user = JSON.parse(localStorage.getItem('redmaria_session')).name;
+        const slots = this.getContinuoSlots(dateKey);
+        const people = slots[hour] || [];
+        const alreadyIn = people.includes(user);
+        const d = this.continuoDate;
+        const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+        const dateStr = d.getDate() + ' de ' + months[d.getMonth()];
+        const modal = document.createElement('div');
+        modal.className = 'slot-signup-modal';
+        if (alreadyIn) {
+            modal.innerHTML = '<div class="slot-signup-card"><h3>Cancelar Turno</h3><div class="slot-signup-time">' + hourStr + ' - ' + nextHourStr + '</div><div class="slot-signup-date">' + dateStr + '</div><p style="font-size:0.85rem;color:#5A7D9A;margin-bottom:12px">Ya estás anotado en este horario. ¿Deseas cancelar?</p><div class="slot-signup-actions"><button class="btn btn-secondary-outline" onclick="this.closest(\'.slot-signup-modal\').remove()">Volver</button><button class="btn btn-primary" id="confirm-slot-btn" style="background:linear-gradient(135deg,#e74c3c,#c0392b)">Cancelar Turno</button></div></div>';
+            document.body.appendChild(modal);
+            modal.querySelector('#confirm-slot-btn').onclick = () => { this.cancelSlot(dateKey, hour); modal.remove(); };
+        } else {
+            modal.innerHTML = '<div class="slot-signup-card"><h3>Anotarse al Rosario</h3><div class="slot-signup-time">' + hourStr + ' - ' + nextHourStr + '</div><div class="slot-signup-date">' + dateStr + '</div>' + (people.length > 0 ? '<p style="font-size:0.85rem;color:#5A7D9A;margin-bottom:12px">' + people.length + ' persona' + (people.length > 1 ? 's' : '') + ' ya anotada' + (people.length > 1 ? 's' : '') + '</p>' : '') + '<div class="slot-signup-actions"><button class="btn btn-secondary-outline" onclick="this.closest(\'.slot-signup-modal\').remove()">Cancelar</button><button class="btn btn-primary" id="confirm-slot-btn">Confirmar</button></div></div>';
+            document.body.appendChild(modal);
+            modal.querySelector('#confirm-slot-btn').onclick = () => { this.confirmSlot(dateKey, hour); modal.remove(); };
+        }
+        modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+    },
+
+    confirmSlot(dateKey, hour) {
+        const session = JSON.parse(localStorage.getItem('redmaria_session'));
+        if (!session) return;
+        const all = JSON.parse(localStorage.getItem(this.CONTINUO_KEY) || '{}');
+        if (!all[dateKey]) all[dateKey] = {};
+        if (!all[dateKey][hour]) all[dateKey][hour] = [];
+        if (typeof all[dateKey][hour] === 'string') all[dateKey][hour] = [all[dateKey][hour]];
+        if (!all[dateKey][hour].includes(session.name)) all[dateKey][hour].push(session.name);
+        localStorage.setItem(this.CONTINUO_KEY, JSON.stringify(all));
+        this.renderContinuo();
+        // Sync to Supabase
+        if (typeof db !== 'undefined' && db.addContinuoSlot) {
+            db.addContinuoSlot(dateKey, hour, session.name);
+        }
+    },
+
+    cancelSlot(dateKey, hour) {
+        const session = JSON.parse(localStorage.getItem('redmaria_session'));
+        if (!session) return;
+        const all = JSON.parse(localStorage.getItem(this.CONTINUO_KEY) || '{}');
+        if (all[dateKey] && all[dateKey][hour]) {
+            if (typeof all[dateKey][hour] === 'string') all[dateKey][hour] = [all[dateKey][hour]];
+            all[dateKey][hour] = all[dateKey][hour].filter(n => n !== session.name);
+            if (all[dateKey][hour].length === 0) delete all[dateKey][hour];
+        }
+        localStorage.setItem(this.CONTINUO_KEY, JSON.stringify(all));
+        this.renderContinuo();
+        // Sync to Supabase
+        if (typeof db !== 'undefined' && db.removeContinuoSlot) {
+            db.removeContinuoSlot(dateKey, hour, session.name);
+        }
+    },
+
+    highlightTodayMystery() {
+        const el = document.getElementById('rezar-today-highlight');
+        if (!el) return;
+        const day = new Date().getDay(); // 0=Dom, 1=Lun...
+        const dayMap = { 0: 'Gloriosos', 1: 'Gozosos', 2: 'Dolorosos', 3: 'Gloriosos', 4: 'Luminosos', 5: 'Dolorosos', 6: 'Gozosos' };
+        const dayNames = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+        const mystery = dayMap[day];
+        const colorMap = { 'Gozosos': '#56d992', 'Dolorosos': '#e74c3c', 'Gloriosos': '#f0a500', 'Luminosos': '#3DA3D4' };
+        el.innerHTML = '<i class="ri-calendar-check-fill"></i> Hoy es <strong>' + dayNames[day] + '</strong> — rezamos los <strong>Misterios ' + mystery + '</strong>';
+        el.style.borderLeft = '4px solid ' + (colorMap[mystery] || '#3DA3D4');
+    },
+
+    addIntencion() {
+        const ta = document.getElementById('intencion-text');
+        const text = ta?.value.trim();
+        if (!text) { ta?.focus(); return; }
+        const user = auth.isAuthenticated() ? auth.getCurrentUser() : null;
+        const name = user ? user.name : 'Anónimo';
+        const initial = name.charAt(0).toUpperCase();
+        const colors = ['#A8C4DE','#F4D35E','#B5D6A7','#E8A0BF','#C4B5FD','#8FACC5','#FFB4A2','#89CFF0'];
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const list = document.getElementById('community-intentions-list');
+        if (!list) return;
+        const item = document.createElement('div');
+        item.className = 'community-intention glass';
+        item.style.animation = 'fadeInUp 0.4s ease-out';
+        item.innerHTML = '<div class="ci-avatar" style="background:' + color + '">' + initial + '</div><div class="ci-content"><span class="ci-name">' + auth.sanitize(name) + '</span><p>' + auth.sanitize(text) + '</p></div><div class="ci-heart-area"><button class="ci-heart-btn" onclick="toggleHeart(this)"><i class="ri-heart-line"></i></button><span class="ci-heart-count">0</span></div>';
+        list.insertBefore(item, list.firstChild);
+        ta.value = '';
+
+        // Sync intention to Supabase
+        console.log('🔄 Intentando guardar en Supabase...');
+        console.log('   db existe:', typeof db !== 'undefined');
+        console.log('   supabase existe:', typeof supabase !== 'undefined' && supabase !== null);
+        if (typeof db !== 'undefined' && db.createIntencion) {
+            db.createIntencion({ text: text })
+                .then(function(result) { console.log('✅ Intención guardada en Supabase:', result); })
+                .catch(function(e) { console.error('❌ Error guardando intención:', e.message || e); });
+        } else {
+            console.warn('⚠️ db.createIntencion no disponible');
+        }
+    }
+};
+
+// Init app
+document.addEventListener('DOMContentLoaded', function() {
+    app.init();
+});
