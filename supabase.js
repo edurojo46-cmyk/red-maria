@@ -73,6 +73,15 @@ const db = {
         return data || [];
     },
 
+    async getProfileByEmail(email) {
+        if (!sbClient) return null;
+        const { data } = await sbClient.from('profiles')
+            .select('id, name, username, email')
+            .eq('email', email)
+            .single();
+        return data;
+    },
+
     // ==================== ROSARIOS ====================
     async createRosary(rosary) {
         if (!sbClient) { saveLocal('rosaries', rosary); return rosary; }

@@ -2794,35 +2794,28 @@ function formatChatTime(iso) {
 }
 
 async function initRealChat() {
-    // Try Supabase session first
-    var user = await db.getUser();
-
-    // If no Supabase session, try to sign in using local session
-    if (!user && auth.isAuthenticated()) {
-        var localUser = auth.getCurrentUser();
-        if (localUser && localUser.email) {
-            // Try to get session from Supabase
-            var session = await db.getSession();
-            if (!session) {
-                console.log('Chat: No Supabase session, using local auth for user list');
-            }
-        }
-    }
-
-    // Get current user ID (Supabase UUID or null)
-    var myId = user ? user.id : null;
-    var myName = '';
-    if (user) {
-        myName = (user.user_metadata && user.user_metadata.name) || user.email || '';
-    } else if (auth.isAuthenticated()) {
-        var lu = auth.getCurrentUser();
-        myName = lu ? lu.name : '';
-    }
-
-    if (!myId && !auth.isAuthenticated()) {
+    // Get user identity: first try local auth, then find Supabase profile by email
+    if (!auth.isAuthenticated()) {
         showChatEmpty('Iniciá sesión para chatear');
         return;
     }
+    var localUser = auth.getCurrentUser();
+    if (!localUser || !localUser.email) {
+        showChatEmpty('Iniciá sesión para chatear');
+        return;
+    }
+
+    // Find this user's Supabase profile by email
+    var profile = await db.getProfileByEmail(localUser.email);
+    var myId = profile ? profile.id : null;
+    var myName = localUser.name || '';
+
+    if (!myId) {
+        console.log('Chat: No Supabase profile found for', localUser.email);
+        showChatEmpty('Perfil no encontrado. Registrate de nuevo.');
+        return;
+    }
+    console.log('Chat: User identified as', myName, 'ID:', myId);
     var loading = document.getElementById('chat-loading');
     if (loading) loading.style.display = 'block';
 
@@ -2879,8 +2872,9 @@ function renderContactList(convs, myId) {
 }
 
 async function refreshContactList() {
-    var user = await db.getUser();
-    var myId = user ? user.id : null;
+    var localUser = auth.getCurrentUser();
+    var profile = localUser ? await db.getProfileByEmail(localUser.email) : null;
+    var myId = profile ? profile.id : null;
     if (!myId) return;
     var convs = await db.getConversations(myId);
     var empty = document.getElementById('chat-empty');
@@ -2889,8 +2883,9 @@ async function refreshContactList() {
 }
 
 async function openChat(partnerId) {
-    var user = await db.getUser();
-    var myId = user ? user.id : null;
+    var localUser = auth.getCurrentUser();
+    var profile = localUser ? await db.getProfileByEmail(localUser.email) : null;
+    var myId = profile ? profile.id : null;
     currentChatId = partnerId;
     var p = chatProfiles[partnerId];
     if (!p) { var users = await db.getAllUsers(); users.forEach(function(u){chatProfiles[u.id]=u;}); p = chatProfiles[partnerId]; }
@@ -2943,11 +2938,12 @@ async function sendMessage() {
     var input = document.getElementById('chat-input');
     var text = input.value.trim();
     if (!text || !currentChatId) return;
-    var user = await db.getUser();
-    if (!user) { showMsgToast('Sesión expirada. Volvé a iniciar sesión.'); return; }
+    var localUser = auth.getCurrentUser();
+    var profile = localUser ? await db.getProfileByEmail(localUser.email) : null;
+    if (!profile) { showMsgToast('Sesión expirada. Volvé a iniciar sesión.'); return; }
     input.value = '';
-    appendMessageBubble({ text: text, created_at: new Date().toISOString(), from_id: user.id }, true);
-    await db.sendMessage(user.id, currentChatId, text);
+    appendMessageBubble({ text: text, created_at: new Date().toISOString(), from_id: profile.id }, true);
+    await db.sendMessage(profile.id, currentChatId, text);
 }
 
 function renderMessages() {}
@@ -2980,8 +2976,9 @@ function filterChatTab(btn, tab) {
 
 async function showNewChatModal() {
     var old = document.getElementById('new-chat-modal'); if (old) old.remove();
-    var user = await db.getUser();
-    var myId = user ? user.id : null;
+    var localUser = auth.getCurrentUser();
+    var profile = localUser ? await db.getProfileByEmail(localUser.email) : null;
+    var myId = profile ? profile.id : null;
     var users = await db.getAllUsers();
     users = users.filter(function(u) { return u.id !== myId; });
     users.forEach(function(u) { chatProfiles[u.id] = u; });
