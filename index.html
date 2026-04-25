@@ -2868,13 +2868,13 @@ async function openChat(partnerId) {
     currentChatPartner = p;
     chatData[partnerId] = { name: p.name, initial: (p.name||'?').charAt(0).toUpperCase(), color: getChatColor(p.name), messages: [] };
 
-    var hdr = document.getElementById('chat-header-name'); if(hdr) hdr.textContent = p.name;
-    var hdr2 = document.getElementById('chat-header-status'); if(hdr2) hdr2.textContent = p.username || '';
-    var avatar = document.querySelector('.chat-header-avatar');
+    var hdr = document.getElementById('chat-conv-name'); if(hdr) hdr.textContent = p.name;
+    var hdr2 = document.getElementById('chat-conv-status'); if(hdr2) hdr2.textContent = p.username || '';
+    var avatar = document.getElementById('chat-conv-avatar');
     if (avatar) { avatar.style.background = 'linear-gradient(135deg,'+getChatColor(p.name)+','+getChatColor(p.name)+'cc)'; avatar.textContent = (p.name||'?').charAt(0).toUpperCase(); }
 
-    document.querySelector('.chat-contacts-wrap').style.display = 'none';
-    document.querySelector('.chat-conversation').style.display = 'flex';
+    document.getElementById('chat-contacts-view').style.display = 'none';
+    document.getElementById('chat-conversation-view').style.display = 'flex';
     var fab = document.getElementById('new-chat-fab'); if(fab) fab.style.display = 'none';
 
     var msgArea = document.getElementById('chat-messages');
@@ -2890,8 +2890,8 @@ async function openChat(partnerId) {
 
 function closeChat() {
     currentChatId = null; currentChatPartner = null;
-    document.querySelector('.chat-contacts-wrap').style.display = 'flex';
-    document.querySelector('.chat-conversation').style.display = 'none';
+    document.getElementById('chat-contacts-view').style.display = 'flex';
+    document.getElementById('chat-conversation-view').style.display = 'none';
     var fab = document.getElementById('new-chat-fab'); if(fab) fab.style.display = 'flex';
     refreshContactList();
 }
@@ -2930,7 +2930,7 @@ function updateContactPreview(id, text, time) {
 }
 
 function filterChats() {
-    var q = (document.getElementById('chat-search-input') ? document.getElementById('chat-search-input').value : '').toLowerCase();
+    var q = (document.getElementById('chat-search') ? document.getElementById('chat-search').value : '').toLowerCase();
     document.querySelectorAll('#chat-contacts-list .chat-contact').forEach(function(el) {
         var name = (el.querySelector('h4') ? el.querySelector('h4').textContent : '').toLowerCase();
         el.style.display = name.indexOf(q) !== -1 ? 'flex' : 'none';
