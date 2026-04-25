@@ -271,10 +271,24 @@ const auth = {
         users.push(user);
         this.saveUsers(users);
 
-        // Sync with Supabase Auth
+        // Sync with Supabase Auth + ensure profile exists
         if (typeof db !== 'undefined' && db.signUp) {
             db.signUp(email, password, name).then(function(result) {
-                if (result.error) console.warn('Supabase signup:', result.error.message);
+                if (result.error) {
+                    console.warn('Supabase signup:', result.error.message);
+                    // Fallback: create profile directly (for when auth signup fails)
+                    if (sbClient) {
+                        sbClient.from('profiles').upsert({
+                            id: crypto.randomUUID ? crypto.randomUUID() : 'u-' + Date.now() + '-' + Math.random().toString(36).substr(2,9),
+                            name: name,
+                            email: email,
+                            username: '@' + name.toLowerCase().replace(/\s+/g, '_')
+                        }, { onConflict: 'email' }).then(function(r) {
+                            if (r.error) console.warn('Profile fallback error:', r.error.message);
+                            else console.log('✅ Perfil creado directamente');
+                        });
+                    }
+                }
                 else console.log('✅ Usuario registrado en Supabase');
             }).catch(function(e) { console.error('Supabase signup error:', e); });
         }

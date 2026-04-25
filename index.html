@@ -2811,9 +2811,30 @@ async function initRealChat() {
     var myName = localUser.name || '';
 
     if (!myId) {
-        console.log('Chat: No Supabase profile found for', localUser.email);
-        showChatEmpty('Perfil no encontrado. Registrate de nuevo.');
-        return;
+        // Auto-create profile in Supabase
+        console.log('Chat: Creating profile for', localUser.email);
+        try {
+            var newId = crypto.randomUUID ? crypto.randomUUID() : ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g,function(c){return(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16)});
+            var res = await sbClient.from('profiles').insert({
+                id: newId,
+                name: localUser.name || 'Usuario',
+                email: localUser.email,
+                username: '@' + (localUser.name || 'user').toLowerCase().replace(/\s+/g, '_')
+            }).select().single();
+            if (res.data) {
+                myId = res.data.id;
+                chatProfiles[myId] = res.data;
+                console.log('Chat: Profile created with ID:', myId);
+            } else {
+                console.warn('Chat: Could not create profile', res.error);
+                showChatEmpty('Error creando perfil. Intentá de nuevo.');
+                return;
+            }
+        } catch(e) {
+            console.error('Chat: Profile creation error', e);
+            showChatEmpty('Error de conexión. Intentá de nuevo.');
+            return;
+        }
     }
     console.log('Chat: User identified as', myName, 'ID:', myId);
     var loading = document.getElementById('chat-loading');
@@ -2825,7 +2846,34 @@ async function initRealChat() {
 
     if (loading) loading.style.display = 'none';
     var empty = document.getElementById('chat-empty');
-    if (convs.length === 0) { if (empty) empty.style.display = 'block'; return; }
+    if (convs.length === 0) {
+        // No conversations yet - show all users as potential contacts
+        if (empty) empty.style.display = 'none';
+        var otherUsers = allUsers.filter(function(u) { return u.id !== myId; });
+        if (otherUsers.length === 0) {
+            if (empty) { empty.style.display = 'block'; }
+            return;
+        }
+        // Show other users as available contacts
+        var list = document.getElementById('chat-contacts-list');
+        list.querySelectorAll('.chat-contact').forEach(function(el) { el.remove(); });
+        // Add header
+        var hdrDiv = document.createElement('div');
+        hdrDiv.style.cssText = 'padding:12px 16px 6px;font-size:0.72rem;font-weight:700;color:var(--clr-text-muted);text-transform:uppercase;letter-spacing:0.5px';
+        hdrDiv.textContent = 'Usuarios disponibles';
+        hdrDiv.className = 'chat-section-header';
+        list.appendChild(hdrDiv);
+        otherUsers.forEach(function(u) {
+            var color = getChatColor(u.name);
+            var initial = (u.name||'?').charAt(0).toUpperCase();
+            var div = document.createElement('div');
+            div.className = 'chat-contact'; div.setAttribute('data-id', u.id);
+            div.onclick = function() { openChat(u.id); };
+            div.innerHTML = '<div class="chat-avatar-wrapper"><div class="chat-contact-avatar" style="background:linear-gradient(135deg,'+color+','+color+'cc)">'+initial+'</div></div><div class="chat-contact-info"><div class="chat-contact-top"><h4>'+u.name+'</h4><span class="chat-time">'+(u.username||'')+'</span></div><div class="chat-contact-bottom"><p class="chat-last-msg" style="color:var(--clr-text-muted)">Toca para iniciar conversación</p></div></div>';
+            list.appendChild(div);
+        });
+        return;
+    }
     if (empty) empty.style.display = 'none';
     renderContactList(convs, myId);
 
