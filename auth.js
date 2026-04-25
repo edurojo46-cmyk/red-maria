@@ -358,6 +358,14 @@ const auth = {
             loginAt: new Date().toISOString()
         });
 
+        // Also sign in to Supabase for real-time chat
+        if (typeof db !== 'undefined' && db.signIn) {
+            db.signIn(email, password).then(function(result) {
+                if (result.error) console.warn('Supabase login:', result.error.message || result.error);
+                else console.log('✅ Sesión Supabase activa');
+            }).catch(function(e) { console.error('Supabase login error:', e); });
+        }
+
         return { success: true, user };
     },
 

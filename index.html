@@ -2794,32 +2794,59 @@ function formatChatTime(iso) {
 }
 
 async function initRealChat() {
+    // Try Supabase session first
     var user = await db.getUser();
-    if (!user) { showChatEmpty('Iniciá sesión para chatear'); return; }
+
+    // If no Supabase session, try to sign in using local session
+    if (!user && auth.isAuthenticated()) {
+        var localUser = auth.getCurrentUser();
+        if (localUser && localUser.email) {
+            // Try to get session from Supabase
+            var session = await db.getSession();
+            if (!session) {
+                console.log('Chat: No Supabase session, using local auth for user list');
+            }
+        }
+    }
+
+    // Get current user ID (Supabase UUID or null)
+    var myId = user ? user.id : null;
+    var myName = '';
+    if (user) {
+        myName = (user.user_metadata && user.user_metadata.name) || user.email || '';
+    } else if (auth.isAuthenticated()) {
+        var lu = auth.getCurrentUser();
+        myName = lu ? lu.name : '';
+    }
+
+    if (!myId && !auth.isAuthenticated()) {
+        showChatEmpty('Iniciá sesión para chatear');
+        return;
+    }
     var loading = document.getElementById('chat-loading');
     if (loading) loading.style.display = 'block';
 
     var allUsers = await db.getAllUsers();
     allUsers.forEach(function(u) { chatProfiles[u.id] = u; });
-    var convs = await db.getConversations(user.id);
+    var convs = myId ? await db.getConversations(myId) : [];
 
     if (loading) loading.style.display = 'none';
     var empty = document.getElementById('chat-empty');
     if (convs.length === 0) { if (empty) empty.style.display = 'block'; return; }
     if (empty) empty.style.display = 'none';
-    renderContactList(convs, user.id);
+    renderContactList(convs, myId);
 
     if (chatSubscription) { try { chatSubscription.unsubscribe(); } catch(e){} }
-    chatSubscription = db.subscribeToMessages(user.id, function(newMsg) {
+    if (myId) { chatSubscription = db.subscribeToMessages(myId, function(newMsg) {
         incrementNavMsgBadge();
         if (currentChatId === newMsg.from_id) {
             appendMessageBubble(newMsg, false);
-            db.markConversationAsRead(user.id, newMsg.from_id);
+            db.markConversationAsRead(myId, newMsg.from_id);
         }
         refreshContactList();
-    });
+    }); }
 
-    var unread = await db.getUnreadCount(user.id);
+    var unread = myId ? await db.getUnreadCount(myId) : 0;
     if (unread > 0) { navUnreadCount = unread; updateNavMsgBadges(); }
 }
 
@@ -2852,15 +2879,18 @@ function renderContactList(convs, myId) {
 }
 
 async function refreshContactList() {
-    var user = await db.getUser(); if (!user) return;
-    var convs = await db.getConversations(user.id);
+    var user = await db.getUser();
+    var myId = user ? user.id : null;
+    if (!myId) return;
+    var convs = await db.getConversations(myId);
     var empty = document.getElementById('chat-empty');
     if (convs.length > 0 && empty) empty.style.display = 'none';
-    renderContactList(convs, user.id);
+    renderContactList(convs, myId);
 }
 
 async function openChat(partnerId) {
-    var user = await db.getUser(); if (!user) return;
+    var user = await db.getUser();
+    var myId = user ? user.id : null;
     currentChatId = partnerId;
     var p = chatProfiles[partnerId];
     if (!p) { var users = await db.getAllUsers(); users.forEach(function(u){chatProfiles[u.id]=u;}); p = chatProfiles[partnerId]; }
@@ -2879,12 +2909,12 @@ async function openChat(partnerId) {
 
     var msgArea = document.getElementById('chat-messages');
     if(msgArea) msgArea.innerHTML = '<div style="text-align:center;padding:20px;color:var(--clr-text-muted);font-size:0.8rem"><i class="ri-loader-4-line" style="animation:spin 1s linear infinite"></i></div>';
-    var messages = await db.getConversationMessages(user.id, partnerId);
+    var messages = myId ? await db.getConversationMessages(myId, partnerId) : [];
     if(msgArea) msgArea.innerHTML = '';
-    messages.forEach(function(m) { appendMessageBubble(m, m.from_id === user.id); });
+    messages.forEach(function(m) { appendMessageBubble(m, m.from_id === myId); });
     if(msgArea) msgArea.scrollTop = msgArea.scrollHeight;
 
-    await db.markConversationAsRead(user.id, partnerId);
+    if (myId) await db.markConversationAsRead(myId, partnerId);
     refreshContactList();
 }
 
@@ -2913,7 +2943,8 @@ async function sendMessage() {
     var input = document.getElementById('chat-input');
     var text = input.value.trim();
     if (!text || !currentChatId) return;
-    var user = await db.getUser(); if (!user) return;
+    var user = await db.getUser();
+    if (!user) { showMsgToast('Sesión expirada. Volvé a iniciar sesión.'); return; }
     input.value = '';
     appendMessageBubble({ text: text, created_at: new Date().toISOString(), from_id: user.id }, true);
     await db.sendMessage(user.id, currentChatId, text);
@@ -2949,9 +2980,10 @@ function filterChatTab(btn, tab) {
 
 async function showNewChatModal() {
     var old = document.getElementById('new-chat-modal'); if (old) old.remove();
-    var user = await db.getUser(); if (!user) return;
+    var user = await db.getUser();
+    var myId = user ? user.id : null;
     var users = await db.getAllUsers();
-    users = users.filter(function(u) { return u.id !== user.id; });
+    users = users.filter(function(u) { return u.id !== myId; });
     users.forEach(function(u) { chatProfiles[u.id] = u; });
     var listHtml = '';
     if (users.length === 0) { listHtml = '<p style="text-align:center;color:var(--clr-text-muted);font-size:0.82rem;padding:20px">No hay otros usuarios registrados</p>'; }
