@@ -1,14 +1,40 @@
 // =============================================
 // RED MARIA — Auth Module (auth.js)
-// Secure user system with validation
+// Professional-grade security system
 // =============================================
 
 const auth = {
     STORAGE_KEY: 'redmaria_users',
     SESSION_KEY: 'redmaria_session',
+    ATTEMPTS_KEY: 'redmaria_login_attempts',
 
-    // ---- Crypto: SHA-256 Hashing via Web Crypto API ----
-    async hashPassword(password) {
+    // Security config
+    MAX_LOGIN_ATTEMPTS: 5,
+    LOCKOUT_DURATION_MS: 15 * 60 * 1000, // 15 minutes
+    SESSION_EXPIRY_MS: 24 * 60 * 60 * 1000, // 24 hours
+    PBKDF2_ITERATIONS: 100000,
+
+    // ---- Crypto: PBKDF2 Key Derivation with Salt ----
+    async hashPassword(password, salt) {
+        if (!salt) {
+            const saltArray = new Uint8Array(16);
+            crypto.getRandomValues(saltArray);
+            salt = Array.from(saltArray, b => b.toString(16).padStart(2, '0')).join('');
+        }
+        const encoder = new TextEncoder();
+        const keyMaterial = await crypto.subtle.importKey(
+            'raw', encoder.encode(password), 'PBKDF2', false, ['deriveBits']
+        );
+        const derivedBits = await crypto.subtle.deriveBits(
+            { name: 'PBKDF2', salt: encoder.encode(salt), iterations: this.PBKDF2_ITERATIONS, hash: 'SHA-256' },
+            keyMaterial, 256
+        );
+        const hash = Array.from(new Uint8Array(derivedBits), b => b.toString(16).padStart(2, '0')).join('');
+        return { hash, salt };
+    },
+
+    // Legacy SHA-256 (for migrating old users)
+    async hashPasswordLegacy(password) {
         const encoder = new TextEncoder();
         const data = encoder.encode(password);
         const hashBuffer = await crypto.subtle.digest('SHA-256', data);
@@ -23,13 +49,16 @@ const auth = {
         return Array.from(arr, b => b.toString(16).padStart(2, '0')).join('');
     },
 
+    generateId() {
+        const arr = new Uint8Array(12);
+        crypto.getRandomValues(arr);
+        return Array.from(arr, b => b.toString(16).padStart(2, '0')).join('');
+    },
+
     // ---- Storage Helpers ----
     getUsers() {
-        try {
-            return JSON.parse(localStorage.getItem(this.STORAGE_KEY)) || [];
-        } catch {
-            return [];
-        }
+        try { return JSON.parse(localStorage.getItem(this.STORAGE_KEY)) || []; }
+        catch { return []; }
     },
 
     saveUsers(users) {
@@ -37,11 +66,8 @@ const auth = {
     },
 
     getSession() {
-        try {
-            return JSON.parse(localStorage.getItem(this.SESSION_KEY));
-        } catch {
-            return null;
-        }
+        try { return JSON.parse(localStorage.getItem(this.SESSION_KEY)); }
+        catch { return null; }
     },
 
     saveSession(session) {
@@ -50,6 +76,72 @@ const auth = {
 
     clearSession() {
         localStorage.removeItem(this.SESSION_KEY);
+    },
+
+    // ---- Rate Limiting ----
+    getLoginAttempts(email) {
+        try {
+            const data = JSON.parse(localStorage.getItem(this.ATTEMPTS_KEY)) || {};
+            return data[email] || { count: 0, firstAttempt: 0, lockedUntil: 0 };
+        } catch { return { count: 0, firstAttempt: 0, lockedUntil: 0 }; }
+    },
+
+    recordLoginAttempt(email, success) {
+        const data = JSON.parse(localStorage.getItem(this.ATTEMPTS_KEY) || '{}');
+        if (success) {
+            delete data[email];
+        } else {
+            const now = Date.now();
+            const current = data[email] || { count: 0, firstAttempt: now, lockedUntil: 0 };
+            // Reset counter if window expired
+            if (now - current.firstAttempt > this.LOCKOUT_DURATION_MS) {
+                current.count = 1;
+                current.firstAttempt = now;
+                current.lockedUntil = 0;
+            } else {
+                current.count++;
+            }
+            if (current.count >= this.MAX_LOGIN_ATTEMPTS) {
+                current.lockedUntil = now + this.LOCKOUT_DURATION_MS;
+            }
+            data[email] = current;
+        }
+        localStorage.setItem(this.ATTEMPTS_KEY, JSON.stringify(data));
+    },
+
+    isAccountLocked(email) {
+        const attempts = this.getLoginAttempts(email);
+        if (attempts.lockedUntil && Date.now() < attempts.lockedUntil) {
+            const remainingMin = Math.ceil((attempts.lockedUntil - Date.now()) / 60000);
+            return { locked: true, remainingMin };
+        }
+        return { locked: false, remainingMin: 0 };
+    },
+
+    getRemainingAttempts(email) {
+        const attempts = this.getLoginAttempts(email);
+        return Math.max(0, this.MAX_LOGIN_ATTEMPTS - attempts.count);
+    },
+
+    // ---- Session Expiry ----
+    isSessionValid() {
+        const session = this.getSession();
+        if (!session || !session.token || !session.userId) return false;
+        if (!session.loginAt) return false;
+        const elapsed = Date.now() - new Date(session.loginAt).getTime();
+        if (elapsed > this.SESSION_EXPIRY_MS) {
+            this.clearSession();
+            return false;
+        }
+        return true;
+    },
+
+    refreshSession() {
+        const session = this.getSession();
+        if (session) {
+            session.loginAt = new Date().toISOString();
+            this.saveSession(session);
+        }
     },
 
     // ---- Validators ----
@@ -66,8 +158,13 @@ const auth = {
         email(value) {
             const v = (value || '').trim();
             if (!v) return 'El email es obligatorio';
-            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            const re = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
             if (!re.test(v)) return 'Ingresa un email válido';
+            if (v.length > 254) return 'Email demasiado largo';
+            // Block disposable email patterns
+            const blocked = ['tempmail','throwaway','guerrilla','mailinator','yopmail','trashmail'];
+            const domain = v.split('@')[1]?.toLowerCase();
+            if (blocked.some(b => domain?.includes(b))) return 'No se permiten emails temporales';
             return '';
         },
 
@@ -75,10 +172,14 @@ const auth = {
             const v = value || '';
             if (!v) return 'La contraseña es obligatoria';
             if (v.length < 8) return 'Mínimo 8 caracteres';
+            if (v.length > 128) return 'Máximo 128 caracteres';
             if (!/[A-Z]/.test(v)) return 'Debe incluir al menos una mayúscula';
             if (!/[a-z]/.test(v)) return 'Debe incluir al menos una minúscula';
             if (!/[0-9]/.test(v)) return 'Debe incluir al menos un número';
             if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(v)) return 'Debe incluir un carácter especial (!@#$%...)';
+            // Check common weak passwords
+            const weak = ['password','12345678','qwerty12','admin123','letmein1','welcome1','abc12345'];
+            if (weak.includes(v.toLowerCase())) return 'Contraseña demasiado común';
             return '';
         },
 
@@ -98,19 +199,36 @@ const auth = {
 
     // ---- Password Strength Meter ----
     getPasswordStrength(password) {
-        if (!password) return { score: 0, label: '', className: '' };
+        if (!password) return { score: 0, label: '', className: '', checks: {} };
+
+        const checks = {
+            length: password.length >= 8,
+            lengthBonus: password.length >= 12,
+            upper: /[A-Z]/.test(password),
+            lower: /[a-z]/.test(password),
+            number: /[0-9]/.test(password),
+            special: /[^A-Za-z0-9]/.test(password),
+            noRepeat: !/(.)\1{2,}/.test(password),
+            noSequence: !/(?:abc|bcd|cde|def|efg|fgh|ghi|hij|ijk|jkl|klm|lmn|mno|nop|opq|pqr|qrs|rst|stu|tuv|uvw|vwx|wxy|xyz|012|123|234|345|456|567|678|789)/i.test(password)
+        };
 
         let score = 0;
-        if (password.length >= 8) score++;
-        if (password.length >= 12) score++;
-        if (/[A-Z]/.test(password)) score++;
-        if (/[a-z]/.test(password)) score++;
-        if (/[0-9]/.test(password)) score++;
-        if (/[^A-Za-z0-9]/.test(password)) score++;
+        if (checks.length) score++;
+        if (checks.lengthBonus) score++;
+        if (checks.upper) score++;
+        if (checks.lower) score++;
+        if (checks.number) score++;
+        if (checks.special) score++;
+        if (checks.noRepeat) score++;
+        if (checks.noSequence) score++;
 
-        if (score <= 2) return { score: 1, label: 'Débil', className: 'strength-weak' };
-        if (score <= 4) return { score: 2, label: 'Media', className: 'strength-medium' };
-        return { score: 3, label: 'Fuerte', className: 'strength-strong' };
+        let label, className;
+        if (score <= 3) { label = 'Débil'; className = 'strength-weak'; }
+        else if (score <= 5) { label = 'Media'; className = 'strength-medium'; }
+        else if (score <= 7) { label = 'Fuerte'; className = 'strength-strong'; }
+        else { label = 'Muy Fuerte'; className = 'strength-very-strong'; }
+
+        return { score: Math.min(4, Math.ceil(score / 2)), label, className, checks };
     },
 
     // ---- Sanitize Input ----
@@ -133,17 +251,19 @@ const auth = {
             return { success: false, error: 'Este email ya está registrado' };
         }
 
-        // Hash password
-        const hashedPassword = await this.hashPassword(password);
+        // Hash password with salt (PBKDF2)
+        const { hash, salt } = await this.hashPassword(password);
 
         // Create user object
         const user = {
-            id: Date.now().toString(36) + Math.random().toString(36).substr(2),
+            id: this.generateId(),
             name,
             email,
-            password: hashedPassword,
+            password: hash,
+            salt: salt,
             city,
             createdAt: new Date().toISOString(),
+            lastLogin: new Date().toISOString(),
             rosariosCount: 0,
             devotion: 'Ntra. Sra. de Luján'
         };
@@ -176,14 +296,57 @@ const auth = {
     // ---- Login ----
     async loginUser(email, password) {
         email = email.trim().toLowerCase();
-        const hashedPassword = await this.hashPassword(password);
+
+        // Rate limiting check
+        const lockStatus = this.isAccountLocked(email);
+        if (lockStatus.locked) {
+            return { success: false, error: `Cuenta bloqueada temporalmente. Intenta de nuevo en ${lockStatus.remainingMin} minuto(s)`, locked: true };
+        }
 
         const users = this.getUsers();
-        const user = users.find(u => u.email === email && u.password === hashedPassword);
+        const user = users.find(u => u.email === email);
 
         if (!user) {
-            return { success: false, error: 'Email o contraseña incorrectos' };
+            this.recordLoginAttempt(email, false);
+            const remaining = this.getRemainingAttempts(email);
+            return { success: false, error: 'Email o contraseña incorrectos', attemptsLeft: remaining };
         }
+
+        // Check password - support both PBKDF2 (new) and SHA-256 (legacy)
+        let passwordMatch = false;
+        if (user.salt) {
+            // PBKDF2 verification
+            const { hash } = await this.hashPassword(password, user.salt);
+            passwordMatch = (hash === user.password);
+        } else {
+            // Legacy SHA-256 verification + migrate to PBKDF2
+            const legacyHash = await this.hashPasswordLegacy(password);
+            passwordMatch = (legacyHash === user.password);
+            if (passwordMatch) {
+                // Migrate to PBKDF2
+                const { hash, salt } = await this.hashPassword(password);
+                user.password = hash;
+                user.salt = salt;
+                this.saveUsers(users);
+                console.log('🔑 Password migrated to PBKDF2');
+            }
+        }
+
+        if (!passwordMatch) {
+            this.recordLoginAttempt(email, false);
+            const remaining = this.getRemainingAttempts(email);
+            const msg = remaining <= 2 && remaining > 0
+                ? `Email o contraseña incorrectos (${remaining} intento${remaining > 1 ? 's' : ''} restante${remaining > 1 ? 's' : ''})`
+                : 'Email o contraseña incorrectos';
+            return { success: false, error: msg, attemptsLeft: remaining };
+        }
+
+        // Success - clear attempts
+        this.recordLoginAttempt(email, true);
+
+        // Update last login
+        user.lastLogin = new Date().toISOString();
+        this.saveUsers(users);
 
         const token = this.generateSessionToken();
         this.saveSession({
@@ -207,11 +370,11 @@ const auth = {
 
     // ---- Session Checks ----
     isAuthenticated() {
-        const session = this.getSession();
-        return !!(session && session.token && session.userId);
+        return this.isSessionValid();
     },
 
     getCurrentUser() {
+        if (!this.isSessionValid()) return null;
         const session = this.getSession();
         if (!session) return null;
 
@@ -222,7 +385,10 @@ const auth = {
             return null;
         }
 
-        // Return safe data (no password)
+        // Refresh session on activity
+        this.refreshSession();
+
+        // Return safe data (no password, no salt)
         return {
             id: user.id,
             name: user.name,
@@ -230,7 +396,8 @@ const auth = {
             city: user.city,
             rosariosCount: user.rosariosCount,
             devotion: user.devotion,
-            createdAt: user.createdAt
+            createdAt: user.createdAt,
+            lastLogin: user.lastLogin
         };
     },
 
@@ -239,9 +406,14 @@ const auth = {
         const users = this.getUsers();
         const idx = users.findIndex(u => u.email === email);
         if (idx === -1) return { success: false, error: 'Usuario no encontrado' };
-        const hashed = await this.hashPassword(newPassword);
-        users[idx].password = hashed;
+        const { hash, salt } = await this.hashPassword(newPassword);
+        users[idx].password = hash;
+        users[idx].salt = salt;
         this.saveUsers(users);
+        // Clear any lockouts
+        const attempts = JSON.parse(localStorage.getItem(this.ATTEMPTS_KEY) || '{}');
+        delete attempts[email];
+        localStorage.setItem(this.ATTEMPTS_KEY, JSON.stringify(attempts));
         return { success: true };
     },
 
@@ -259,8 +431,7 @@ const auth = {
 // =============================================
 
 const authUI = {
-    // Current visible form
-    currentForm: 'register', // 'register' | 'login'
+    currentForm: 'register',
 
     init() {
         this.setupRegisterForm();
@@ -268,6 +439,7 @@ const authUI = {
         this.setupPasswordToggles();
         this.setupPasswordStrength();
         this.setupRealTimeValidation();
+        this.setupPasswordChecklist();
     },
 
     // ---- Register Form ----
@@ -283,6 +455,7 @@ const authUI = {
             const password = document.getElementById('reg-password').value;
             const confirmPw = document.getElementById('reg-confirm-password').value;
             const city = document.getElementById('reg-city').value;
+            const tosCheck = document.getElementById('reg-tos');
 
             // Validate all fields
             const errors = {
@@ -301,6 +474,13 @@ const authUI = {
                 if (error) hasErrors = true;
             }
 
+            // Terms check
+            if (tosCheck && !tosCheck.checked) {
+                const tosField = tosCheck.closest('.auth-tos');
+                if (tosField) tosField.classList.add('has-error');
+                hasErrors = true;
+            }
+
             if (hasErrors) {
                 this.shakeForm('register-form');
                 return;
@@ -311,7 +491,6 @@ const authUI = {
             btn.classList.add('loading');
             btn.disabled = true;
 
-            // Simulate slight delay for UX
             await new Promise(r => setTimeout(r, 600));
 
             const result = await auth.registerUser({ name, email, password, city });
@@ -372,10 +551,39 @@ const authUI = {
                     app.onAuthSuccess();
                 }, 1000);
             } else {
-                this.showFormError('login-form', result.error);
+                // Show appropriate error
+                if (result.locked) {
+                    this.showFormError('login-form', result.error);
+                    this.showLockoutTimer('login-form');
+                } else {
+                    this.showFormError('login-form', result.error);
+                }
                 this.shakeForm('login-form');
             }
         });
+    },
+
+    // ---- Lockout Timer Display ----
+    showLockoutTimer(formId) {
+        const form = document.getElementById(formId);
+        if (!form) return;
+        const btn = form.querySelector('.btn-auth-submit');
+        if (!btn) return;
+        btn.disabled = true;
+        btn.classList.add('locked-out');
+
+        const interval = setInterval(() => {
+            const email = document.getElementById('login-email')?.value?.trim().toLowerCase();
+            if (!email) { clearInterval(interval); btn.disabled = false; btn.classList.remove('locked-out'); return; }
+            const lock = auth.isAccountLocked(email);
+            if (!lock.locked) {
+                clearInterval(interval);
+                btn.disabled = false;
+                btn.classList.remove('locked-out');
+                const banner = form.querySelector('.form-error-banner');
+                if (banner) banner.classList.remove('visible');
+            }
+        }, 5000);
     },
 
     // ---- Password Visibility Toggle ----
@@ -419,6 +627,35 @@ const authUI = {
         });
     },
 
+    // ---- Password Requirement Checklist ----
+    setupPasswordChecklist() {
+        const pwInput = document.getElementById('reg-password');
+        const checklist = document.getElementById('password-checklist');
+        if (!pwInput || !checklist) return;
+
+        pwInput.addEventListener('input', () => {
+            const v = pwInput.value;
+            const items = checklist.querySelectorAll('.pw-check-item');
+            const checks = [
+                v.length >= 8,
+                /[A-Z]/.test(v),
+                /[a-z]/.test(v),
+                /[0-9]/.test(v),
+                /[^A-Za-z0-9]/.test(v)
+            ];
+            items.forEach((item, i) => {
+                if (checks[i]) { item.classList.add('passed'); item.classList.remove('failed'); }
+                else { item.classList.remove('passed'); item.classList.add('failed'); }
+            });
+            if (v) { checklist.classList.add('visible'); }
+            else { checklist.classList.remove('visible'); }
+        });
+
+        pwInput.addEventListener('focus', () => {
+            if (pwInput.value) checklist.classList.add('visible');
+        });
+    },
+
     // ---- Real-time Validation ----
     setupRealTimeValidation() {
         const fields = [
@@ -437,7 +674,6 @@ const authUI = {
             });
 
             input.addEventListener('input', () => {
-                // Clear error on typing
                 this.clearFieldError(id);
             });
         });
@@ -499,7 +735,7 @@ const authUI = {
         }
         errorBanner.innerHTML = `<i class="ri-error-warning-fill"></i> ${message}`;
         errorBanner.classList.add('visible');
-        setTimeout(() => errorBanner.classList.remove('visible'), 4000);
+        setTimeout(() => errorBanner.classList.remove('visible'), 6000);
     },
 
     showSuccess(formId, message) {

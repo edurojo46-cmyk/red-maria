@@ -29,7 +29,7 @@ const app = {
 
     loadRosaryCards() {
         const list = document.getElementById('rosary-list'); if (!list) return;
-        this.getRosaries().forEach(r => this.addRosaryCard(r));
+        this.getActiveRosaries().forEach(r => this.addRosaryCard(r));
     },
 
     initPickerMap() {
@@ -60,8 +60,8 @@ const app = {
             marker.bindPopup(() => this._buildMapPopup(m.id, m.name, m.time, m.mystery, m.intention, m.participants), { className: 'rosary-map-popup', maxWidth: 260 });
         });
 
-        // Add saved rosaries markers
-        this.getRosaries().forEach(r => {
+        // Add saved rosaries markers (only active/future ones)
+        this.getActiveRosaries().forEach(r => {
             if (r.lat && r.lng) {
                 const pCount = r.participants || 1;
                 const icon = L.divIcon({ className: 'custom-marker-wrapper', html: '<div class="custom-map-marker user-marker"><i class="ri-map-pin-fill" style="font-size:1rem;color:white"></i><span class="marker-count">' + pCount + '</span></div>', iconSize: [36, 44], iconAnchor: [18, 44] });
@@ -107,6 +107,7 @@ const app = {
         // Close and reopen popup to refresh button
         if (this.buscarMap) this.buscarMap.closePopup();
         this.renderProfileJoined();
+        this.renderProfileMyRosaries();
     },
 
     leaveRosary(id) {
@@ -120,27 +121,105 @@ const app = {
         }
         if (this.buscarMap) this.buscarMap.closePopup();
         this.renderProfileJoined();
+        this.renderProfileMyRosaries();
+    },
+
+    // Buscar page: filter cards by search text
+    filterBuscarCards(query) {
+        const cards = document.querySelectorAll('#rosary-list .rosary-card');
+        const q = query.toLowerCase().trim();
+        let visible = 0;
+        cards.forEach(card => {
+            const text = card.textContent.toLowerCase();
+            const show = !q || text.includes(q);
+            card.style.display = show ? '' : 'none';
+            if (show) visible++;
+        });
+        const countEl = document.getElementById('buscar-cards-count');
+        if (countEl) countEl.textContent = visible + ' encontrados';
+        const emptyEl = document.getElementById('buscar-empty');
+        if (emptyEl) emptyEl.style.display = visible === 0 ? '' : 'none';
+    },
+
+    // Buscar page: filter by time chip
+    filterByTime(btn, period) {
+        document.querySelectorAll('.buscar-chip').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        // For now just show all - future: integrate with date filtering
+        this.filterBuscarCards(document.getElementById('buscar-search-input')?.value || '');
+    },
+
+    renderProfileMyRosaries() {
+        const container = document.getElementById('profile-my-rosaries'); if (!container) return;
+        const user = auth.getCurrentUser(); if (!user) return;
+        const allRosaries = this.getActiveRosaries();
+        const myRosaries = allRosaries.filter(r => r.creatorId === user.id);
+
+        if (myRosaries.length === 0) {
+            container.innerHTML = '<div class="profile-no-slots glass card"><i class="ri-add-circle-line"></i><p>Aún no creaste ningún rosario</p><button class="btn btn-primary" onclick="app.navigate(\'screen-create-rosary\')"><i class="ri-add-line"></i> Crear Rosario</button></div>';
+            return;
+        }
+        let html = '';
+        myRosaries.forEach(r => {
+            const ds = this.formatDate(r.date);
+            const confirmedKey = 'redmaria_confirmed_' + r.id;
+            let confirmed = [];
+            try { confirmed = JSON.parse(localStorage.getItem(confirmedKey)) || []; } catch(e) {}
+            const confirmCount = confirmed.length;
+            html += '<div class="profile-rosary-card glass card">' +
+                '<div class="profile-rosary-header">' +
+                    '<div class="profile-rosary-icon coord-icon"><i class="ri-shield-star-fill"></i></div>' +
+                    '<div class="profile-rosary-info">' +
+                        '<h4>' + r.place + '</h4>' +
+                        '<p><i class="ri-time-line"></i> ' + ds + ' ' + r.time + ' hs · Misterios ' + r.mystery + '</p>' +
+                        '<span class="profile-rosary-intention"><i class="ri-candle-fill"></i> ' + r.intention + '</span>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="profile-rosary-footer">' +
+                    '<div class="profile-rosary-stats">' +
+                        '<span class="profile-rosary-badge coord-badge"><i class="ri-shield-star-fill"></i> Coordinador</span>' +
+                        '<span class="profile-rosary-confirmed"><i class="ri-check-double-fill"></i> ' + confirmCount + ' confirmados</span>' +
+                    '</div>' +
+                    '<button class="btn btn-primary profile-rosary-btn" onclick="app._currentRosary = app.getRosaries().find(x => x.id === \'' + r.id + '\'); app.navigate(\'screen-rezo\')"><i class="ri-play-circle-fill"></i> Rezar</button>' +
+                '</div>' +
+            '</div>';
+        });
+        container.innerHTML = html;
     },
 
     renderProfileJoined() {
         const container = document.getElementById('profile-joined-rosaries'); if (!container) return;
-        const joined = this.getJoinedRosaries();
-        if (joined.length === 0) {
+        const user = auth.getCurrentUser();
+        const joined = this.getActiveJoinedRosaries();
+        // Filter out rosaries that user created (those go in "Rosarios que Coordino")
+        const allRosaries = this.getActiveRosaries();
+        const myCreatedIds = user ? allRosaries.filter(r => r.creatorId === user.id).map(r => r.id) : [];
+        const joinedOnly = joined.filter(r => !myCreatedIds.includes(r.id));
+
+        if (joinedOnly.length === 0) {
             container.innerHTML = '<div class="profile-no-slots glass card"><i class="ri-map-pin-line"></i><p>Aún no te uniste a ningún rosario</p><button class="btn btn-primary" onclick="app.navigate(\'screen-map\')"><i class="ri-search-line"></i> Buscar Rosario</button></div>';
             return;
         }
         let html = '';
-        joined.forEach(r => {
-            html += '<div class="profile-slot-card glass card">' +
-                '<div class="profile-slot-left">' +
-                    '<div class="profile-slot-icon" style="background:linear-gradient(135deg,#56d992,#27ae60)"><i class="ri-map-pin-fill"></i></div>' +
-                    '<div class="profile-slot-info">' +
+        joinedOnly.forEach(r => {
+            html += '<div class="profile-rosary-card glass card">' +
+                '<div class="profile-rosary-header">' +
+                    '<div class="profile-rosary-icon joined-icon"><i class="ri-map-pin-fill"></i></div>' +
+                    '<div class="profile-rosary-info">' +
                         '<h4>' + r.name + '</h4>' +
-                        '<p><i class="ri-time-line"></i> Hoy ' + r.time + ' hs</p>' +
-                        '<span class="profile-slot-people"><i class="ri-candle-fill"></i> ' + r.intention + '</span>' +
+                        '<p><i class="ri-time-line"></i> Hoy ' + r.time + ' hs · Misterios ' + (r.mystery || '') + '</p>' +
+                        '<span class="profile-rosary-intention"><i class="ri-candle-fill"></i> ' + r.intention + '</span>' +
                     '</div>' +
                 '</div>' +
-                '<button class="profile-slot-cancel" onclick="app.leaveRosary(\'' + r.id + '\'); app.renderProfileJoined();" title="Salir del rosario"><i class="ri-close-circle-line"></i></button>' +
+                '<div class="profile-rosary-footer">' +
+                    '<div class="profile-rosary-stats">' +
+                        '<span class="profile-rosary-badge joined-badge"><i class="ri-check-line"></i> Unido</span>' +
+                    '</div>' +
+                    '<div class="profile-rosary-actions">' +
+                        '<button class="btn btn-primary profile-rosary-btn" onclick="app._currentRosary = {id:\'' + r.id + '\',place:\'' + (r.name || '').replace(/'/g, "\\'") + '\',time:\'' + r.time + '\',mystery:\'' + (r.mystery || '') + '\',intention:\'' + (r.intention || '').replace(/'/g, "\\'") + '\'}; app.navigate(\'screen-rezo\')"><i class="ri-play-circle-fill"></i> Unirme</button>' +
+                        '<button class="profile-slot-cancel" onclick="app.leaveRosary(\'' + r.id + '\'); app.renderProfileJoined();" title="Salir"><i class="ri-close-circle-line"></i></button>' +
+                    '</div>' +
+                '</div>' +
             '</div>';
         });
         container.innerHTML = html;
@@ -157,6 +236,33 @@ const app = {
     },
 
     getRosaries() { try { return JSON.parse(localStorage.getItem(this.ROSARY_STORAGE_KEY)) || []; } catch { return []; } },
+
+    // Check if a rosary's date+time has already passed
+    isRosaryExpired(rosary) {
+        if (!rosary.date) return false;
+        const now = new Date();
+        const rosaryDate = new Date(rosary.date + 'T' + (rosary.time || '23:59'));
+        // Add 2 hours grace period after scheduled time
+        rosaryDate.setHours(rosaryDate.getHours() + 2);
+        return now > rosaryDate;
+    },
+
+    // Get only rosaries whose date hasn't passed yet
+    getActiveRosaries() {
+        return this.getRosaries().filter(r => !this.isRosaryExpired(r));
+    },
+
+    // Get only joined rosaries that haven't expired
+    getActiveJoinedRosaries() {
+        return this.getJoinedRosaries().filter(r => {
+            // Joined rosaries may not have a date field, check via saved rosaries
+            if (r.date) return !this.isRosaryExpired(r);
+            // Look up the original rosary to check its date
+            const original = this.getRosaries().find(o => o.id === r.id);
+            if (original) return !this.isRosaryExpired(original);
+            return true; // Keep if we can't determine expiry
+        });
+    },
     saveRosary(r) {
         // Save locally
         const a = this.getRosaries(); a.push(r); localStorage.setItem(this.ROSARY_STORAGE_KEY, JSON.stringify(a));
@@ -178,7 +284,7 @@ const app = {
         const ds = this.formatDate(rosary.date);
         const card = document.createElement('div');
         card.className = 'rosary-card glass card';
-        card.onclick = () => { app._currentRosaryCreatorId = rosary.creatorId || null; app.navigate('screen-rezo'); };
+        card.onclick = () => { app._currentRosary = rosary; app.navigate('screen-rezo'); };
         var addrHtml = rosary.address ? '<div class="rosary-card-detail"><i class="ri-road-map-fill"></i> ' + rosary.address + '</div>' : '';
         card.innerHTML = '<div class="rosary-card-header"><div class="rosary-card-icon"><i class="ri-map-pin-fill"></i></div><div class="rosary-card-info"><h3>' + rosary.place + '</h3><p>' + ds + ' ' + rosary.time + ' hs · Misterios ' + rosary.mystery + '</p></div></div><div class="rosary-card-details">' + addrHtml + '<div class="rosary-card-detail"><i class="ri-candle-fill"></i> ' + rosary.intention + '</div><div class="rosary-card-detail"><i class="ri-group-fill"></i> ' + (rosary.participants || 1) + ' Participantes</div></div><button class="btn btn-primary btn-join" onclick="app.navigate(\'screen-rezo\')">Unirme</button>';
         list.appendChild(card);
@@ -197,9 +303,11 @@ const app = {
         const di = document.getElementById('rosary-date'); if (di) { const td = new Date().toISOString().split('T')[0]; di.min = td; di.value = td; }
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
+            const country = document.getElementById('rosary-country') ? document.getElementById('rosary-country').value : '';
+            const city = document.getElementById('rosary-city') ? document.getElementById('rosary-city').value : '';
             const place = document.getElementById('rosary-place').value.trim(), date = document.getElementById('rosary-date').value, time = document.getElementById('rosary-time').value, mystery = document.getElementById('rosary-mystery').value, intention = document.getElementById('rosary-intention').value.trim();
             let hasErr = false;
-            [{id:'rosary-place',v:place,m:'Obligatorio'},{id:'rosary-date',v:date,m:'Obligatoria'},{id:'rosary-time',v:time,m:'Obligatoria'},{id:'rosary-mystery',v:mystery,m:'Selecciona uno'},{id:'rosary-intention',v:intention,m:'Obligatoria'}].forEach(f => {
+            [{id:'rosary-country',v:country,m:'Selecciona un país'},{id:'rosary-city',v:city,m:'Selecciona una localidad'},{id:'rosary-place',v:place,m:'Obligatorio'},{id:'rosary-date',v:date,m:'Obligatoria'},{id:'rosary-time',v:time,m:'Obligatoria'},{id:'rosary-mystery',v:mystery,m:'Selecciona uno'},{id:'rosary-intention',v:intention,m:'Obligatoria'}].forEach(f => {
                 const el = document.getElementById(f.id), g = el?.closest('.auth-field'), er = g?.querySelector('.field-error');
                 if (!f.v) { if (g) g.classList.add('has-error'); if (er) er.textContent = f.m; hasErr = true; }
                 else { if (g) { g.classList.remove('has-error'); g.classList.add('has-success'); } if (er) er.textContent = ''; }
@@ -210,7 +318,8 @@ const app = {
             await new Promise(r => setTimeout(r, 800));
             const user = auth.getCurrentUser();
             const address = document.getElementById('rosary-address') ? document.getElementById('rosary-address').value.trim() : '';
-            const rosary = { id: Date.now().toString(36)+Math.random().toString(36).substr(2), place: auth.sanitize(place), address: auth.sanitize(address), date, time, mystery, intention: auth.sanitize(intention), lat: this.pickerLocation.lat, lng: this.pickerLocation.lng, creatorId: user?.id||'anon', creatorName: user?.name||'Anónimo', createdAt: new Date().toISOString(), participants: 1 };
+            const countryName = document.getElementById('rosary-country') ? document.getElementById('rosary-country').options[document.getElementById('rosary-country').selectedIndex].text : '';
+            const rosary = { id: Date.now().toString(36)+Math.random().toString(36).substr(2), place: auth.sanitize(place), address: auth.sanitize(address), country: country, countryName: countryName, city: city, date, time, mystery, intention: auth.sanitize(intention), lat: this.pickerLocation.lat, lng: this.pickerLocation.lng, creatorId: user?.id||'anon', creatorName: user?.name||'Anónimo', createdAt: new Date().toISOString(), participants: 1 };
             this.saveRosary(rosary); this.addRosaryCard(rosary);
             btn.classList.remove('loading'); btn.disabled = false;
             form.reset(); this.pickerLocation = null;
@@ -227,6 +336,7 @@ const app = {
         const user = auth.getCurrentUser();
         const details = document.getElementById('create-success-details');
         details.innerHTML = '<div class="success-detail-row"><i class="ri-map-pin-fill"></i> ' + rosary.place + '</div>' +
+            (rosary.city ? '<div class="success-detail-row"><i class="ri-building-fill"></i> ' + rosary.city + ', ' + (rosary.countryName || '') + '</div>' : '') +
             (rosary.address ? '<div class="success-detail-row"><i class="ri-road-map-fill"></i> ' + rosary.address + '</div>' : '') +
             '<div class="success-detail-row"><i class="ri-calendar-fill"></i> ' + ds + ' ' + rosary.time + ' hs</div>' +
             '<div class="success-detail-row"><i class="ri-sparkling-fill"></i> Misterios ' + rosary.mystery + '</div>' +
@@ -241,6 +351,8 @@ const app = {
         document.getElementById('create-rosary-form-wrapper').style.display = '';
         const form = document.getElementById('create-rosary-form');
         if (form) form.reset();
+        const citySelect = document.getElementById('rosary-city');
+        if (citySelect) { citySelect.innerHTML = '<option value="">Primero selecciona un país...</option>'; citySelect.disabled = true; }
         this.pickerLocation = null;
         if (this.pickerMarker && this.pickerMap) { this.pickerMap.removeLayer(this.pickerMarker); this.pickerMarker = null; }
         const ov = document.getElementById('picker-overlay'); if (ov) ov.style.display = '';
@@ -360,8 +472,12 @@ const app = {
         if (screenId === 'screen-create-rosary') setTimeout(() => this.initPickerMap(), 400);
         if (screenId === 'screen-map') setTimeout(() => this.initBuscarMap(), 400);
         if (screenId === 'screen-rosary-detail' && this.detailMap) setTimeout(() => this.detailMap.invalidateSize(), 350);
-        if (screenId === 'screen-rezo' && !this._counterStarted) { this._counterStarted = true; this.startOnlineCounter(); }
-        if (screenId === 'screen-rezo' && typeof updateVideoCallButton === 'function') { updateVideoCallButton(this._currentRosaryCreatorId || null); }
+        if (screenId === 'screen-rezo') {
+            if (!this._counterStarted) { this._counterStarted = true; this.startOnlineCounter(); }
+            if (typeof updateRezoPage === 'function') {
+                updateRezoPage(this._currentRosary || null);
+            }
+        }
         if (screenId === 'screen-live') this.renderContinuo();
         if (screenId === 'screen-como-rezar') this.highlightTodayMystery();
         if (screenId === 'screen-cenaculo') setTimeout(function() { if (typeof initCenaculoMap === 'function') initCenaculoMap(); }, 400);
@@ -420,12 +536,33 @@ const app = {
 
     updateNavVisibility(s) {
         const nav = document.getElementById('main-nav');
-        const hide = ['screen-splash','screen-live','screen-rezo','screen-register','screen-login','screen-forgot-password','screen-reset-password','screen-create-rosary','screen-rosary-detail'];
-        if (hide.includes(s)) { nav.style.transform='translateY(100%)'; nav.style.opacity='0'; nav.style.pointerEvents='none'; }
-        else { nav.style.transform='translateY(0)'; nav.style.opacity='1'; nav.style.pointerEvents='all';
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            if (s==='screen-map') document.querySelectorAll('.nav-item')[0].classList.add('active');
-            if (s==='screen-profile') document.querySelectorAll('.nav-item')[1].classList.add('active');
+        const hideScreens = ['screen-register','screen-login','screen-forgot-password','screen-reset-password'];
+        if (hideScreens.includes(s)) {
+            nav.style.transform='translateY(100%)'; nav.style.opacity='0'; nav.style.pointerEvents='none';
+        } else {
+            nav.style.transform='translateY(0)'; nav.style.opacity='1'; nav.style.pointerEvents='all';
+            // Map screens to nav items
+            const navMap = {
+                'screen-splash': 0,
+                'screen-map': 1,
+                'screen-create-rosary': 2,
+                'screen-rezo': 3,
+                'screen-live': 4,
+                'screen-iglesias': 5,
+                'screen-cenaculo': 6,
+                'screen-chat': 7,
+                'screen-profile': 8,
+                'screen-rosary-detail': 1,
+                'screen-como-rezar': 3,
+                'screen-porque-rezar': 3,
+                'screen-apariciones': 3,
+                'screen-intenciones': 3,
+                'screen-event': 1
+            };
+            const items = document.querySelectorAll('#main-nav .nav-item');
+            items.forEach(el => el.classList.remove('active'));
+            const idx = navMap[s];
+            if (idx !== undefined && items[idx]) items[idx].classList.add('active');
         }
     },
 
@@ -468,6 +605,7 @@ const app = {
         if (savedCity && pc) pc.textContent = savedCity;
         this.renderProfileSlots();
         this.renderProfileJoined();
+        this.renderProfileMyRosaries();
     },
 
     renderProfileSlots() {
