@@ -187,24 +187,95 @@ const db = {
         return data || [];
     },
 
-    // ==================== MENSAJES ====================
+    // ==================== MENSAJES (REAL) ====================
     async sendMessage(fromId, toId, text) {
-        if (!sbClient) return;
-        await sbClient.from('messages').insert({
+        if (!sbClient) return null;
+        const { data, error } = await sbClient.from('messages').insert({
             from_id: fromId,
             to_id: toId,
             text: text
-        });
+        }).select().single();
+        if (error) { console.error('Error sending message:', error); return null; }
+        return data;
     },
 
-    async getMessages(userId) {
+    async getConversations(userId) {
         if (!sbClient) return [];
-        const { data } = await sbClient.from('messages')
-            .select('*, profiles!from_id(name, username)')
+        // Get all messages involving this user, ordered by most recent
+        const { data, error } = await sbClient.from('messages')
+            .select('*')
             .or(`from_id.eq.${userId},to_id.eq.${userId}`)
-            .order('created_at', { ascending: false })
-            .limit(50);
+            .order('created_at', { ascending: false });
+        if (error) { console.error('Error getting conversations:', error); return []; }
+        if (!data || data.length === 0) return [];
+
+        // Group by conversation partner
+        var convMap = {};
+        data.forEach(function(msg) {
+            var partnerId = msg.from_id === userId ? msg.to_id : msg.from_id;
+            if (!convMap[partnerId]) {
+                convMap[partnerId] = {
+                    partnerId: partnerId,
+                    lastMessage: msg,
+                    unreadCount: 0
+                };
+            }
+            if (msg.to_id === userId && !msg.read) {
+                convMap[partnerId].unreadCount++;
+            }
+        });
+        return Object.values(convMap);
+    },
+
+    async getConversationMessages(userId, partnerId) {
+        if (!sbClient) return [];
+        const { data, error } = await sbClient.from('messages')
+            .select('*')
+            .or(`and(from_id.eq.${userId},to_id.eq.${partnerId}),and(from_id.eq.${partnerId},to_id.eq.${userId})`)
+            .order('created_at', { ascending: true });
+        if (error) { console.error('Error getting messages:', error); return []; }
         return data || [];
+    },
+
+    async markConversationAsRead(userId, partnerId) {
+        if (!sbClient) return;
+        await sbClient.from('messages')
+            .update({ read: true })
+            .eq('from_id', partnerId)
+            .eq('to_id', userId)
+            .eq('read', false);
+    },
+
+    async getUnreadCount(userId) {
+        if (!sbClient) return 0;
+        const { count, error } = await sbClient.from('messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('to_id', userId)
+            .eq('read', false);
+        if (error) return 0;
+        return count || 0;
+    },
+
+    async getAllUsers() {
+        if (!sbClient) return [];
+        const { data } = await sbClient.from('profiles')
+            .select('id, name, username, email')
+            .order('name', { ascending: true });
+        return data || [];
+    },
+
+    subscribeToMessages(userId, callback) {
+        if (!sbClient) return null;
+        return sbClient.channel('user-messages-' + userId)
+            .on('postgres_changes', {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'messages',
+                filter: 'to_id=eq.' + userId
+            }, function(payload) {
+                callback(payload.new);
+            })
+            .subscribe();
     },
 
     // ==================== REALTIME ====================

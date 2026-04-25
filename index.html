@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -2306,97 +2306,20 @@ if (document.readyState !== 'loading') renderIglesiasGrid();
                 </div>
             </div>
             <div class="chat-contacts-list" id="chat-contacts-list">
-                <div class="chat-contact" onclick="openChat('maria')" data-id="maria">
-                    <div class="chat-avatar-wrapper">
-                        <div class="chat-contact-avatar" style="background:linear-gradient(135deg,#A8C4DE,#6a9cc4)">M</div>
-                        <span class="chat-online-dot"></span>
-                    </div>
-                    <div class="chat-contact-info">
-                        <div class="chat-contact-top">
-                            <h4>María García</h4>
-                            <span class="chat-time">10:32</span>
-                        </div>
-                        <div class="chat-contact-bottom">
-                            <p class="chat-last-msg">Hola! Nos vemos en el rosario?</p>
-                            <span class="chat-unread">2</span>
-                        </div>
-                    </div>
+                <!-- Dynamic: populated from Supabase -->
+                <div id="chat-loading" style="text-align:center;padding:40px 20px;color:var(--clr-text-muted)">
+                    <i class="ri-loader-4-line" style="font-size:1.5rem;animation:spin 1s linear infinite;display:block;margin-bottom:8px"></i>
+                    <span style="font-size:0.82rem">Cargando conversaciones...</span>
                 </div>
-                <div class="chat-contact" onclick="openChat('juan')" data-id="juan">
-                    <div class="chat-avatar-wrapper">
-                        <div class="chat-contact-avatar" style="background:linear-gradient(135deg,#F4D35E,#e0a800)">J</div>
-                        <span class="chat-online-dot"></span>
-                    </div>
-                    <div class="chat-contact-info">
-                        <div class="chat-contact-top">
-                            <h4>Juan Rodríguez</h4>
-                            <span class="chat-time">09:15</span>
-                        </div>
-                        <div class="chat-contact-bottom">
-                            <p class="chat-last-msg"><i class="ri-check-double-fill" style="color:#3DA3D4;font-size:0.85rem"></i> Amén hermano!</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="chat-contact" onclick="openChat('laura')" data-id="laura">
-                    <div class="chat-avatar-wrapper">
-                        <div class="chat-contact-avatar" style="background:linear-gradient(135deg,#B5D6A7,#6abf4c)">L</div>
-                    </div>
-                    <div class="chat-contact-info">
-                        <div class="chat-contact-top">
-                            <h4>Laura Martínez</h4>
-                            <span class="chat-time">Ayer</span>
-                        </div>
-                        <div class="chat-contact-bottom">
-                            <p class="chat-last-msg">Gracias por la intención</p>
-                            <span class="chat-unread">1</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="chat-contact" onclick="openChat('sofia')" data-id="sofia">
-                    <div class="chat-avatar-wrapper">
-                        <div class="chat-contact-avatar" style="background:linear-gradient(135deg,#E8A0BF,#c06090)">S</div>
-                        <span class="chat-online-dot"></span>
-                    </div>
-                    <div class="chat-contact-info">
-                        <div class="chat-contact-top">
-                            <h4>Sofía López</h4>
-                            <span class="chat-time">Ayer</span>
-                        </div>
-                        <div class="chat-contact-bottom">
-                            <p class="chat-last-msg">Te mando las fotos del encuentro</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="chat-contact" onclick="openChat('pedro')" data-id="pedro">
-                    <div class="chat-avatar-wrapper">
-                        <div class="chat-contact-avatar" style="background:linear-gradient(135deg,#C4B5FD,#8B5CF6)">P</div>
-                    </div>
-                    <div class="chat-contact-info">
-                        <div class="chat-contact-top">
-                            <h4>Pedro Fernández</h4>
-                            <span class="chat-time">Lun</span>
-                        </div>
-                        <div class="chat-contact-bottom">
-                            <p class="chat-last-msg"><i class="ri-check-double-fill" style="color:#3DA3D4;font-size:0.85rem"></i> El próximo rosario es el jueves</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="chat-contact" onclick="openChat('ana')" data-id="ana">
-                    <div class="chat-avatar-wrapper">
-                        <div class="chat-contact-avatar" style="background:linear-gradient(135deg,#89CFF0,#4da8d4)">A</div>
-                        <span class="chat-online-dot"></span>
-                    </div>
-                    <div class="chat-contact-info">
-                        <div class="chat-contact-top">
-                            <h4>Ana Pérez</h4>
-                            <span class="chat-time">Dom</span>
-                        </div>
-                        <div class="chat-contact-bottom">
-                            <p class="chat-last-msg">Dios te bendiga!</p>
-                        </div>
-                    </div>
+                <div id="chat-empty" style="display:none;text-align:center;padding:40px 20px">
+                    <div style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#3DA3D4,#2E8BC0);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:1.5rem;color:white"><i class="ri-chat-3-line"></i></div>
+                    <h4 style="color:var(--clr-text-title);font-size:0.95rem;margin:0 0 6px">Sin conversaciones</h4>
+                    <p style="font-size:0.8rem;color:var(--clr-text-muted);margin:0 0 16px">Inicia una conversación con otros miembros de la comunidad</p>
+                    <button onclick="showNewChatModal()" style="background:linear-gradient(135deg,#3DA3D4,#2E8BC0);color:white;border:none;padding:10px 24px;border-radius:20px;font-weight:700;font-size:0.85rem;cursor:pointer;font-family:'Inter',sans-serif"><i class="ri-add-line"></i> Nueva Conversación</button>
                 </div>
             </div>
+            <!-- New Chat FAB -->
+            <button id="new-chat-fab" onclick="showNewChatModal()" style="position:absolute;bottom:16px;right:16px;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#3DA3D4,#2E8BC0);color:white;border:none;font-size:1.3rem;cursor:pointer;box-shadow:0 6px 24px rgba(46,139,192,0.4);display:flex;align-items:center;justify-content:center;z-index:5;transition:transform 0.2s" onmouseenter="this.style.transform='scale(1.1)'" onmouseleave="this.style.transform='scale(1)'"><i class="ri-edit-line"></i></button>
         </div>
 
         <!-- Chat Conversation -->
@@ -2837,6 +2760,7 @@ app.navigate = function(screenId) {
     // Clear message badge when entering chat screen
     if (screenId === 'screen-chat') {
         if (typeof clearNavMsgBadge === 'function') clearNavMsgBadge();
+        if (typeof initRealChat === 'function') initRealChat();
     }
 };
 // Also init on DOMContentLoaded if profile is first visible
@@ -2846,442 +2770,219 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script>
-// Chat System
+// Chat System — REAL (Supabase)
 var currentChatId = null;
-var chatData = {
-    maria: { name:'Maria Garcia', initial:'M', color:'#A8C4DE', messages:[
-        {from:'them', text:'Hola! Como estas?', time:'10:30'},
-        {from:'them', text:'Nos vemos en el rosario?', time:'10:32'}
-    ]},
-    juan: { name:'Juan Rodriguez', initial:'J', color:'#F4D35E', messages:[
-        {from:'me', text:'Hermano, que lindo el rosario de ayer', time:'09:10'},
-        {from:'them', text:'Amen hermano!', time:'09:15'}
-    ]},
-    laura: { name:'Laura Martinez', initial:'L', color:'#B5D6A7', messages:[
-        {from:'me', text:'Te agrego en la intencion de hoy', time:'Ayer'},
-        {from:'them', text:'Gracias por la intencion', time:'Ayer'}
-    ]},
-    sofia: { name:'Sofia Lopez', initial:'S', color:'#E8A0BF', messages:[
-        {from:'them', text:'Hola! Vi que creaste un rosario en la plaza', time:'Ayer'},
-        {from:'them', text:'Te mando las fotos del encuentro', time:'Ayer'}
-    ]},
-    pedro: { name:'Pedro Fernandez', initial:'P', color:'#C4B5FD', messages:[
-        {from:'me', text:'Pedro, cuando es el proximo rosario?', time:'Lun'},
-        {from:'them', text:'El proximo rosario es el jueves', time:'Lun'}
-    ]},
-    ana: { name:'Ana Perez', initial:'A', color:'#89CFF0', messages:[
-        {from:'them', text:'Dios te bendiga!', time:'Dom'}
-    ]}
-};
+var currentChatPartner = null;
+var chatProfiles = {};
+var chatSubscription = null;
+var chatColors = ['#A8C4DE','#F4D35E','#B5D6A7','#E8A0BF','#C4B5FD','#89CFF0','#FCA5A5','#86EFAC'];
+var chatData = {};
 
-// Load saved messages from localStorage
-var savedChats = localStorage.getItem('redmaria_chats');
-if (savedChats) {
-    try { chatData = JSON.parse(savedChats); } catch(e) {}
+function getChatColor(name) {
+    var h = 0; for (var i=0;i<(name||'').length;i++) h = name.charCodeAt(i)+((h<<5)-h);
+    return chatColors[Math.abs(h)%chatColors.length];
 }
 
-var autoReplies = [
-    'Amen!', 'Que lindo! Dios te bendiga', 'Si, nos vemos ahi!',
-    'Gracias por avisar', 'Dale, perfecto!', 'Te agrego en mis intenciones',
-    'Ave Maria!', 'Que hermoso rosario hoy', 'Conta conmigo!',
-    'Dios te bendiga siempre', 'Si! Llevo mas de 10 dias seguidos rezando'
-];
-function isChatBlocked(id) {
-    var c = chatData[id];
-    if (!c) return false;
-    var blocked = [];
-    try { blocked = JSON.parse(localStorage.getItem('redmaria_blocked_users')) || []; } catch(e) {}
-    return blocked.indexOf(c.name) !== -1;
+function formatChatTime(iso) {
+    if (!iso) return '';
+    var d = new Date(iso), now = new Date();
+    var hh = d.getHours().toString().padStart(2,'0'), mm = d.getMinutes().toString().padStart(2,'0');
+    if (d.toDateString() === now.toDateString()) return hh+':'+mm;
+    var yd = new Date(now); yd.setDate(yd.getDate()-1);
+    if (d.toDateString() === yd.toDateString()) return 'Ayer';
+    return d.getDate()+'/'+(d.getMonth()+1);
 }
 
-function openChat(id) {
-    currentChatId = id;
-    var c = chatData[id];
-    if (!c) return;
-    var isBlocked = isChatBlocked(id);
-    document.getElementById('chat-contacts-view').style.display = 'none';
-    document.getElementById('chat-conversation-view').style.display = 'flex';
-    document.getElementById('chat-conv-name').textContent = c.name;
-    document.getElementById('chat-title').textContent = c.name;
+async function initRealChat() {
+    var user = await db.getUser();
+    if (!user) { showChatEmpty('Iniciá sesión para chatear'); return; }
+    var loading = document.getElementById('chat-loading');
+    if (loading) loading.style.display = 'block';
 
-    // Avatar: hide initial & show blocked state, or show normal
-    var avatarEl = document.getElementById('chat-conv-avatar');
-    var onlineDot = document.getElementById('chat-conv-online');
-    var statusEl = document.getElementById('chat-conv-status');
-    var inputBar = document.querySelector('.chat-input-bar');
-    var typingEl = document.getElementById('chat-typing');
-    var convActions = document.querySelector('.chat-conv-actions');
-    var blockBtn = document.getElementById('chat-block-btn');
+    var allUsers = await db.getAllUsers();
+    allUsers.forEach(function(u) { chatProfiles[u.id] = u; });
+    var convs = await db.getConversations(user.id);
 
-    // Remove any previous blocked banner
-    var oldBanner = document.getElementById('chat-blocked-banner');
-    if (oldBanner) oldBanner.remove();
+    if (loading) loading.style.display = 'none';
+    var empty = document.getElementById('chat-empty');
+    if (convs.length === 0) { if (empty) empty.style.display = 'block'; return; }
+    if (empty) empty.style.display = 'none';
+    renderContactList(convs, user.id);
 
-    if (isBlocked) {
-        // Blocked state: grey avatar with ban icon
-        avatarEl.textContent = '';
-        avatarEl.classList.add('blocked-avatar');
-        if (onlineDot) onlineDot.style.display = 'none';
-        if (statusEl) { statusEl.textContent = 'Bloqueado'; statusEl.style.color = '#e74c3c'; }
-        // Hide input bar, show blocked banner
-        if (inputBar) inputBar.style.display = 'none';
-        if (typingEl) typingEl.style.display = 'none';
-        // Hide video call button
-        if (convActions) {
-            var videoBtn = convActions.querySelector('[onclick="chatVideoCall()"]');
-            if (videoBtn) videoBtn.style.display = 'none';
+    if (chatSubscription) { try { chatSubscription.unsubscribe(); } catch(e){} }
+    chatSubscription = db.subscribeToMessages(user.id, function(newMsg) {
+        incrementNavMsgBadge();
+        if (currentChatId === newMsg.from_id) {
+            appendMessageBubble(newMsg, false);
+            db.markConversationAsRead(user.id, newMsg.from_id);
         }
-        // Update menu block button text
-        if (blockBtn) {
-            blockBtn.innerHTML = '<i class="ri-lock-unlock-line"></i> Desbloquear usuario';
-            blockBtn.onclick = function() { unblockChatUser(); };
-        }
-        // Insert blocked banner before the conversation view end
-        var banner = document.createElement('div');
-        banner.className = 'chat-blocked-banner';
-        banner.id = 'chat-blocked-banner';
-        banner.innerHTML = '<i class="ri-forbid-line"></i>' +
-            '<p>Bloqueaste a <strong>' + c.name + '</strong>.<br>No podés enviar ni recibir mensajes.</p>' +
-            '<button class="unblock-btn" onclick="unblockChatUser()"><i class="ri-lock-unlock-line"></i> Desbloquear</button>';
-        var convView = document.getElementById('chat-conversation-view');
-        convView.appendChild(banner);
-    } else {
-        // Normal state
-        avatarEl.textContent = c.initial;
-        avatarEl.classList.remove('blocked-avatar');
-        avatarEl.style.background = c.color;
-        if (onlineDot) onlineDot.style.display = '';
-        if (statusEl) { statusEl.textContent = 'en línea'; statusEl.style.color = '#27ae60'; }
-        if (inputBar) inputBar.style.display = 'flex';
-        // Show video call button
-        if (convActions) {
-            var videoBtn = convActions.querySelector('[onclick="chatVideoCall()"]');
-            if (videoBtn) videoBtn.style.display = '';
-        }
-        // Update menu block button text
-        if (blockBtn) {
-            blockBtn.innerHTML = '<i class="ri-forbid-line"></i> Bloquear usuario';
-            blockBtn.onclick = function() { blockChatUser(); };
-        }
-    }
+        refreshContactList();
+    });
 
-    renderMessages();
-    // Remove unread badge
-    var contacts = document.querySelectorAll('.chat-contact');
-    var keys = Object.keys(chatData);
-    var idx = keys.indexOf(id);
-    if (idx >= 0 && contacts[idx]) {
-        var badge = contacts[idx].querySelector('.chat-unread');
-        if (badge) badge.remove();
-    }
+    var unread = await db.getUnreadCount(user.id);
+    if (unread > 0) { navUnreadCount = unread; updateNavMsgBadges(); }
+}
+
+function showChatEmpty(msg) {
+    var loading = document.getElementById('chat-loading');
+    var empty = document.getElementById('chat-empty');
+    if (loading) loading.style.display = 'none';
+    if (empty) { empty.style.display = 'block'; if (msg) { var h = empty.querySelector('h4'); if(h) h.textContent = msg; } }
+}
+
+function renderContactList(convs, myId) {
+    var list = document.getElementById('chat-contacts-list');
+    list.querySelectorAll('.chat-contact').forEach(function(el) { el.remove(); });
+    convs.forEach(function(c) {
+        var p = chatProfiles[c.partnerId] || { name: 'Usuario', username: '' };
+        var color = getChatColor(p.name);
+        var initial = (p.name||'?').charAt(0).toUpperCase();
+        var lastText = c.lastMessage ? c.lastMessage.text : '';
+        if (lastText.length > 40) lastText = lastText.substring(0,40) + '...';
+        var isSent = c.lastMessage && c.lastMessage.from_id === myId;
+        var prefix = isSent ? '<i class="ri-check-double-fill" style="color:#3DA3D4;font-size:0.85rem"></i> ' : '';
+        var unreadHtml = c.unreadCount > 0 ? '<span class="chat-unread">' + c.unreadCount + '</span>' : '';
+        var timeStr = c.lastMessage ? formatChatTime(c.lastMessage.created_at) : '';
+        var div = document.createElement('div');
+        div.className = 'chat-contact'; div.setAttribute('data-id', c.partnerId);
+        div.onclick = function() { openChat(c.partnerId); };
+        div.innerHTML = '<div class="chat-avatar-wrapper"><div class="chat-contact-avatar" style="background:linear-gradient(135deg,'+color+','+color+'cc)">'+initial+'</div></div><div class="chat-contact-info"><div class="chat-contact-top"><h4>'+p.name+'</h4><span class="chat-time">'+timeStr+'</span></div><div class="chat-contact-bottom"><p class="chat-last-msg">'+prefix+lastText+'</p>'+unreadHtml+'</div></div>';
+        list.appendChild(div);
+    });
+}
+
+async function refreshContactList() {
+    var user = await db.getUser(); if (!user) return;
+    var convs = await db.getConversations(user.id);
+    var empty = document.getElementById('chat-empty');
+    if (convs.length > 0 && empty) empty.style.display = 'none';
+    renderContactList(convs, user.id);
+}
+
+async function openChat(partnerId) {
+    var user = await db.getUser(); if (!user) return;
+    currentChatId = partnerId;
+    var p = chatProfiles[partnerId];
+    if (!p) { var users = await db.getAllUsers(); users.forEach(function(u){chatProfiles[u.id]=u;}); p = chatProfiles[partnerId]; }
+    if (!p) p = { name:'Usuario', username:'' };
+    currentChatPartner = p;
+    chatData[partnerId] = { name: p.name, initial: (p.name||'?').charAt(0).toUpperCase(), color: getChatColor(p.name), messages: [] };
+
+    var hdr = document.getElementById('chat-header-name'); if(hdr) hdr.textContent = p.name;
+    var hdr2 = document.getElementById('chat-header-status'); if(hdr2) hdr2.textContent = p.username || '';
+    var avatar = document.querySelector('.chat-header-avatar');
+    if (avatar) { avatar.style.background = 'linear-gradient(135deg,'+getChatColor(p.name)+','+getChatColor(p.name)+'cc)'; avatar.textContent = (p.name||'?').charAt(0).toUpperCase(); }
+
+    document.querySelector('.chat-contacts-wrap').style.display = 'none';
+    document.querySelector('.chat-conversation').style.display = 'flex';
+    var fab = document.getElementById('new-chat-fab'); if(fab) fab.style.display = 'none';
+
+    var msgArea = document.getElementById('chat-messages');
+    if(msgArea) msgArea.innerHTML = '<div style="text-align:center;padding:20px;color:var(--clr-text-muted);font-size:0.8rem"><i class="ri-loader-4-line" style="animation:spin 1s linear infinite"></i></div>';
+    var messages = await db.getConversationMessages(user.id, partnerId);
+    if(msgArea) msgArea.innerHTML = '';
+    messages.forEach(function(m) { appendMessageBubble(m, m.from_id === user.id); });
+    if(msgArea) msgArea.scrollTop = msgArea.scrollHeight;
+
+    await db.markConversationAsRead(user.id, partnerId);
+    refreshContactList();
 }
 
 function closeChat() {
-    currentChatId = null;
-    document.getElementById('chat-contacts-view').style.display = 'flex';
-    document.getElementById('chat-conversation-view').style.display = 'none';
-    document.getElementById('chat-title').textContent = 'Mensajes';
+    currentChatId = null; currentChatPartner = null;
+    document.querySelector('.chat-contacts-wrap').style.display = 'flex';
+    document.querySelector('.chat-conversation').style.display = 'none';
+    var fab = document.getElementById('new-chat-fab'); if(fab) fab.style.display = 'flex';
+    refreshContactList();
 }
 
-function renderMessages() {
-    var el = document.getElementById('chat-messages');
-    var c = chatData[currentChatId];
-    if (!c) return;
-    el.innerHTML = '';
-    c.messages.forEach(function(m, idx) {
-        var wrapper = document.createElement('div');
-        wrapper.className = 'chat-msg-wrapper ' + (m.from === 'me' ? 'sent' : 'received');
-
-        var div = document.createElement('div');
-        div.className = 'chat-msg ' + (m.from === 'me' ? 'sent' : 'received');
-        div.innerHTML = m.text + '<div class="chat-msg-time">' + m.time + '</div>';
-
-        // Action buttons bar
-        var actions = document.createElement('div');
-        actions.className = 'chat-msg-actions';
-
-        // Copy text button
-        var copyBtn = document.createElement('button');
-        copyBtn.className = 'msg-action-btn';
-        copyBtn.title = 'Copiar texto';
-        copyBtn.innerHTML = '<i class="ri-file-copy-line"></i>';
-        copyBtn.onclick = function(e) { e.stopPropagation(); copyMsgText(m, copyBtn); };
-        actions.appendChild(copyBtn);
-
-        // If media message, add download button
-        if (m.isMedia) {
-            var dlBtn = document.createElement('button');
-            dlBtn.className = 'msg-action-btn';
-            dlBtn.title = 'Descargar archivo';
-            dlBtn.innerHTML = '<i class="ri-download-line"></i>';
-            dlBtn.onclick = function(e) { e.stopPropagation(); downloadMsgMedia(m); };
-            actions.appendChild(dlBtn);
-        }
-
-        // Share / Forward button
-        var shareBtn = document.createElement('button');
-        shareBtn.className = 'msg-action-btn';
-        shareBtn.title = 'Compartir';
-        shareBtn.innerHTML = '<i class="ri-share-forward-line"></i>';
-        shareBtn.onclick = function(e) { e.stopPropagation(); shareMsgContent(m); };
-        actions.appendChild(shareBtn);
-
-        wrapper.appendChild(div);
-        wrapper.appendChild(actions);
-        el.appendChild(wrapper);
-    });
-    el.scrollTop = el.scrollHeight;
+function appendMessageBubble(msg, isMe) {
+    var msgArea = document.getElementById('chat-messages'); if (!msgArea) return;
+    var div = document.createElement('div');
+    div.className = 'chat-msg ' + (isMe ? 'sent' : '');
+    var time = formatChatTime(msg.created_at);
+    div.innerHTML = '<div class="chat-msg-text">' + msg.text + '</div><div class="chat-msg-meta">' + time + (isMe ? ' <i class="ri-check-double-fill"></i>' : '') + '</div>';
+    var actions = document.createElement('div'); actions.className = 'msg-action-bar';
+    actions.innerHTML = '<button class="msg-action-btn" title="Copiar" onclick="copyMsgText(this)"><i class="ri-file-copy-line"></i></button><button class="msg-action-btn" title="Compartir" onclick="shareMsgContent(this)"><i class="ri-share-forward-line"></i></button>';
+    div.appendChild(actions);
+    msgArea.appendChild(div);
+    msgArea.scrollTop = msgArea.scrollHeight;
 }
 
-// Copy message text to clipboard
-function copyMsgText(msg, btn) {
-    // Extract plain text (strip HTML tags)
-    var tmp = document.createElement('div');
-    tmp.innerHTML = msg.text;
-    var plainText = tmp.textContent || tmp.innerText || '';
-    // Remove the file name line for media
-    plainText = plainText.replace(/\n?[\r\n]?$/,'').trim();
-    if (!plainText) { plainText = msg.text; }
-
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(plainText).then(function() {
-            showCopyFeedback(btn);
-        }).catch(function() {
-            fallbackCopy(plainText, btn);
-        });
-    } else {
-        fallbackCopy(plainText, btn);
-    }
-}
-
-function fallbackCopy(text, btn) {
-    var ta = document.createElement('textarea');
-    ta.value = text;
-    ta.style.cssText = 'position:fixed;left:-9999px;top:-9999px;opacity:0';
-    document.body.appendChild(ta);
-    ta.select();
-    try { document.execCommand('copy'); showCopyFeedback(btn); }
-    catch(e) { alert('No se pudo copiar'); }
-    document.body.removeChild(ta);
-}
-
-function showCopyFeedback(btn) {
-    var origHTML = btn.innerHTML;
-    btn.innerHTML = '<i class="ri-check-line"></i>';
-    btn.classList.add('msg-action-success');
-    setTimeout(function() {
-        btn.innerHTML = origHTML;
-        btn.classList.remove('msg-action-success');
-    }, 1500);
-}
-
-// Download media from a message
-function downloadMsgMedia(msg) {
-    var tmp = document.createElement('div');
-    tmp.innerHTML = msg.text;
-    var mediaEl = tmp.querySelector('img') || tmp.querySelector('video');
-    if (mediaEl && mediaEl.src) {
-        var a = document.createElement('a');
-        a.href = mediaEl.src;
-        a.download = 'archivo_redmaria';
-        a.target = '_blank';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-    }
-}
-
-// Share / Forward message content
-function shareMsgContent(msg) {
-    // Extract plain text
-    var tmp = document.createElement('div');
-    tmp.innerHTML = msg.text;
-    var plainText = (tmp.textContent || tmp.innerText || '').trim();
-
-    // Check for media
-    var mediaEl = tmp.querySelector('img') || tmp.querySelector('video');
-    var hasMedia = !!mediaEl;
-
-    // Use Web Share API if available
-    if (navigator.share) {
-        var shareData = { title: 'Red Maria', text: plainText || 'Mensaje compartido desde Red Maria' };
-
-        // If it's a media message with a blob/data URL, try to share as file
-        if (hasMedia && mediaEl.src && mediaEl.src.startsWith('data:')) {
-            try {
-                var arr = mediaEl.src.split(',');
-                var mime = arr[0].match(/:(.*?);/)[1];
-                var bstr = atob(arr[1]);
-                var n = bstr.length;
-                var u8arr = new Uint8Array(n);
-                for (var i = 0; i < n; i++) u8arr[i] = bstr.charCodeAt(i);
-                var ext = mime.split('/')[1] || 'bin';
-                var file = new File([u8arr], 'archivo_redmaria.' + ext, { type: mime });
-                shareData.files = [file];
-                if (navigator.canShare && navigator.canShare(shareData)) {
-                    navigator.share(shareData).catch(function(){});
-                    return;
-                }
-            } catch(e) { console.log('File share fallback'); }
-        }
-
-        navigator.share(shareData).catch(function(){});
-        return;
-    }
-
-    // Fallback: show forward-to-contact modal
-    showForwardModal(msg, plainText);
-}
-
-// Forward modal: lets user pick a contact to forward the message to
-function showForwardModal(msg, plainText) {
-    // Remove existing modal
-    var old = document.getElementById('forward-modal');
-    if (old) old.remove();
-
-    var modal = document.createElement('div');
-    modal.className = 'forward-modal-overlay';
-    modal.id = 'forward-modal';
-
-    var card = document.createElement('div');
-    card.className = 'forward-modal-card';
-
-    var header = '<div class="forward-modal-header"><h3><i class="ri-share-forward-fill"></i> Reenviar mensaje</h3><button class="forward-close-btn" onclick="document.getElementById(\'forward-modal\').remove()"><i class="ri-close-line"></i></button></div>';
-    var preview = '<div class="forward-msg-preview"><div class="forward-msg-bubble">' + (plainText.length > 80 ? plainText.substring(0, 80) + '...' : (plainText || '<i class="ri-image-line"></i> Archivo multimedia')) + '</div></div>';
-
-    var contactsList = '<div class="forward-contacts-list">';
-    var keys = Object.keys(chatData);
-    keys.forEach(function(key) {
-        if (key === currentChatId) return;
-        var ct = chatData[key];
-        contactsList += '<div class="forward-contact-item" onclick="forwardTo(\'' + key + '\',' + JSON.stringify(msg.text).replace(/'/g, "\\'") + ')">' +
-            '<div class="forward-contact-avatar" style="background:' + (ct.color || '#3DA3D4') + '">' + (ct.initial || ct.name.charAt(0)) + '</div>' +
-            '<span>' + ct.name + '</span>' +
-            '<i class="ri-send-plane-fill"></i>' +
-        '</div>';
-    });
-    contactsList += '</div>';
-
-    // Also add copy link button as alternative
-    var copyAlt = '<button class="forward-copy-alt" onclick="copyForwardText()"><i class="ri-file-copy-line"></i> Copiar al portapapeles</button>';
-
-    card.innerHTML = header + preview + contactsList + copyAlt;
-    modal.appendChild(card);
-    modal.onclick = function(e) { if (e.target === modal) modal.remove(); };
-    document.body.appendChild(modal);
-
-    // Store text for copy
-    modal.dataset.text = plainText;
-}
-
-function forwardTo(contactId, msgText) {
-    var now = new Date();
-    var time = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
-    if (!chatData[contactId]) return;
-    chatData[contactId].messages.push({ from: 'me', text: '↩️ Reenviado: ' + msgText, time: time, isMedia: false });
-    saveChats();
-    updateContactPreview(contactId, '↩️ Reenviado', time);
-    // Close modal
-    var modal = document.getElementById('forward-modal');
-    if (modal) modal.remove();
-    // Show success toast
-    showMsgToast('Mensaje reenviado a ' + chatData[contactId].name);
-}
-
-function copyForwardText() {
-    var modal = document.getElementById('forward-modal');
-    var text = modal ? modal.dataset.text : '';
-    if (!text) return;
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(function() {
-            modal.remove();
-            showMsgToast('Texto copiado al portapapeles');
-        });
-    } else {
-        fallbackCopy(text, null);
-        if (modal) modal.remove();
-        showMsgToast('Texto copiado al portapapeles');
-    }
-}
-
-function showMsgToast(text) {
-    var toast = document.createElement('div');
-    toast.className = 'msg-toast';
-    toast.innerHTML = '<i class="ri-check-double-fill"></i> ' + text;
-    document.body.appendChild(toast);
-    setTimeout(function() { toast.classList.add('visible'); }, 50);
-    setTimeout(function() { toast.classList.remove('visible'); setTimeout(function() { toast.remove(); }, 300); }, 2500);
-}
-
-function sendMessage() {
+async function sendMessage() {
     var input = document.getElementById('chat-input');
     var text = input.value.trim();
     if (!text || !currentChatId) return;
-    // Prevent sending to blocked users
-    if (isChatBlocked(currentChatId)) return;
-    var now = new Date();
-    var time = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
-    chatData[currentChatId].messages.push({from:'me', text:text, time:time});
+    var user = await db.getUser(); if (!user) return;
     input.value = '';
-    renderMessages();
-    saveChats();
-    // Update last message in contact list
-    updateContactPreview(currentChatId, text, time);
-    // Show typing indicator then auto-reply
-    var chatId = currentChatId;
-    var typingEl = document.getElementById('chat-typing');
-    setTimeout(function() {
-        if (typingEl && currentChatId === chatId) typingEl.style.display = 'flex';
-    }, 500);
-    setTimeout(function() {
-        if (typingEl) typingEl.style.display = 'none';
-        var reply = autoReplies[Math.floor(Math.random() * autoReplies.length)];
-        var now2 = new Date();
-        var t2 = now2.getHours().toString().padStart(2,'0') + ':' + now2.getMinutes().toString().padStart(2,'0');
-        chatData[chatId].messages.push({from:'them', text:reply, time:t2});
-        saveChats();
-        updateContactPreview(chatId, reply, t2);
-        if (currentChatId === chatId) renderMessages();
-        addChatNotification(chatData[chatId].name, reply, chatId);
-    }, 1500 + Math.random() * 2000);
+    appendMessageBubble({ text: text, created_at: new Date().toISOString(), from_id: user.id }, true);
+    await db.sendMessage(user.id, currentChatId, text);
 }
+
+function renderMessages() {}
+function saveChats() {}
 
 function updateContactPreview(id, text, time) {
-    var keys = Object.keys(chatData);
-    var idx = keys.indexOf(id);
-    var contacts = document.querySelectorAll('.chat-contact');
-    if (idx >= 0 && contacts[idx]) {
-        var msgEl = contacts[idx].querySelector('.chat-last-msg');
-        var timeEl = contacts[idx].querySelector('.chat-time');
-        if (msgEl) msgEl.textContent = text;
-        if (timeEl) timeEl.textContent = time;
-    }
-}
-
-function saveChats() {
-    localStorage.setItem('redmaria_chats', JSON.stringify(chatData));
+    var el = document.querySelector('.chat-contact[data-id="'+id+'"] .chat-last-msg');
+    if (el) el.textContent = text;
+    var tel = document.querySelector('.chat-contact[data-id="'+id+'"] .chat-time');
+    if (tel) tel.textContent = time;
 }
 
 function filterChats() {
-    var q = document.getElementById('chat-search').value.toLowerCase();
-    var contacts = document.querySelectorAll('.chat-contact');
-    var keys = Object.keys(chatData);
-    contacts.forEach(function(el, i) {
-        var name = chatData[keys[i]]?.name?.toLowerCase() || '';
-        el.style.display = name.includes(q) ? 'flex' : 'none';
+    var q = (document.getElementById('chat-search-input') ? document.getElementById('chat-search-input').value : '').toLowerCase();
+    document.querySelectorAll('#chat-contacts-list .chat-contact').forEach(function(el) {
+        var name = (el.querySelector('h4') ? el.querySelector('h4').textContent : '').toLowerCase();
+        el.style.display = name.indexOf(q) !== -1 ? 'flex' : 'none';
     });
 }
 
 function filterChatTab(btn, tab) {
-    document.querySelectorAll('.chat-tab').forEach(function(t) { t.classList.remove('active'); });
+    document.querySelectorAll('.chat-tab').forEach(function(b){b.classList.remove('active');});
     btn.classList.add('active');
-    var contacts = document.querySelectorAll('.chat-contact');
-    contacts.forEach(function(el) {
-        if (tab === 'all') { el.style.display = 'flex'; }
-        else if (tab === 'unread') { el.style.display = el.querySelector('.chat-unread') ? 'flex' : 'none'; }
-        else if (tab === 'groups') { el.style.display = 'none'; } // No groups yet
+    document.querySelectorAll('#chat-contacts-list .chat-contact').forEach(function(el) {
+        if (tab === 'all') el.style.display = 'flex';
+        else if (tab === 'unread') el.style.display = el.querySelector('.chat-unread') ? 'flex' : 'none';
+        else if (tab === 'groups') el.style.display = 'none';
     });
 }
+
+async function showNewChatModal() {
+    var old = document.getElementById('new-chat-modal'); if (old) old.remove();
+    var user = await db.getUser(); if (!user) return;
+    var users = await db.getAllUsers();
+    users = users.filter(function(u) { return u.id !== user.id; });
+    users.forEach(function(u) { chatProfiles[u.id] = u; });
+    var listHtml = '';
+    if (users.length === 0) { listHtml = '<p style="text-align:center;color:var(--clr-text-muted);font-size:0.82rem;padding:20px">No hay otros usuarios registrados</p>'; }
+    users.forEach(function(u) {
+        var c = getChatColor(u.name);
+        listHtml += '<div class="gc-info-member-item" style="cursor:pointer;padding:10px 4px;border-radius:12px;transition:background 0.15s" onmouseenter="this.style.background=\'rgba(46,139,192,0.06)\'" onmouseleave="this.style.background=\'none\'" onclick="startChatWith(\''+u.id+'\')"><div class="gc-info-member-avatar" style="background:'+c+'">'+u.name.charAt(0).toUpperCase()+'</div><div class="gc-info-member-details"><span class="gc-info-member-name">'+u.name+'</span><span class="gc-info-member-username">'+(u.username||u.email)+'</span></div></div>';
+    });
+    var modal = document.createElement('div');
+    modal.className = 'block-modal-overlay'; modal.id = 'new-chat-modal';
+    modal.innerHTML = '<div class="block-modal-card" style="max-width:380px;max-height:70vh;overflow:hidden"><div class="block-modal-icon-wrap" style="background:rgba(46,139,192,0.12);color:#3DA3D4"><i class="ri-user-add-line"></i></div><h3 class="block-modal-title">Nueva Conversación</h3><p class="block-modal-desc">Seleccioná un usuario para chatear</p><div style="width:100%;max-height:300px;overflow-y:auto;padding:4px 0">'+listHtml+'</div><div class="block-modal-actions"><button class="block-modal-btn block-modal-cancel" onclick="document.getElementById(\'new-chat-modal\').remove()">Cancelar</button></div></div>';
+    document.body.appendChild(modal);
+    requestAnimationFrame(function(){ modal.classList.add('block-modal-visible'); });
+    modal.onclick = function(e) { if (e.target === modal) modal.remove(); };
+}
+
+function startChatWith(userId) {
+    var modal = document.getElementById('new-chat-modal'); if (modal) modal.remove();
+    openChat(userId);
+}
+
+function isChatBlocked(id) {
+    var p = chatProfiles[id]; if (!p) return false;
+    var blocked = []; try { blocked = JSON.parse(localStorage.getItem('redmaria_blocked_users')) || []; } catch(e) {}
+    return blocked.indexOf(p.name) !== -1;
+}
+
+// Init on navigate
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() { initRealChat(); }, 2500);
+});
+
 
 // === Chat Video Call with Ringing ===
 var callState = { overlay: null, ringtoneInterval: null, audioCtx: null, answerTimeout: null };
@@ -5305,4 +5006,3 @@ function populateGcInfoPanel(c) {
 </script>
 </body>
 </html>
-
