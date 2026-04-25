@@ -372,12 +372,25 @@ const auth = {
             loginAt: new Date().toISOString()
         });
 
-        // Also sign in to Supabase for real-time chat
-        if (typeof db !== 'undefined' && db.signIn) {
-            db.signIn(email, password).then(function(result) {
-                if (result.error) console.warn('Supabase login:', result.error.message || result.error);
-                else console.log('✅ Sesión Supabase activa');
-            }).catch(function(e) { console.error('Supabase login error:', e); });
+        // Ensure Supabase profile exists for chat (auto-create if missing)
+        if (typeof sbClient !== 'undefined' && sbClient) {
+            sbClient.from('profiles').select('id').eq('email', email).single().then(function(r) {
+                if (!r.data) {
+                    // Profile missing - create it
+                    var newId = crypto.randomUUID ? crypto.randomUUID() : ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g,function(c){return(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16)});
+                    sbClient.from('profiles').insert({
+                        id: newId,
+                        name: user.name,
+                        email: email,
+                        username: '@' + user.name.toLowerCase().replace(/\s+/g, '_')
+                    }).then(function(ins) {
+                        if (ins.error) console.warn('Profile create on login:', ins.error.message);
+                        else console.log('✅ Perfil Supabase creado al hacer login');
+                    });
+                } else {
+                    console.log('✅ Perfil Supabase existe:', r.data.id);
+                }
+            });
         }
 
         return { success: true, user };
