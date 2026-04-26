@@ -2633,13 +2633,13 @@ function toggleHeart(btn) {
 </script>
 
 <script>
-// Ahora Rezando toggle
+// Ahora Rezando - REAL TIME (Supabase Presence)
 var rezandoInterval = null;
 var rezandoMap = null;
-
-var rezandoUsers = []; // Real users from Supabase
-
+var rezandoUsers = [];
 var myRezandoMarker = null;
+var rezandoChannel = null;
+var rezandoMarkers = {};
 
 function toggleRezando() {
     var btn = document.getElementById('rezando-btn');
@@ -2647,52 +2647,124 @@ function toggleRezando() {
     var textEl = document.getElementById('rezando-btn-text');
 
     if (btn.classList.contains('active')) {
+        // STOP rezando
         btn.classList.remove('active');
         textEl.textContent = 'Ahora Rezando';
         if (rezandoInterval) { clearInterval(rezandoInterval); rezandoInterval = null; }
-        var c = parseInt(countEl.textContent) || 0;
-        countEl.textContent = Math.max(0, c - 1);
-        // Remove my marker
-        if (myRezandoMarker && rezandoMap) {
-            rezandoMap.removeLayer(myRezandoMarker);
-            myRezandoMarker = null;
+        if (myRezandoMarker && rezandoMap) { rezandoMap.removeLayer(myRezandoMarker); myRezandoMarker = null; }
+        // Leave presence channel
+        if (rezandoChannel) {
+            rezandoChannel.untrack();
         }
+        updateRezandoCount();
     } else {
+        // START rezando
         btn.classList.add('active');
         textEl.textContent = '¡Estoy Rezando!';
-        var c2 = parseInt(countEl.textContent) || 47;
-        countEl.textContent = c2 + 1;
 
-        // Add my location to map
+        var userName = 'Tú';
+        try { userName = auth.getCurrentUser().name || 'Tú'; } catch(e) {}
+
+        // Join presence channel
+        joinRezandoChannel();
+
+        // Get my location and broadcast
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(function(pos) {
                 var lat = pos.coords.latitude;
                 var lng = pos.coords.longitude;
-                if (!rezandoMap) return;
 
-                var userName = document.getElementById('profile-user-name')?.textContent || 'Tú';
+                // Track presence with location
+                if (rezandoChannel) {
+                    rezandoChannel.track({ name: userName, lat: lat, lng: lng, city: '' });
+                }
 
-                var myIcon = L.divIcon({
-                    className: 'rezando-marker rezando-marker-me',
-                    html: '<div class="rezando-marker-dot-me"></div>',
-                    iconSize: [22, 22],
-                    iconAnchor: [11, 11]
-                });
-
-                myRezandoMarker = L.marker([lat, lng], {icon: myIcon})
-                    .addTo(rezandoMap)
-                    .bindPopup('<div class="map-user-popup"><div class="map-user-popup-header"><div class="map-user-popup-avatar" style="background:linear-gradient(135deg,#e74c3c,#c0392b)">' + userName.charAt(0) + '</div><div><b>' + userName + '</b><br><small>"YT" ¡Estoy rezando ahora!</small></div></div></div>', {className: 'map-user-leaflet-popup', minWidth: 180})
-                    .openPopup();
-
-                rezandoMap.setView([lat, lng], 12, {animate: true});
-            }, function() {}, {enableHighAccuracy: true, timeout: 8000});
+                // Add my marker
+                if (rezandoMap) {
+                    var myIcon = L.divIcon({
+                        className: 'rezando-marker rezando-marker-me',
+                        html: '<div class="rezando-marker-dot-me"></div>',
+                        iconSize: [22, 22], iconAnchor: [11, 11]
+                    });
+                    myRezandoMarker = L.marker([lat, lng], {icon: myIcon})
+                        .addTo(rezandoMap)
+                        .bindPopup('<div class="map-user-popup"><div class="map-user-popup-header"><div class="map-user-popup-avatar" style="background:linear-gradient(135deg,#e74c3c,#c0392b)">' + userName.charAt(0) + '</div><div><b>' + userName + '</b><br><small>¡Estoy rezando ahora!</small></div></div></div>', {className: 'map-user-leaflet-popup', minWidth: 180})
+                        .openPopup();
+                    rezandoMap.setView([lat, lng], 12, {animate: true});
+                }
+            }, function() {
+                // No GPS - still join without location
+                if (rezandoChannel) {
+                    rezandoChannel.track({ name: userName, lat: -34.6, lng: -58.4, city: '' });
+                }
+            }, {enableHighAccuracy: true, timeout: 8000});
+        } else {
+            if (rezandoChannel) {
+                rezandoChannel.track({ name: userName, lat: -34.6, lng: -58.4, city: '' });
+            }
         }
+    }
+}
 
-        rezandoInterval = setInterval(function() {
-            var current = parseInt(countEl.textContent) || 0;
-            var change = Math.random() > 0.3 ? 1 : -1;
-            countEl.textContent = Math.max(1, current + change);
-        }, 5000);
+function joinRezandoChannel() {
+    if (!sbClient || rezandoChannel) return;
+    rezandoChannel = sbClient.channel('rezando-live', { config: { presence: { key: Math.random().toString(36).substr(2,8) } } });
+
+    rezandoChannel.on('presence', { event: 'sync' }, function() {
+        var state = rezandoChannel.presenceState();
+        renderRezandoPresence(state);
+    });
+
+    rezandoChannel.on('presence', { event: 'join' }, function() {
+        updateRezandoCount();
+    });
+
+    rezandoChannel.on('presence', { event: 'leave' }, function() {
+        updateRezandoCount();
+    });
+
+    rezandoChannel.subscribe();
+}
+
+function renderRezandoPresence(state) {
+    if (!rezandoMap) return;
+    // Remove old markers
+    Object.values(rezandoMarkers).forEach(function(m) { rezandoMap.removeLayer(m); });
+    rezandoMarkers = {};
+
+    var prayIcon = L.divIcon({
+        className: 'rezando-marker',
+        html: '<div class="rezando-marker-dot"></div>',
+        iconSize: [16, 16], iconAnchor: [8, 8]
+    });
+
+    var count = 0;
+    Object.keys(state).forEach(function(key) {
+        var presences = state[key];
+        presences.forEach(function(p) {
+            count++;
+            if (!p.lat || !p.lng) return;
+            var popupHtml = '<div class="map-user-popup"><div class="map-user-popup-header">' +
+                '<div class="map-user-popup-avatar">' + (p.name || '?').charAt(0) + '</div>' +
+                '<div><b>' + (p.name || 'Usuario') + '</b><br><small>🙏 Rezando ahora</small></div>' +
+                '</div></div>';
+            var marker = L.marker([p.lat, p.lng], {icon: prayIcon})
+                .addTo(rezandoMap)
+                .bindPopup(popupHtml, {className: 'map-user-leaflet-popup', minWidth: 180});
+            rezandoMarkers[key + '_' + count] = marker;
+        });
+    });
+    updateRezandoCount();
+}
+
+function updateRezandoCount() {
+    var countEl = document.getElementById('rezando-count');
+    if (!countEl) return;
+    if (rezandoChannel) {
+        var state = rezandoChannel.presenceState();
+        var total = 0;
+        Object.keys(state).forEach(function(k) { total += state[k].length; });
+        countEl.textContent = total;
     }
 }
 
@@ -2703,27 +2775,8 @@ function initRezandoMap() {
     rezandoMap = L.map('rezando-map', {zoomControl: false, attributionControl: false}).setView([-34.6, -58.4], 5);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(rezandoMap);
 
-    var prayIcon = L.divIcon({
-        className: 'rezando-marker',
-        html: '<div class="rezando-marker-dot"></div>',
-        iconSize: [16, 16],
-        iconAnchor: [8, 8]
-    });
-
-    rezandoUsers.forEach(function(u) {
-        var popupHtml = '<div class="map-user-popup">' +
-            '<div class="map-user-popup-header">' +
-                '<div class="map-user-popup-avatar">' + u.name.charAt(0) + '</div>' +
-                '<div><b>' + u.name + '</b><br><small>ï¿½Â½YTï¿½Â½ Rezando desde ' + u.city + '</small></div>' +
-            '</div>' +
-            '<button class="map-user-msg-btn" onclick="sendMapMessage(\'' + u.chatId + '\',\'' + u.name.replace(/'/g, '') + '\')">' +
-                '<i class="ri-chat-1-fill"></i> Enviar Mensaje' +
-            '</button>' +
-        '</div>';
-        L.marker([u.lat, u.lng], {icon: prayIcon})
-         .addTo(rezandoMap)
-         .bindPopup(popupHtml, {className: 'map-user-leaflet-popup', minWidth: 200});
-    });
+    // Auto-join channel to see who's rezando (even without pressing button)
+    joinRezandoChannel();
 }
 
 // Init map when profile screen is shown
