@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -5036,29 +5036,7 @@ var cenaculoAccessType = 'private';
 var currentCenaculoId = null;
 
 // Sample data
-var sampleCenaculos = {
-    'sample1': { id:'sample1', name:'Rosario en Familia', access:'private', color:'#6366f1', icon:'ri-team-fill', creatorId:'current', lat:-34.5955, lng:-58.3739, members:[
-        {name:'Tu', username:'@yo', role:'creador', active:true},
-        {name:'Maria Garcia', username:'@maria_garcia', role:'miembro', active:true},
-        {name:'Juan Rodriguez', username:'@juan_rod', role:'miembro', active:false},
-        {name:'Ana Perez', username:'@ana_perez', role:'miembro', active:false},
-        {name:'Carlos Lopez', username:'@carlos_lp', role:'miembro', active:false}
-    ]},
-    'sample2': { id:'sample2', name:'Grupo Parroquial San Jose', access:'private', color:'#f0a500', icon:'ri-heart-3-fill', creatorId:'other', lat:-34.6037, lng:-58.3816, members:[
-        {name:'Padre Miguel', username:'@padre_miguel', role:'creador', active:true},
-        {name:'Tu', username:'@yo', role:'miembro', active:true},
-        {name:'Laura Martinez', username:'@laura_m', role:'miembro', active:true},
-        {name:'Pedro Gonzalez', username:'@pedro_g', role:'miembro', active:true},
-        {name:'Sofia Ramirez', username:'@sofia_r', role:'miembro', active:true},
-        {name:'+7 mas', username:'', role:'miembro', active:false}
-    ]},
-    'sample3': { id:'sample3', name:'Jovenes en Oracion', access:'link', color:'#3DA3D4', icon:'ri-group-fill', creatorId:'current', lat:-34.5794, lng:-58.4199, members:[
-        {name:'Tu', username:'@yo', role:'creador', active:true},
-        {name:'Diego Torres', username:'@diego_t', role:'miembro', active:false},
-        {name:'Valentina Ruiz', username:'@vale_ruiz', role:'miembro', active:false},
-        {name:'+5 mas', username:'', role:'miembro', active:false}
-    ]}
-};
+var sampleCenaculos = {}; // Solo cenaculos reales
 
 function getSavedCenaculos() { try { return JSON.parse(localStorage.getItem(CENACULO_KEY)) || {}; } catch(e) { return {}; } }
 function saveCenaculos(data) { localStorage.setItem(CENACULO_KEY, JSON.stringify(data)); }
