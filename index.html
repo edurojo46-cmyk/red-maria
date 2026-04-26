@@ -3061,6 +3061,70 @@ function appendMessageBubble(msg, isMe) {
     msgArea.scrollTop = msgArea.scrollHeight;
 }
 
+// Emoji reaction handler
+async function reactToMsg(msgDiv, emoji) {
+    var msgId = msgDiv.getAttribute('data-msg-id');
+    var localUser = auth.getCurrentUser();
+    if (!localUser) return;
+    var profile = await db.getProfileByEmail(localUser.email);
+    var myId = profile ? profile.id : 'anon';
+
+    // Hide emoji bar
+    var bar = msgDiv.querySelector('.msg-emoji-bar');
+    if (bar) bar.classList.remove('visible');
+
+    if (msgId && typeof sbClient !== 'undefined' && sbClient) {
+        // Save to DB
+        var res = await sbClient.from('messages').select('reactions').eq('id', msgId).single();
+        var reactions = (res.data && res.data.reactions) ? res.data.reactions : {};
+        if (!reactions[emoji]) reactions[emoji] = [];
+        var idx = reactions[emoji].indexOf(myId);
+        if (idx !== -1) { reactions[emoji].splice(idx, 1); if (reactions[emoji].length === 0) delete reactions[emoji]; }
+        else { reactions[emoji].push(myId); }
+        await sbClient.from('messages').update({ reactions: reactions }).eq('id', msgId);
+        updateReactionDisplay(msgDiv, reactions);
+    } else {
+        // Local-only reaction
+        var display = msgDiv.querySelector('.msg-reactions-display');
+        if (!display) {
+            display = document.createElement('div');
+            display.className = 'msg-reactions-display';
+            var meta = msgDiv.querySelector('.chat-msg-meta');
+            if (meta) msgDiv.insertBefore(display, meta);
+        }
+        var existing = display.querySelector('[data-emoji="'+emoji+'"]');
+        if (existing) { existing.remove(); }
+        else {
+            var pill = document.createElement('span');
+            pill.className = 'msg-reaction-pill';
+            pill.setAttribute('data-emoji', emoji);
+            pill.textContent = emoji;
+            display.appendChild(pill);
+        }
+    }
+}
+
+function updateReactionDisplay(msgDiv, reactions) {
+    var display = msgDiv.querySelector('.msg-reactions-display');
+    if (!display) {
+        display = document.createElement('div');
+        display.className = 'msg-reactions-display';
+        var meta = msgDiv.querySelector('.chat-msg-meta');
+        if (meta) msgDiv.insertBefore(display, meta);
+        else msgDiv.appendChild(display);
+    }
+    display.innerHTML = '';
+    Object.entries(reactions).forEach(function(pair) {
+        if (pair[1] && pair[1].length > 0) {
+            var pill = document.createElement('span');
+            pill.className = 'msg-reaction-pill';
+            pill.setAttribute('data-emoji', pair[0]);
+            pill.textContent = pair[0] + (pair[1].length > 1 ? ' ' + pair[1].length : '');
+            display.appendChild(pill);
+        }
+    });
+}
+
 // Full-screen image viewer
 function openImageViewer(src) {
     var old = document.getElementById('img-viewer-overlay');
