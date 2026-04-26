@@ -3010,7 +3010,6 @@ function closeChat() {
 }
 
 function appendMessageBubble(msg, isMe) {
-function appendMessageBubble(msg, isMe) {
     var msgArea = document.getElementById('chat-messages'); if (!msgArea) return;
     var div = document.createElement('div');
     div.className = 'chat-msg ' + (isMe ? 'sent' : '');
