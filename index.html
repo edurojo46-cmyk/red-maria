@@ -5009,8 +5009,9 @@ async function loadCenaculosFromSupabase() {
     if (typeof db === 'undefined' || !db.getCenaculos) return;
     try {
         var user = auth.getCurrentUser();
-        var profile = user ? await db.getProfileByEmail(user.email) : null;
-        var myName = profile ? profile.name : '';
+        if (!user) return;
+        var profile = await db.getProfileByEmail(user.email);
+        var myName = profile ? profile.name.toLowerCase() : '';
         var myId = profile ? profile.id : '';
         
         var cenaculos = await db.getCenaculos(myId);
@@ -5019,27 +5020,20 @@ async function loadCenaculosFromSupabase() {
         var list = document.getElementById('cenaculos-list');
         if (!list) return;
         
-        // Don't duplicate - check existing cards
-        var existingIds = {};
-        list.querySelectorAll('.cenaculo-item').forEach(function(el) {
-            var oid = el.getAttribute('data-cid');
-            if (oid) existingIds[oid] = true;
-        });
+        // Clear duplicates
+        list.querySelectorAll('.cenaculo-item').forEach(function(el) { el.remove(); });
         
         cenaculos.forEach(function(c) {
-            if (existingIds[c.id]) return;
-            
-            // Check if user is a member
-            var isMember = false;
             var members = c.cenaculo_members || [];
-            if (c.creator_id === myId) isMember = true;
+            
+            // Check if I'm a member (by name, user_id, or creator)
+            var isMember = (c.creator_id === myId);
             members.forEach(function(m) {
-                if (m.name && m.name.toLowerCase() === myName.toLowerCase()) isMember = true;
+                if (m.name && m.name.toLowerCase() === myName) isMember = true;
                 if (m.user_id && m.user_id === myId) isMember = true;
             });
             if (!isMember) return;
             
-            // Build cenaculo object for addCenaculoCard
             var cenObj = {
                 id: c.id,
                 name: c.name,
@@ -5048,15 +5042,13 @@ async function loadCenaculosFromSupabase() {
                 icon: c.icon || 'ri-team-fill',
                 creatorId: c.creator_id,
                 members: members.map(function(m) {
-                    return { name: m.name, role: m.role, active: false };
+                    return { name: m.name, role: m.role, active: false, profileId: m.user_id };
                 })
             };
-            // Also save to localStorage
+            // Save to localStorage so openCenaculo can find it
             var saved = getSavedCenaculos();
-            if (!saved[c.id]) {
-                saved[c.id] = cenObj;
-                saveCenaculos(saved);
-            }
+            saved[c.id] = cenObj;
+            saveCenaculos(saved);
             addCenaculoCard(cenObj);
         });
     } catch(e) {
