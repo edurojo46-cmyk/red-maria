@@ -5170,10 +5170,11 @@ function addCenaculoCard(c) {
     list.insertBefore(card, list.firstChild);
 }
 
-function openCenaculo(id) {
+async function openCenaculo(id) {
     currentCenaculoId = id;
     var c = getSavedCenaculos()[id];
-    if (!c) { console.warn('Cenaculo not found:', id); return; }
+    if (!c) { await loadCenaculosFromSupabase(); c = getSavedCenaculos()[id]; }
+    if (!c) { showMsgToast('Cenáculo no encontrado'); return; }
 
     document.getElementById('cenaculos-list').style.display = 'none';
     document.getElementById('btn-create-cenaculo').style.display = 'none';
@@ -5293,9 +5294,9 @@ function initCenaculoMap() {
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(cenaculoMap);
     L.control.zoom({ position: 'topright' }).addTo(cenaculoMap);
 
-    // Add sample cenaculo markers
-    Object.keys(sampleCenaculos).forEach(function(k) {
-        var c = sampleCenaculos[k];
+    // Add saved cenaculo markers from localStorage/Supabase
+    Object.keys(getSavedCenaculos()).forEach(function(k) {
+        var c = getSavedCenaculos()[k];
         if (!c.lat || !c.lng) return;
         var memberCount = c.members.length;
         var icon = L.divIcon({
@@ -5308,9 +5309,8 @@ function initCenaculoMap() {
         marker.bindPopup('<div style="text-align:center;padding:4px"><b style="font-size:0.9rem">' + c.name + '</b><br><span style="font-size:0.75rem;color:#666">' + memberCount + ' miembros Â· ' + (c.access === 'private' ? '<i class="ri-lock-fill"></i> Privado' : '<i class="ri-link"></i> Enlace') + '</span><br><button onclick="openCenaculo(\'' + c.id + '\')" style="margin-top:6px;background:' + c.color + ';color:white;border:none;padding:5px 14px;border-radius:8px;font-size:0.75rem;font-weight:700;cursor:pointer"><i class="ri-door-open-line"></i> Abrir</button></div>', { className: 'rosary-map-popup', maxWidth: 200 });
     });
 
-    // Add user-created cenaculos
-    var saved = getSavedCenaculos();
-    Object.keys(saved).forEach(function(k) {
+    /* User cenaculos already loaded above */
+    var _skip = true; if (!_skip) Object.keys({}).forEach(function(k) {
         var c = saved[k];
         if (!c.lat || !c.lng) return;
         var memberCount = c.members ? c.members.length : 1;
@@ -5350,10 +5350,11 @@ function saveGcMessages(cenaculoId, messages) {
     localStorage.setItem(GC_STORAGE_KEY, JSON.stringify(all));
 }
 
-function openCenaculoGroupChat() {
+async function openCenaculoGroupChat() {
     if (!currentCenaculoId) return;
     var c = getSavedCenaculos()[currentCenaculoId];
-    if (!c) { console.warn('Cenaculo not found for GC:', currentCenaculoId); return; }
+    if (!c) { await loadCenaculosFromSupabase(); c = getSavedCenaculos()[currentCenaculoId]; }
+    if (!c) { showMsgToast('Error: no se pudo cargar el cenáculo'); return; }
 
     // Hide detail, show group chat
     document.getElementById('cenaculo-detail').style.display = 'none';
