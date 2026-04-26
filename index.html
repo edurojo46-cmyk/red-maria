@@ -2983,32 +2983,78 @@ function closeChat() {
 }
 
 function appendMessageBubble(msg, isMe) {
+function appendMessageBubble(msg, isMe) {
     var msgArea = document.getElementById('chat-messages'); if (!msgArea) return;
     var div = document.createElement('div');
     div.className = 'chat-msg ' + (isMe ? 'sent' : '');
+    if (msg.id) div.setAttribute('data-msg-id', msg.id);
     var time = formatChatTime(msg.created_at);
     // Detect image messages
     var textContent = msg.text;
+    var isImage = false;
     if (textContent && textContent.indexOf('[IMG]') === 0) {
         var imgSrc = textContent.substring(5);
-        textContent = '<img src="' + imgSrc + '" style="max-width:100%;border-radius:12px;cursor:pointer;margin-bottom:4px" onclick="window.open(this.src)">';
+        textContent = '<img src="' + imgSrc + '" class="chat-img-preview" onclick="openImageViewer(this.src)">';
+        isImage = true;
     }
-    div.innerHTML = '<div class="chat-msg-text">' + textContent + '</div><div class="chat-msg-meta">' + time + (isMe ? ' <i class="ri-check-double-fill"></i>' : '') + '</div>';
+    // Reactions display
+    var reactHtml = '';
+    if (msg.reactions && typeof msg.reactions === 'object') {
+        var entries = Object.entries(msg.reactions);
+        entries.forEach(function(p) {
+            if (p[1] && p[1].length > 0) {
+                reactHtml += '<span class="msg-reaction-pill" data-emoji="' + p[0] + '">' + p[0] + (p[1].length > 1 ? ' ' + p[1].length : '') + '</span>';
+            }
+        });
+        if (reactHtml) reactHtml = '<div class="msg-reactions-display">' + reactHtml + '</div>';
+    }
+    div.innerHTML = '<div class="chat-msg-text">' + textContent + '</div>' + reactHtml +
+        '<div class="chat-msg-meta">' + time + (isMe ? ' <i class="ri-check-double-fill"></i>' : '') + '</div>';
+    // Emoji reaction bar
+    var emojiBar = document.createElement('div');
+    emojiBar.className = 'msg-emoji-bar';
+    var emojis = ['👍','❤️','😂','😮','🙏'];
+    emojis.forEach(function(em) {
+        var btn = document.createElement('button');
+        btn.textContent = em;
+        btn.onclick = function(e) { e.stopPropagation(); reactToMsg(div, em); };
+        emojiBar.appendChild(btn);
+    });
+    div.appendChild(emojiBar);
+    // Action bar
     var actions = document.createElement('div'); actions.className = 'msg-action-bar';
     actions.innerHTML = '<button class="msg-action-btn" title="Copiar" onclick="copyMsgText(this)"><i class="ri-file-copy-line"></i></button><button class="msg-action-btn" title="Compartir" onclick="shareMsgContent(this)"><i class="ri-share-forward-line"></i></button>';
     div.appendChild(actions);
-    // Mobile: toggle emoji bar on tap
+    // Toggle emoji bar on tap
     div.addEventListener('click', function(e) {
-        if (e.target.closest('.msg-emoji-bar') || e.target.closest('.msg-action-bar') || e.target.closest('.msg-action-btn')) return;
-        var bar = div.querySelector('.msg-emoji-bar');
-        if (bar) {
-            // Close all other bars first
-            document.querySelectorAll('.msg-emoji-bar.visible').forEach(function(b) { b.classList.remove('visible'); });
-            bar.classList.toggle('visible');
-        }
+        if (e.target.closest('.msg-emoji-bar') || e.target.closest('.msg-action-bar') || e.target.tagName === 'IMG') return;
+        document.querySelectorAll('.msg-emoji-bar.visible').forEach(function(b) { b.classList.remove('visible'); });
+        emojiBar.classList.toggle('visible');
     });
     msgArea.appendChild(div);
     msgArea.scrollTop = msgArea.scrollHeight;
+}
+
+// Full-screen image viewer
+function openImageViewer(src) {
+    var old = document.getElementById('img-viewer-overlay');
+    if (old) old.remove();
+    var overlay = document.createElement('div');
+    overlay.id = 'img-viewer-overlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;animation:fadeIn 0.2s ease';
+    overlay.innerHTML = '<button onclick="this.parentElement.remove()" style="position:absolute;top:16px;right:16px;width:40px;height:40px;border-radius:50%;border:none;background:rgba(255,255,255,0.15);color:white;font-size:1.3rem;cursor:pointer;backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center"><i class="ri-close-line"></i></button>' +
+        '<img src="' + src + '" style="max-width:92%;max-height:85vh;border-radius:12px;object-fit:contain;box-shadow:0 8px 40px rgba(0,0,0,0.5)">' +
+        '<div style="margin-top:12px;display:flex;gap:12px"><button onclick="downloadChatImage(this)" data-src="' + src + '" style="background:rgba(255,255,255,0.12);border:none;color:white;padding:8px 20px;border-radius:20px;font-size:0.8rem;cursor:pointer;backdrop-filter:blur(8px);font-family:Inter,sans-serif"><i class="ri-download-2-line"></i> Guardar</button></div>';
+    overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+    document.body.appendChild(overlay);
+}
+
+function downloadChatImage(btn) {
+    var src = btn.getAttribute('data-src');
+    var a = document.createElement('a');
+    a.href = src;
+    a.download = 'red-maria-img-' + Date.now() + '.jpg';
+    a.click();
 }
 
 async function sendMessage() {
