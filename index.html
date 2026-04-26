@@ -2997,6 +2997,16 @@ function appendMessageBubble(msg, isMe) {
     var actions = document.createElement('div'); actions.className = 'msg-action-bar';
     actions.innerHTML = '<button class="msg-action-btn" title="Copiar" onclick="copyMsgText(this)"><i class="ri-file-copy-line"></i></button><button class="msg-action-btn" title="Compartir" onclick="shareMsgContent(this)"><i class="ri-share-forward-line"></i></button>';
     div.appendChild(actions);
+    // Mobile: toggle emoji bar on tap
+    div.addEventListener('click', function(e) {
+        if (e.target.closest('.msg-emoji-bar') || e.target.closest('.msg-action-bar') || e.target.closest('.msg-action-btn')) return;
+        var bar = div.querySelector('.msg-emoji-bar');
+        if (bar) {
+            // Close all other bars first
+            document.querySelectorAll('.msg-emoji-bar.visible').forEach(function(b) { b.classList.remove('visible'); });
+            bar.classList.toggle('visible');
+        }
+    });
     msgArea.appendChild(div);
     msgArea.scrollTop = msgArea.scrollHeight;
 }

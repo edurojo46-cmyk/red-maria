@@ -4538,6 +4538,127 @@ body {
     color: rgba(255,255,255,0.7);
 }
 
+/* ===== Emoji Reaction Bar ===== */
+.msg-emoji-bar {
+    position: absolute;
+    top: -44px;
+    left: 50%;
+    transform: translateX(-50%) scale(0.8);
+    display: flex;
+    gap: 2px;
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 24px;
+    padding: 4px 6px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.12), 0 0 0 1px rgba(200,230,255,0.3);
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 10;
+}
+
+.chat-msg:hover .msg-emoji-bar,
+.msg-emoji-bar.visible {
+    opacity: 1;
+    pointer-events: all;
+    transform: translateX(-50%) scale(1);
+}
+
+.chat-msg.sent .msg-emoji-bar {
+    left: auto;
+    right: 0;
+    transform: translateX(0) scale(0.8);
+}
+.chat-msg.sent:hover .msg-emoji-bar,
+.chat-msg.sent .msg-emoji-bar.visible {
+    transform: translateX(0) scale(1);
+}
+
+.msg-emoji-bar button {
+    width: 34px;
+    height: 34px;
+    border: none;
+    background: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    border-radius: 50%;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.msg-emoji-bar button:hover {
+    transform: scale(1.35);
+    background: rgba(46,139,192,0.08);
+}
+
+.msg-emoji-bar button:active {
+    transform: scale(0.9);
+}
+
+/* Reaction pills displayed under message */
+.msg-reactions-display {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 4px;
+    margin-bottom: 2px;
+}
+
+.msg-reaction-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    background: rgba(46,139,192,0.08);
+    border: 1px solid rgba(46,139,192,0.15);
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    animation: reactionPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.msg-reaction-pill:hover {
+    background: rgba(46,139,192,0.15);
+    transform: scale(1.08);
+}
+
+@keyframes reactionPop {
+    0% { transform: scale(0); opacity: 0; }
+    60% { transform: scale(1.2); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* Dark mode */
+[data-theme="dark"] .msg-emoji-bar {
+    background: rgba(25,35,55,0.95);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3), 0 0 0 1px rgba(60,90,140,0.2);
+}
+
+[data-theme="dark"] .msg-reaction-pill {
+    background: rgba(46,139,192,0.15);
+    border-color: rgba(46,139,192,0.25);
+}
+
+/* Mobile: show emoji bar on tap (via .visible class) */
+@media (hover: none) {
+    .msg-emoji-bar {
+        top: -48px;
+    }
+    .chat-msg:active .msg-emoji-bar {
+        opacity: 1;
+        pointer-events: all;
+        transform: translateX(-50%) scale(1);
+    }
+    .chat-msg.sent:active .msg-emoji-bar {
+        transform: translateX(0) scale(1);
+    }
+}
+
 /* === Forward Modal === */
 .forward-modal-overlay {
     position: fixed;
