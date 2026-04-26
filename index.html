@@ -2307,7 +2307,7 @@ if (document.readyState !== 'loading') renderIglesiasGrid();
             </div>
             <div class="chat-contacts-list" id="chat-contacts-list">
                 <!-- Dynamic: populated from Supabase -->
-                <div id="chat-loading" style="text-align:center;padding:40px 20px;color:var(--clr-text-muted)">
+                <div id="chat-loading" style="display:none;text-align:center;padding:40px 20px;color:var(--clr-text-muted)">
                     <i class="ri-loader-4-line" style="font-size:1.5rem;animation:spin 1s linear infinite;display:block;margin-bottom:8px"></i>
                     <span style="font-size:0.82rem">Cargando conversaciones...</span>
                 </div>
@@ -2807,6 +2807,23 @@ function formatChatTime(iso) {
 }
 
 async function initRealChat() {
+    var loading = document.getElementById('chat-loading');
+    if (loading) loading.style.display = 'block';
+    // Safety timeout: hide loading after 5 seconds no matter what
+    setTimeout(function() {
+        var ld = document.getElementById('chat-loading');
+        if (ld && ld.style.display !== 'none') {
+            ld.style.display = 'none';
+            console.warn('Chat: loading timeout reached');
+        }
+    }, 5000);
+    try { await _initRealChatInner(); } catch(err) {
+        console.error('initRealChat error:', err);
+        if (loading) loading.style.display = 'none';
+        showChatEmpty('Error cargando chat');
+    }
+}
+async function _initRealChatInner() {
     // Get user identity: first try local auth, then find Supabase profile by email
     if (!auth.isAuthenticated()) {
         showChatEmpty('Iniciá sesión para chatear');
