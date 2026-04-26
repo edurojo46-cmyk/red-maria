@@ -5180,8 +5180,8 @@ function addCenaculoCard(c) {
 
 function openCenaculo(id) {
     currentCenaculoId = id;
-    var c = sampleCenaculos[id] || (getSavedCenaculos()[id]);
-    if (!c) return;
+    var c = getSavedCenaculos()[id];
+    if (!c) { console.warn('Cenaculo not found:', id); return; }
 
     document.getElementById('cenaculos-list').style.display = 'none';
     document.getElementById('btn-create-cenaculo').style.display = 'none';
@@ -5249,8 +5249,8 @@ function inviteMember() {
 }
 
 function startCenaculoVideoCall() {
-    var c = sampleCenaculos[currentCenaculoId] || (getSavedCenaculos()[currentCenaculoId]);
-    if (!c) return;
+    var c = getSavedCenaculos()[currentCenaculoId];
+    if (!c) { console.warn('Cenaculo not found for GC:', currentCenaculoId); return; }
 
     // Check if user is creator
     var user = (typeof auth !== 'undefined' && auth.getCurrentUser) ? auth.getCurrentUser() : null;
@@ -5360,8 +5360,8 @@ function saveGcMessages(cenaculoId, messages) {
 
 function openCenaculoGroupChat() {
     if (!currentCenaculoId) return;
-    var c = sampleCenaculos[currentCenaculoId] || (getSavedCenaculos()[currentCenaculoId]);
-    if (!c) return;
+    var c = getSavedCenaculos()[currentCenaculoId];
+    if (!c) { console.warn('Cenaculo not found for GC:', currentCenaculoId); return; }
 
     // Hide detail, show group chat
     document.getElementById('cenaculo-detail').style.display = 'none';
@@ -5392,7 +5392,8 @@ function openCenaculoGroupChat() {
     // Populate info panel
     populateGcInfoPanel(c);
 
-    // Render messages
+    // Join real-time channel and render messages
+    joinGcChannel(currentCenaculoId);
     renderGcMessages();
 }
 
@@ -5425,7 +5426,7 @@ function renderGcMessages() {
             el.appendChild(sep);
         }
 
-        var isMe = m.from === 'me';
+        var isMe = m.from === 'me' || m.from === 'Yo' || (typeof auth !== 'undefined' && auth.getCurrentUser && m.from === auth.getCurrentUser().name);
         var wrapper = document.createElement('div');
         wrapper.className = 'gc-msg-wrapper ' + (isMe ? 'gc-sent' : 'gc-received');
 
@@ -5479,6 +5480,43 @@ function sendGcMessage() {
     // Real messages only - no simulated replies
 }
 
+
+// Group Chat Real-time via Supabase Broadcast
+var gcChannel = null;
+var gcChannelId = null;
+
+function joinGcChannel(cenaculoId) {
+    if (gcChannel && gcChannelId === cenaculoId) return;
+    if (gcChannel) { try { gcChannel.unsubscribe(); } catch(e){} }
+    if (!sbClient) return;
+    gcChannelId = cenaculoId;
+    gcChannel = sbClient.channel('gc-' + cenaculoId);
+    gcChannel.on('broadcast', { event: 'gc-msg' }, function(payload) {
+        var msg = payload.payload;
+        if (!msg) return;
+        // Don't duplicate own messages
+        var myName = 'Yo';
+        try { myName = auth.getCurrentUser().name || 'Yo'; } catch(e) {}
+        if (msg.from === myName) return;
+        // Save and render
+        var messages = getGcMessages(cenaculoId);
+        messages.push(msg);
+        saveGcMessages(cenaculoId, messages);
+        if (currentCenaculoId === cenaculoId) renderGcMessages();
+    });
+    gcChannel.subscribe(function(status) {
+        console.log('GC channel ' + cenaculoId + ':', status);
+    });
+}
+
+function broadcastGcMessage(cenaculoId, msg) {
+    if (!gcChannel || gcChannelId !== cenaculoId) joinGcChannel(cenaculoId);
+    if (gcChannel) {
+        try {
+            gcChannel.send({ type: 'broadcast', event: 'gc-msg', payload: msg });
+        } catch(e) { console.warn('GC broadcast error:', e); }
+    }
+}
 
 function handleGcFileUpload(input) {
     if (!input.files || !input.files.length || !currentCenaculoId) return;
