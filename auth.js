@@ -271,26 +271,34 @@ const auth = {
         users.push(user);
         this.saveUsers(users);
 
-        // Sync with Supabase Auth + ensure profile exists
-        if (typeof db !== 'undefined' && db.signUp) {
-            db.signUp(email, password, name).then(function(result) {
-                if (result.error) {
-                    console.warn('Supabase signup:', result.error.message);
-                    // Fallback: create profile directly (for when auth signup fails)
-                    if (sbClient) {
-                        sbClient.from('profiles').upsert({
-                            id: crypto.randomUUID ? crypto.randomUUID() : 'u-' + Date.now() + '-' + Math.random().toString(36).substr(2,9),
+        // ALWAYS create Supabase profile directly for chat
+        if (typeof sbClient !== 'undefined' && sbClient) {
+            var newUUID = crypto.randomUUID ? crypto.randomUUID() : ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g,function(c){return(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16)});
+            sbClient.from('profiles').insert({
+                id: newUUID,
+                name: name,
+                email: email,
+                username: '@' + name.toLowerCase().replace(/\s+/g, '_')
+            }).then(function(res) {
+                if (res.error) {
+                    console.warn('Profile insert error:', res.error.message);
+                    // If username conflict, try with a suffix
+                    if (res.error.message && res.error.message.includes('duplicate')) {
+                        var newUUID2 = crypto.randomUUID ? crypto.randomUUID() : ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g,function(c){return(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16)});
+                        sbClient.from('profiles').insert({
+                            id: newUUID2,
                             name: name,
                             email: email,
-                            username: '@' + name.toLowerCase().replace(/\s+/g, '_')
-                        }, { onConflict: 'email' }).then(function(r) {
-                            if (r.error) console.warn('Profile fallback error:', r.error.message);
-                            else console.log('✅ Perfil creado directamente');
+                            username: '@' + name.toLowerCase().replace(/\s+/g, '_') + '_' + Math.floor(Math.random()*999)
+                        }).then(function(r2) {
+                            if (r2.error) console.warn('Profile retry error:', r2.error.message);
+                            else console.log('✅ Perfil Supabase creado (retry)');
                         });
                     }
+                } else {
+                    console.log('✅ Perfil Supabase creado:', name, email);
                 }
-                else console.log('✅ Usuario registrado en Supabase');
-            }).catch(function(e) { console.error('Supabase signup error:', e); });
+            });
         }
 
         // Auto-login after registration
