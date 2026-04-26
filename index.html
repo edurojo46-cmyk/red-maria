@@ -3120,10 +3120,6 @@ async function openChat(partnerId) {
         if(msgArea) msgArea.scrollTop = msgArea.scrollHeight;
         if (myId) {
         await db.markConversationAsRead(myId, partnerId);
-        // Update read ticks for messages WE sent that are now read
-        document.querySelectorAll('.chat-msg.sent .msg-read-tick').forEach(function(tick) {
-            tick.style.color = 'rgba(255,255,255,0.45)'; // our sent, not read by partner yet
-        });
     }
     } catch(err) {
         console.error('Error loading messages:', err);
@@ -3180,7 +3176,7 @@ function appendMessageBubble(msg, isMe) {
     }
     var senderHtml = senderName ? '<div class="chat-msg-sender">' + senderName + '</div>' : '';
     div.innerHTML = senderHtml + '<div class="chat-msg-text">' + textContent + '</div>' + reactHtml +
-        '<div class="chat-msg-meta">' + time + (isMe ? ' <i class="ri-check-double-fill msg-read-tick" style="color:' + (msg.read === true || msg.read === 'true' ? '#4ade80' : 'rgba(255,255,255,0.45)') + ';font-size:0.7rem"></i>' : '') + '</div>';
+        '<div class="chat-msg-meta">' + time + (isMe ? ' <i class="ri-check-double-fill msg-read-tick" style="color:' + (msg.read ? '#00e676' : 'rgba(255,255,255,0.4)') + ';font-size:0.85rem;margin-left:4px"></i>' : '') + '</div>';
     // Emoji reaction bar
     var emojiBar = document.createElement('div');
     emojiBar.className = 'msg-emoji-bar';
