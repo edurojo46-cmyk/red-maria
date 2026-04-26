@@ -3387,45 +3387,85 @@ function showBlockModal(opts) {
 // === Chat File Upload ===
 function handleChatFileUpload(input) {
     if (!input.files || !input.files.length || !currentChatId) return;
-    Array.from(input.files).forEach(function(file) {
-        if (file.type.startsWith('image/')) {
-            var reader = new FileReader();
-            reader.onload = function(e) {
-                var img = new Image();
-                img.onload = function() {
-                    var canvas = document.createElement('canvas');
-                    var maxW = 600, maxH = 600;
-                    var w = img.width, h = img.height;
-                    if (w > maxW) { h = h * maxW / w; w = maxW; }
-                    if (h > maxH) { w = w * maxH / h; h = maxH; }
-                    canvas.width = w; canvas.height = h;
-                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                    var dataUrl = canvas.toDataURL('image/jpeg', 0.5);
-                    sendImageMessage(dataUrl);
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        } else {
-            showMsgToast('Solo se pueden enviar imágenes');
-        }
-    });
+    var file = input.files[0];
+    if (!file.type.startsWith('image/')) {
+        showMsgToast('Solo se pueden enviar imágenes');
+        input.value = '';
+        return;
+    }
+    showMsgToast('Enviando imagen...');
+    // Try Supabase Storage first, fallback to compressed base64
+    uploadChatImage(file);
     input.value = '';
 }
 
-async function sendImageMessage(dataUrl) {
-    if (!currentChatId) return;
+async function uploadChatImage(file) {
     var localUser = auth.getCurrentUser();
     if (!localUser) { showMsgToast('Iniciá sesión primero'); return; }
     var profile = await db.getProfileByEmail(localUser.email);
     if (!profile) { showMsgToast('Error de perfil'); return; }
-    var msgText = '[IMG]' + dataUrl;
-    appendMessageBubble({ text: msgText, created_at: new Date().toISOString(), from_id: profile.id }, true);
-    var result = await db.sendMessage(profile.id, currentChatId, msgText);
-    if (!result || result.error) {
-        showMsgToast('Error al enviar imagen');
+
+    // Try Supabase Storage
+    var fileName = 'chat/' + Date.now() + '_' + Math.random().toString(36).substr(2,6) + '.jpg';
+    
+    // First compress the image
+    var compressed = await compressChatImage(file);
+    
+    if (typeof sbClient !== 'undefined' && sbClient) {
+        var uploadResult = await sbClient.storage.from('chat-images').upload(fileName, compressed, {
+            contentType: 'image/jpeg',
+            cacheControl: '3600'
+        });
+        
+        if (!uploadResult.error) {
+            // Get public URL
+            var urlResult = sbClient.storage.from('chat-images').getPublicUrl(fileName);
+            var imageUrl = urlResult.data.publicUrl;
+            var msgText = '[IMG]' + imageUrl;
+            appendMessageBubble({ text: msgText, created_at: new Date().toISOString(), from_id: profile.id }, true);
+            await db.sendMessage(profile.id, currentChatId, msgText);
+            showMsgToast('Imagen enviada ✓');
+            return;
+        }
+        console.warn('Storage upload failed:', uploadResult.error.message, '- trying base64 fallback');
     }
+    
+    // Fallback: send as compressed base64
+    var reader = new FileReader();
+    reader.onload = async function(e) {
+        var msgText = '[IMG]' + e.target.result;
+        appendMessageBubble({ text: msgText, created_at: new Date().toISOString(), from_id: profile.id }, true);
+        var result = await db.sendMessage(profile.id, currentChatId, msgText);
+        if (result) {
+            showMsgToast('Imagen enviada ✓');
+        } else {
+            showMsgToast('Error al enviar imagen');
+        }
+    };
+    reader.readAsDataURL(compressed);
 }
+
+function compressChatImage(file) {
+    return new Promise(function(resolve) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var img = new Image();
+            img.onload = function() {
+                var canvas = document.createElement('canvas');
+                var maxW = 400, maxH = 400;
+                var w = img.width, h = img.height;
+                if (w > maxW) { h = h * maxW / w; w = maxW; }
+                if (h > maxH) { w = w * maxH / h; h = maxH; }
+                canvas.width = w; canvas.height = h;
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                canvas.toBlob(function(blob) {
+                    resolve(blob);
+                }, 'image/jpeg', 0.4);
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
 }
 
 function sendMapMessage(chatId, name) {
