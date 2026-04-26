@@ -2387,11 +2387,11 @@ if (document.readyState !== 'loading') renderIglesiasGrid();
                 <button onclick="checkSupabaseConnection()" style="background:none;border:1px solid var(--clr-border);border-radius:8px;padding:4px 10px;font-size:0.7rem;color:var(--clr-text-muted);cursor:pointer"><i class="ri-refresh-line"></i></button>
             </div>
 
-            <!-- Ahora Rezando Button -->
+            <!-- Reza x mí Button -->
             <div class="rezando-section" id="rezando-section">
                 <button class="rezando-btn" id="rezando-btn" onclick="toggleRezando()">
                     <i class="ri-hand-heart-fill"></i>
-                    <span id="rezando-btn-text">Ahora Rezando</span>
+                    <span id="rezando-btn-text">Reza x mí</span>
                 </button>
                 <div class="rezando-counter" id="rezando-counter">
                     <span class="pulse-dot small"></span>
@@ -2633,7 +2633,7 @@ function toggleHeart(btn) {
 </script>
 
 <script>
-// Ahora Rezando - usando Supabase Broadcast
+// Reza x mí - usando Supabase Broadcast
 var rezandoInterval = null;
 var rezandoMap = null;
 var myRezandoMarker = null;
@@ -2648,7 +2648,7 @@ async function toggleRezando() {
 
     if (btn.classList.contains('active')) {
         btn.classList.remove('active');
-        textEl.textContent = 'Ahora Rezando';
+        textEl.textContent = 'Reza x mí';
         if (rezandoInterval) { clearInterval(rezandoInterval); rezandoInterval = null; }
         if (myRezandoMarker && rezandoMap) { rezandoMap.removeLayer(myRezandoMarker); myRezandoMarker = null; }
         // Broadcast leave
@@ -2658,7 +2658,7 @@ async function toggleRezando() {
         updateRezandoCount();
     } else {
         btn.classList.add('active');
-        textEl.textContent = '¡Estoy Rezando!';
+        textEl.textContent = '¡Recen x mí!';
         ensureRezandoChannel();
 
         var userName = 'Tú';
@@ -2754,7 +2754,7 @@ function addMyMarker(name, lat, lng) {
     });
     myRezandoMarker = L.marker([lat, lng], {icon: myIcon})
         .addTo(rezandoMap)
-        .bindPopup('<div class="map-user-popup"><div class="map-user-popup-header"><div class="map-user-popup-avatar" style="background:linear-gradient(135deg,#e74c3c,#c0392b)">' + name.charAt(0) + '</div><div><b>' + name + '</b><br><small>🙏 ¡Estoy rezando!</small></div></div></div>', {className: 'map-user-leaflet-popup', minWidth: 180})
+        .bindPopup('<div class="map-user-popup"><div class="map-user-popup-header"><div class="map-user-popup-avatar" style="background:linear-gradient(135deg,#e74c3c,#c0392b)">' + name.charAt(0) + '</div><div><b>' + name + '</b><br><small>🙏 ¡Recen x mí!</small></div></div></div>', {className: 'map-user-leaflet-popup', minWidth: 180})
         .openPopup();
     rezandoMap.setView([lat, lng], 12, {animate: true});
 }
@@ -2772,7 +2772,7 @@ function addOtherMarker(id, name, lat, lng, profileId) {
     var msgBtn = profileId ? '<button class="map-user-msg-btn" onclick="openChatFromMap(\'' + profileId + '\',\'' + (name||'').replace(/'/g,'') + '\')"><i class="ri-chat-1-fill"></i> Enviar Mensaje</button>' : '';
     rezandoMarkers[id] = L.marker([lat, lng], {icon: prayIcon})
         .addTo(rezandoMap)
-        .bindPopup('<div class="map-user-popup"><div class="map-user-popup-header"><div class="map-user-popup-avatar">' + (name||'?').charAt(0) + '</div><div><b>' + (name||'Usuario') + '</b><br><small>🙏 Rezando ahora</small></div></div>' + heartBtn + msgBtn + '</div>', {className: 'map-user-leaflet-popup', minWidth: 200});
+        .bindPopup('<div class="map-user-popup"><div class="map-user-popup-header"><div class="map-user-popup-avatar">' + (name||'?').charAt(0) + '</div><div><b>' + (name||'Usuario') + '</b><br><small>🙏 Rezando · Reza x mí</small></div></div>' + heartBtn + msgBtn + '</div>', {className: 'map-user-leaflet-popup', minWidth: 200});
 }
 
 function toggleMapHeart(btn) {
@@ -3882,7 +3882,7 @@ function sendMapMessage(chatId, name) {
             name: name,
             initial: name.charAt(0),
             color: colors[Math.floor(Math.random() * colors.length)],
-            messages: [{from:'them', text:'Hola! Estoy rezando ahora mismo.', time: new Date().getHours().toString().padStart(2,'0') + ':' + new Date().getMinutes().toString().padStart(2,'0')}]
+            messages: [{from:'them', text:'Hola! Reza x mí mismo.', time: new Date().getHours().toString().padStart(2,'0') + ':' + new Date().getMinutes().toString().padStart(2,'0')}]
         };
         saveChats();
         // Add contact to DOM list
@@ -3891,7 +3891,7 @@ function sendMapMessage(chatId, name) {
         div.className = 'chat-contact';
         div.onclick = function(){ openChat(chatId); };
         div.innerHTML = '<div class="chat-contact-avatar" style="background:' + chatData[chatId].color + '">' + chatData[chatId].initial + '</div>' +
-            '<div class="chat-contact-info"><h4>' + name + '</h4><p class="chat-last-msg">Hola! Estoy rezando ahora mismo.</p></div>' +
+            '<div class="chat-contact-info"><h4>' + name + '</h4><p class="chat-last-msg">Hola! Reza x mí mismo.</p></div>' +
             '<div class="chat-contact-meta"><span class="chat-time">Ahora</span><span class="chat-unread">1</span></div>';
         list.appendChild(div);
     }
@@ -4226,7 +4226,7 @@ var searchIndex = [
     {type:'page',icon:'ri-eye-fill',title:'Apariciones',desc:'Historia de las apariciones marianas',action:"app.navigate('screen-apariciones')"},
     {type:'page',icon:'ri-user-fill',title:'Mi Perfil',desc:'Tu información y notificaciones',action:"app.navigate('screen-profile')"},
     // Usuarios
-    {type:'user',icon:'ri-user-heart-fill',title:'María García',desc:'Buenos Aires Â· Rezando ahora',action:"app.navigate('screen-chat');setTimeout(function(){openChat('maria')},300)"},
+    {type:'user',icon:'ri-user-heart-fill',title:'María García',desc:'Buenos Aires Â· Rezando · Reza x mí',action:"app.navigate('screen-chat');setTimeout(function(){openChat('maria')},300)"},
     {type:'user',icon:'ri-user-heart-fill',title:'Juan Rodríguez',desc:'Caballito Â· Activo hoy',action:"app.navigate('screen-chat');setTimeout(function(){openChat('juan')},300)"},
     {type:'user',icon:'ri-user-heart-fill',title:'Laura Martínez',desc:'Palermo Â· Activa ayer',action:"app.navigate('screen-chat');setTimeout(function(){openChat('laura')},300)"},
     {type:'user',icon:'ri-user-heart-fill',title:'Sofía López',desc:'Centro Â· Activa ayer',action:"app.navigate('screen-chat');setTimeout(function(){openChat('sofia')},300)"},
