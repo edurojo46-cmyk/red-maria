@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -3018,7 +3018,11 @@ function appendMessageBubble(msg, isMe) {
     // Detect image messages
     var textContent = msg.text;
     var isImage = false;
-    if (textContent && textContent.indexOf('[IMG]') === 0) {
+    if (textContent && textContent.indexOf('[VID]') === 0) {
+        var vidSrc = textContent.substring(5);
+        textContent = '<video src="' + vidSrc + '" controls playsinline preload="metadata" style="max-width:100%;border-radius:12px;margin-bottom:4px;max-height:300px"></video>';
+        isImage = true;
+    } else if (textContent && textContent.indexOf('[IMG]') === 0) {
         var imgSrc = textContent.substring(5);
         textContent = '<img src="' + imgSrc + '" class="chat-img-preview" onclick="openImageViewer(this.src)">';
         isImage = true;
@@ -3645,51 +3649,130 @@ function handleChatFileUpload(input) {
     if (!input.files || !input.files.length || !currentChatId) return;
     var file = input.files[0];
     input.value = '';
-    if (!file.type.startsWith('image/')) {
-        showMsgToast('Solo imágenes'); return;
+    
+    if (file.type.startsWith('image/')) {
+        showMsgToast('Enviando imagen...');
+        uploadMediaToStorage(file, 'image');
+    } else if (file.type.startsWith('video/')) {
+        if (file.size > 20 * 1024 * 1024) {
+            showMsgToast('Video muy grande (máx 20MB)');
+            return;
+        }
+        showMsgToast('Subiendo video...');
+        uploadMediaToStorage(file, 'video');
+    } else {
+        showMsgToast('Solo imágenes y videos');
     }
-    showMsgToast('Enviando imagen...');
-    var reader = new FileReader();
-    reader.onerror = function() { showMsgToast('Error al leer imagen'); };
-    reader.onload = function(e) {
-        var img = new Image();
-        img.onerror = function() { showMsgToast('Error: imagen inválida'); };
-        img.onload = function() {
-            try {
+}
+
+async function uploadMediaToStorage(file, type) {
+    var localUser = auth.getCurrentUser();
+    if (!localUser) { showMsgToast('No hay sesión'); return; }
+    var profile = await db.getProfileByEmail(localUser.email);
+    if (!profile) { showMsgToast('Perfil no encontrado'); return; }
+
+    var ext = type === 'video' ? 'mp4' : 'jpg';
+    var fileName = type + '/' + Date.now() + '_' + Math.random().toString(36).substr(2,6) + '.' + ext;
+
+    // Try Supabase Storage
+    if (typeof sbClient !== 'undefined' && sbClient) {
+        var fileToUpload = file;
+        if (type === 'image') {
+            // Compress image
+            fileToUpload = await compressChatImg(file);
+        }
+        var uploadRes = await sbClient.storage.from('chat-media').upload(fileName, fileToUpload, {
+            contentType: file.type, cacheControl: '3600'
+        });
+        if (!uploadRes.error) {
+            var urlRes = sbClient.storage.from('chat-media').getPublicUrl(fileName);
+            var publicUrl = urlRes.data.publicUrl;
+            var prefix = type === 'video' ? '[VID]' : '[IMG]';
+            var msgText = prefix + publicUrl;
+            appendMessageBubble({ text: msgText, created_at: new Date().toISOString(), from_id: profile.id }, true);
+            await db.sendMessage(profile.id, currentChatId, msgText);
+            showMsgToast(type === 'video' ? 'Video enviado ✓' : 'Imagen enviada ✓');
+            return;
+        }
+        console.warn('Storage upload failed:', uploadRes.error.message);
+    }
+
+    // Fallback: compress image to base64
+    if (type === 'image') {
+        var blob = await compressChatImg(file);
+        var reader = new FileReader();
+        reader.onload = async function(e) {
+            var msgText = '[IMG]' + e.target.result;
+            appendMessageBubble({ text: msgText, created_at: new Date().toISOString(), from_id: profile.id }, true);
+            var r = await db.sendMessage(profile.id, currentChatId, msgText);
+            showMsgToast(r ? 'Imagen enviada ✓' : 'Error al enviar');
+        };
+        reader.readAsDataURL(blob);
+    } else {
+        // Video without Storage: extract thumbnail frame
+        showMsgToast('Para videos necesitás Storage. Enviando preview...');
+        var thumb = await extractVideoThumb(file);
+        var msgText = '[IMG]' + thumb;
+        appendMessageBubble({ text: msgText, created_at: new Date().toISOString(), from_id: profile.id }, true);
+        await db.sendMessage(profile.id, currentChatId, msgText);
+        showMsgToast('Preview de video enviado');
+    }
+}
+
+function compressChatImg(file) {
+    return new Promise(function(resolve) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var img = new Image();
+            img.onload = function() {
                 var c = document.createElement('canvas');
-                var max = 300;
+                var max = 400;
                 var w = img.width, h = img.height;
                 if (w > h) { if (w > max) { h = Math.round(h * max / w); w = max; } }
                 else { if (h > max) { w = Math.round(w * max / h); h = max; } }
                 c.width = w; c.height = h;
                 c.getContext('2d').drawImage(img, 0, 0, w, h);
-                var dataUrl = c.toDataURL('image/jpeg', 0.35);
-                // Send via Supabase
-                doSendImage(dataUrl);
-            } catch(err) {
-                showMsgToast('Error comprimiendo: ' + err.message);
-            }
+                c.toBlob(function(blob) { resolve(blob); }, 'image/jpeg', 0.4);
+            };
+            img.src = e.target.result;
         };
-        img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
+        reader.readAsDataURL(file);
+    });
 }
 
-async function doSendImage(dataUrl) {
-    try {
-        var localUser = auth.getCurrentUser();
-        if (!localUser) { showMsgToast('No hay sesión'); return; }
-        var profile = await db.getProfileByEmail(localUser.email);
-        if (!profile) { showMsgToast('Perfil no encontrado'); return; }
-        var msgText = '[IMG]' + dataUrl;
-        appendMessageBubble({ text: msgText, created_at: new Date().toISOString(), from_id: profile.id }, true);
-        var result = await db.sendMessage(profile.id, currentChatId, msgText);
-        if (result) { showMsgToast('Imagen enviada ✓'); }
-        else { showMsgToast('Error guardando imagen'); }
-    } catch(err) {
-        showMsgToast('Error: ' + err.message);
-    }
+function extractVideoThumb(file) {
+    return new Promise(function(resolve) {
+        var video = document.createElement('video');
+        video.preload = 'metadata';
+        video.onloadeddata = function() {
+            video.currentTime = 1;
+        };
+        video.onseeked = function() {
+            var c = document.createElement('canvas');
+            var max = 300;
+            var w = video.videoWidth, h = video.videoHeight;
+            if (w > max) { h = Math.round(h * max / w); w = max; }
+            c.width = w; c.height = h;
+            var ctx = c.getContext('2d');
+            ctx.drawImage(video, 0, 0, w, h);
+            // Draw play button overlay
+            ctx.fillStyle = 'rgba(0,0,0,0.4)';
+            ctx.beginPath();
+            ctx.arc(w/2, h/2, 30, 0, Math.PI*2);
+            ctx.fill();
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.moveTo(w/2-10, h/2-15);
+            ctx.lineTo(w/2+15, h/2);
+            ctx.lineTo(w/2-10, h/2+15);
+            ctx.fill();
+            resolve(c.toDataURL('image/jpeg', 0.5));
+            URL.revokeObjectURL(video.src);
+        };
+        video.src = URL.createObjectURL(file);
+    });
 }
+
 function sendMapMessage(chatId, name) {
     // Create chat if doesn't exist
     if (!chatData[chatId]) {
