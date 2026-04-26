@@ -2767,10 +2767,31 @@ function addOtherMarker(id, name, lat, lng, profileId) {
         html: '<div class="rezando-marker-dot"></div>',
         iconSize: [16, 16], iconAnchor: [8, 8]
     });
+    var heartId = 'heart-' + id.replace(/[^a-zA-Z0-9]/g,'');
+    var heartBtn = '<div style="display:flex;align-items:center;gap:12px;margin:8px 0 4px"><button class="map-heart-btn" id="' + heartId + '" onclick="toggleMapHeart(this)" style="background:none;border:none;cursor:pointer;font-size:1.3rem;display:flex;align-items:center;gap:4px;color:#ccc;transition:all 0.2s"><i class="ri-heart-3-line"></i><span style="font-size:0.75rem;font-weight:700">0</span></button></div>';
     var msgBtn = profileId ? '<button class="map-user-msg-btn" onclick="openChatFromMap(\'' + profileId + '\',\'' + (name||'').replace(/'/g,'') + '\')"><i class="ri-chat-1-fill"></i> Enviar Mensaje</button>' : '';
     rezandoMarkers[id] = L.marker([lat, lng], {icon: prayIcon})
         .addTo(rezandoMap)
-        .bindPopup('<div class="map-user-popup"><div class="map-user-popup-header"><div class="map-user-popup-avatar">' + (name||'?').charAt(0) + '</div><div><b>' + (name||'Usuario') + '</b><br><small>🙏 Rezando ahora</small></div></div>' + msgBtn + '</div>', {className: 'map-user-leaflet-popup', minWidth: 200});
+        .bindPopup('<div class="map-user-popup"><div class="map-user-popup-header"><div class="map-user-popup-avatar">' + (name||'?').charAt(0) + '</div><div><b>' + (name||'Usuario') + '</b><br><small>🙏 Rezando ahora</small></div></div>' + heartBtn + msgBtn + '</div>', {className: 'map-user-leaflet-popup', minWidth: 200});
+}
+
+function toggleMapHeart(btn) {
+    var icon = btn.querySelector('i');
+    var countEl = btn.querySelector('span');
+    var count = parseInt(countEl.textContent) || 0;
+    if (btn.classList.contains('liked')) {
+        btn.classList.remove('liked');
+        icon.className = 'ri-heart-3-line';
+        btn.style.color = '#ccc';
+        countEl.textContent = Math.max(0, count - 1);
+    } else {
+        btn.classList.add('liked');
+        icon.className = 'ri-heart-3-fill';
+        btn.style.color = '#e74c3c';
+        countEl.textContent = count + 1;
+        btn.style.transform = 'scale(1.3)';
+        setTimeout(function() { btn.style.transform = 'scale(1)'; }, 200);
+    }
 }
 
 function openChatFromMap(profileId, name) {
