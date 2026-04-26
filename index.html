@@ -5032,6 +5032,7 @@ async function loadCenaculosFromSupabase() {
                 if (m.name && m.name.toLowerCase() === myName) isMember = true;
                 if (m.user_id && m.user_id === myId) isMember = true;
             });
+            console.log('[Cenaculos]', c.name, 'isMember:', isMember, 'members:', members.map(function(m){return m.name}).join(','));
             if (!isMember) return;
             
             var cenObj = {
@@ -5160,6 +5161,7 @@ async function createCenaculo() {
 function addCenaculoCard(c) {
     var list = document.getElementById('cenaculos-list');
     if (!list) return;
+    if (!c.members) c.members = [];
     var activeCount = c.members.filter(function(m){return m.active;}).length;
     var card = document.createElement('div');
     card.className = 'cenaculo-item glass card';
@@ -5175,6 +5177,7 @@ async function openCenaculo(id) {
     var c = getSavedCenaculos()[id];
     if (!c) { await loadCenaculosFromSupabase(); c = getSavedCenaculos()[id]; }
     if (!c) { showMsgToast('Cenáculo no encontrado'); return; }
+    if (!c.members) c.members = [];
 
     document.getElementById('cenaculos-list').style.display = 'none';
     document.getElementById('btn-create-cenaculo').style.display = 'none';
@@ -5355,6 +5358,7 @@ async function openCenaculoGroupChat() {
     var c = getSavedCenaculos()[currentCenaculoId];
     if (!c) { await loadCenaculosFromSupabase(); c = getSavedCenaculos()[currentCenaculoId]; }
     if (!c) { showMsgToast('Error: no se pudo cargar el cenáculo'); return; }
+    if (!c.members) c.members = [];
 
     // Hide detail, show group chat
     document.getElementById('cenaculo-detail').style.display = 'none';

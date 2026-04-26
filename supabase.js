@@ -151,10 +151,25 @@ const db = {
 
     async getCenaculos(userId) {
         if (!sbClient) return getLocal('cenaculos');
-        const { data } = await sbClient.from('cenaculos')
-            .select('*, cenaculo_members(*)')
+        try {
+            // Try join query first
+            const { data, error } = await sbClient.from('cenaculos')
+                .select('*, cenaculo_members(*)')
+                .order('created_at', { ascending: false });
+            if (!error && data) return data;
+        } catch(e) {}
+        // Fallback: separate queries
+        const { data: cenaculos } = await sbClient.from('cenaculos')
+            .select('*')
             .order('created_at', { ascending: false });
-        return data || [];
+        if (!cenaculos) return [];
+        for (const c of cenaculos) {
+            const { data: members } = await sbClient.from('cenaculo_members')
+                .select('*')
+                .eq('cenaculo_id', c.id);
+            c.cenaculo_members = members || [];
+        }
+        return cenaculos;
     },
 
     async addCenaculoMember(cenaculoId, username, name) {
