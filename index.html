@@ -3388,86 +3388,52 @@ function showBlockModal(opts) {
 function handleChatFileUpload(input) {
     if (!input.files || !input.files.length || !currentChatId) return;
     var file = input.files[0];
+    input.value = '';
     if (!file.type.startsWith('image/')) {
-        showMsgToast('Solo se pueden enviar imágenes');
-        input.value = '';
-        return;
+        showMsgToast('Solo imágenes'); return;
     }
     showMsgToast('Enviando imagen...');
-    // Try Supabase Storage first, fallback to compressed base64
-    uploadChatImage(file);
-    input.value = '';
+    var reader = new FileReader();
+    reader.onerror = function() { showMsgToast('Error al leer imagen'); };
+    reader.onload = function(e) {
+        var img = new Image();
+        img.onerror = function() { showMsgToast('Error: imagen inválida'); };
+        img.onload = function() {
+            try {
+                var c = document.createElement('canvas');
+                var max = 300;
+                var w = img.width, h = img.height;
+                if (w > h) { if (w > max) { h = Math.round(h * max / w); w = max; } }
+                else { if (h > max) { w = Math.round(w * max / h); h = max; } }
+                c.width = w; c.height = h;
+                c.getContext('2d').drawImage(img, 0, 0, w, h);
+                var dataUrl = c.toDataURL('image/jpeg', 0.35);
+                // Send via Supabase
+                doSendImage(dataUrl);
+            } catch(err) {
+                showMsgToast('Error comprimiendo: ' + err.message);
+            }
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
 }
 
-async function uploadChatImage(file) {
-    var localUser = auth.getCurrentUser();
-    if (!localUser) { showMsgToast('Iniciá sesión primero'); return; }
-    var profile = await db.getProfileByEmail(localUser.email);
-    if (!profile) { showMsgToast('Error de perfil'); return; }
-
-    // Try Supabase Storage
-    var fileName = 'chat/' + Date.now() + '_' + Math.random().toString(36).substr(2,6) + '.jpg';
-    
-    // First compress the image
-    var compressed = await compressChatImage(file);
-    
-    if (typeof sbClient !== 'undefined' && sbClient) {
-        var uploadResult = await sbClient.storage.from('chat-images').upload(fileName, compressed, {
-            contentType: 'image/jpeg',
-            cacheControl: '3600'
-        });
-        
-        if (!uploadResult.error) {
-            // Get public URL
-            var urlResult = sbClient.storage.from('chat-images').getPublicUrl(fileName);
-            var imageUrl = urlResult.data.publicUrl;
-            var msgText = '[IMG]' + imageUrl;
-            appendMessageBubble({ text: msgText, created_at: new Date().toISOString(), from_id: profile.id }, true);
-            await db.sendMessage(profile.id, currentChatId, msgText);
-            showMsgToast('Imagen enviada ✓');
-            return;
-        }
-        console.warn('Storage upload failed:', uploadResult.error.message, '- trying base64 fallback');
-    }
-    
-    // Fallback: send as compressed base64
-    var reader = new FileReader();
-    reader.onload = async function(e) {
-        var msgText = '[IMG]' + e.target.result;
+async function doSendImage(dataUrl) {
+    try {
+        var localUser = auth.getCurrentUser();
+        if (!localUser) { showMsgToast('No hay sesión'); return; }
+        var profile = await db.getProfileByEmail(localUser.email);
+        if (!profile) { showMsgToast('Perfil no encontrado'); return; }
+        var msgText = '[IMG]' + dataUrl;
         appendMessageBubble({ text: msgText, created_at: new Date().toISOString(), from_id: profile.id }, true);
         var result = await db.sendMessage(profile.id, currentChatId, msgText);
-        if (result) {
-            showMsgToast('Imagen enviada ✓');
-        } else {
-            showMsgToast('Error al enviar imagen');
-        }
-    };
-    reader.readAsDataURL(compressed);
+        if (result) { showMsgToast('Imagen enviada ✓'); }
+        else { showMsgToast('Error guardando imagen'); }
+    } catch(err) {
+        showMsgToast('Error: ' + err.message);
+    }
 }
-
-function compressChatImage(file) {
-    return new Promise(function(resolve) {
-        var reader = new FileReader();
-        reader.onload = function(e) {
-            var img = new Image();
-            img.onload = function() {
-                var canvas = document.createElement('canvas');
-                var maxW = 400, maxH = 400;
-                var w = img.width, h = img.height;
-                if (w > maxW) { h = h * maxW / w; w = maxW; }
-                if (h > maxH) { w = w * maxH / h; h = maxH; }
-                canvas.width = w; canvas.height = h;
-                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                canvas.toBlob(function(blob) {
-                    resolve(blob);
-                }, 'image/jpeg', 0.4);
-            };
-            img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-    });
-}
-
 function sendMapMessage(chatId, name) {
     // Create chat if doesn't exist
     if (!chatData[chatId]) {
