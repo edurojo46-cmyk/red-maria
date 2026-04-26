@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -3038,7 +3038,17 @@ function appendMessageBubble(msg, isMe) {
         });
         if (reactHtml) reactHtml = '<div class="msg-reactions-display">' + reactHtml + '</div>';
     }
-    div.innerHTML = '<div class="chat-msg-text">' + textContent + '</div>' + reactHtml +
+    // Get sender name
+    var senderName = '';
+    if (isMe) {
+        senderName = 'Tú';
+    } else if (msg.from_id && chatProfiles[msg.from_id]) {
+        senderName = chatProfiles[msg.from_id].name || '';
+    } else if (currentChatPartner) {
+        senderName = currentChatPartner.name || '';
+    }
+    var senderHtml = senderName ? '<div class="chat-msg-sender">' + senderName + '</div>' : '';
+    div.innerHTML = senderHtml + '<div class="chat-msg-text">' + textContent + '</div>' + reactHtml +
         '<div class="chat-msg-meta">' + time + (isMe ? ' <i class="ri-check-double-fill"></i>' : '') + '</div>';
     // Emoji reaction bar
     var emojiBar = document.createElement('div');
