@@ -3061,20 +3061,23 @@ function appendMessageBubble(msg, isMe) {
         emojiBar.appendChild(btn);
     });
     div.appendChild(emojiBar);
-    // Inline action buttons (horizontal, inside the bubble)
-    var actionsHtml = '<div class="msg-inline-actions">' +
-        '<button class="msg-inline-btn" onclick="copyMsgText(this)" title="Copiar"><i class="ri-file-copy-line"></i></button>' +
-        '<button class="msg-inline-btn" onclick="shareMsgContent(this)" title="Compartir"><i class="ri-share-forward-line"></i></button>' +
-    '</div>';
-    var metaEl = div.querySelector('.chat-msg-meta');
-    if (metaEl) metaEl.insertAdjacentHTML('beforebegin', actionsHtml);
+    // Action buttons OUTSIDE the bubble
+    var actionsDiv = document.createElement('div');
+    actionsDiv.className = 'msg-outer-actions' + (isMe ? ' sent' : '');
+    actionsDiv.innerHTML = '<button class="msg-outer-btn" onclick="copyMsgText(this)" title="Copiar"><i class="ri-file-copy-line"></i></button>' +
+        '<button class="msg-outer-btn" onclick="shareMsgContent(this)" title="Compartir"><i class="ri-share-forward-line"></i></button>';
     // Toggle emoji bar on tap
     div.addEventListener('click', function(e) {
         if (e.target.closest('.msg-emoji-bar') || e.target.closest('.msg-action-bar') || e.target.tagName === 'IMG') return;
         document.querySelectorAll('.msg-emoji-bar.visible').forEach(function(b) { b.classList.remove('visible'); });
         emojiBar.classList.toggle('visible');
     });
-    msgArea.appendChild(div);
+    // Wrap bubble + actions in a container
+    var wrapper = document.createElement('div');
+    wrapper.className = 'msg-wrapper' + (isMe ? ' sent' : '');
+    wrapper.appendChild(div);
+    wrapper.appendChild(actionsDiv);
+    msgArea.appendChild(wrapper);
     msgArea.scrollTop = msgArea.scrollHeight;
 }
 
