@@ -2862,6 +2862,7 @@ async function initRealChat() {
     if (convs.length === 0) {
         // No conversations yet - show all users as potential contacts
         if (empty) empty.style.display = 'none';
+        if (loading) loading.style.display = 'none';
         var otherUsers = allUsers.filter(function(u) { return u.id !== myId; });
         if (otherUsers.length === 0) {
             if (empty) { empty.style.display = 'block'; }
@@ -2888,6 +2889,7 @@ async function initRealChat() {
         return;
     }
     if (empty) empty.style.display = 'none';
+    if (loading) loading.style.display = 'none';
     renderContactList(convs, myId);
 
     if (chatSubscription) { try { chatSubscription.unsubscribe(); } catch(e){} }
@@ -2913,7 +2915,8 @@ function showChatEmpty(msg) {
 
 function renderContactList(convs, myId) {
     var list = document.getElementById('chat-contacts-list');
-    list.querySelectorAll('.chat-contact').forEach(function(el) { el.remove(); });
+    list.querySelectorAll('.chat-contact, .chat-section-header').forEach(function(el) { el.remove(); });
+    var ld = document.getElementById('chat-loading'); if(ld) ld.style.display = 'none';
     convs.forEach(function(c) {
         var p = chatProfiles[c.partnerId] || { name: 'Usuario', username: '' };
         var color = getChatColor(p.name);
@@ -2965,12 +2968,16 @@ async function openChat(partnerId) {
 
     var msgArea = document.getElementById('chat-messages');
     if(msgArea) msgArea.innerHTML = '<div style="text-align:center;padding:20px;color:var(--clr-text-muted);font-size:0.8rem"><i class="ri-loader-4-line" style="animation:spin 1s linear infinite"></i></div>';
-    var messages = myId ? await db.getConversationMessages(myId, partnerId) : [];
-    if(msgArea) msgArea.innerHTML = '';
-    messages.forEach(function(m) { appendMessageBubble(m, m.from_id === myId); });
-    if(msgArea) msgArea.scrollTop = msgArea.scrollHeight;
-
-    if (myId) await db.markConversationAsRead(myId, partnerId);
+    try {
+        var messages = myId ? await db.getConversationMessages(myId, partnerId) : [];
+        if(msgArea) msgArea.innerHTML = '';
+        messages.forEach(function(m) { appendMessageBubble(m, m.from_id === myId); });
+        if(msgArea) msgArea.scrollTop = msgArea.scrollHeight;
+        if (myId) await db.markConversationAsRead(myId, partnerId);
+    } catch(err) {
+        console.error('Error loading messages:', err);
+        if(msgArea) msgArea.innerHTML = '<div style="text-align:center;padding:20px;color:var(--clr-text-muted);font-size:0.8rem">Error al cargar mensajes</div>';
+    }
     refreshContactList();
 }
 
