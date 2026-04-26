@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -1956,44 +1956,7 @@ if (document.readyState !== 'loading') renderIglesiasGrid();
             <!-- Cenaculos List -->
             <div id="cenaculos-list">
                 <!-- Sample Cenaculos -->
-                <div class="cenaculo-item glass card" onclick="openCenaculo('sample1')" style="padding:14px 16px;margin-bottom:10px;cursor:pointer;border-left:3px solid #6366f1">
-                    <div style="display:flex;justify-content:space-between;align-items:center">
-                        <div style="display:flex;align-items:center;gap:12px">
-                            <div style="width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;color:white;font-size:1.1rem;flex-shrink:0"><i class="ri-team-fill"></i></div>
-                            <div>
-                                <h4 style="margin:0;font-size:0.9rem;color:var(--clr-text-title)">Rosario en Familia</h4>
-                                <p style="margin:2px 0 0;font-size:0.75rem;color:var(--clr-text-muted)">5 miembros Â· <i class="ri-lock-fill"></i> Privado</p>
-                            </div>
-                        </div>
-                        <div style="display:flex;align-items:center;gap:4px;font-size:0.7rem;color:#27ae60"><span class="pulse-dot small" style="width:6px;height:6px"></span> 2 activos</div>
-                    </div>
-                </div>
-
-                <div class="cenaculo-item glass card" onclick="openCenaculo('sample2')" style="padding:14px 16px;margin-bottom:10px;cursor:pointer;border-left:3px solid #f0a500">
-                    <div style="display:flex;justify-content:space-between;align-items:center">
-                        <div style="display:flex;align-items:center;gap:12px">
-                            <div style="width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#f0a500,#e67e22);display:flex;align-items:center;justify-content:center;color:white;font-size:1.1rem;flex-shrink:0"><i class="ri-heart-3-fill"></i></div>
-                            <div>
-                                <h4 style="margin:0;font-size:0.9rem;color:var(--clr-text-title)">Grupo Parroquial San Jose</h4>
-                                <p style="margin:2px 0 0;font-size:0.75rem;color:var(--clr-text-muted)">12 miembros Â· <i class="ri-lock-fill"></i> Privado</p>
-                            </div>
-                        </div>
-                        <div style="display:flex;align-items:center;gap:4px;font-size:0.7rem;color:#27ae60"><span class="pulse-dot small" style="width:6px;height:6px"></span> 5 activos</div>
-                    </div>
-                </div>
-
-                <div class="cenaculo-item glass card" onclick="openCenaculo('sample3')" style="padding:14px 16px;margin-bottom:10px;cursor:pointer;border-left:3px solid #3DA3D4">
-                    <div style="display:flex;justify-content:space-between;align-items:center">
-                        <div style="display:flex;align-items:center;gap:12px">
-                            <div style="width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#3DA3D4,#2E8BC0);display:flex;align-items:center;justify-content:center;color:white;font-size:1.1rem;flex-shrink:0"><i class="ri-group-fill"></i></div>
-                            <div>
-                                <h4 style="margin:0;font-size:0.9rem;color:var(--clr-text-title)">Jovenes en Oracion</h4>
-                                <p style="margin:2px 0 0;font-size:0.75rem;color:var(--clr-text-muted)">8 miembros Â· <i class="ri-link"></i> Con enlace</p>
-                            </div>
-                        </div>
-                        <div style="display:flex;align-items:center;gap:4px;font-size:0.7rem;color:var(--clr-text-muted)"><i class="ri-time-line"></i> Ayer</div>
-                    </div>
-                </div>
+                <!-- Los cenaculos se agregan dinamicamente -->
             </div>
 
             <!-- Mapa de Cenaculos -->
@@ -2069,7 +2032,7 @@ if (document.readyState !== 'loading') renderIglesiasGrid();
                 <!-- Typing Indicator -->
                 <div class="gc-typing" id="gc-typing" style="display:none">
                     <div class="typing-dots"><span></span><span></span><span></span></div>
-                    <span id="gc-typing-name">Maria Garcia</span> <span>esta escribiendo...</span>
+                    <span id="gc-typing-name"></span> <span>esta escribiendo...</span>
                 </div>
 
                 <!-- Input Bar -->
@@ -5283,33 +5246,8 @@ function initCenaculoMap() {
 var GC_STORAGE_KEY = 'redmaria_gc_chats';
 var gcMemberColors = ['#A8C4DE','#F4D35E','#B5D6A7','#E8A0BF','#C4B5FD','#89CFF0','#FCA5A5','#86EFAC','#FDE68A','#D8B4FE'];
 
-// Pre-populated group chat messages
-var gcDefaultMessages = {
-    'sample1': [
-        {from:'Maria Garcia', text:'Buenas tardes familia! Hoy a las 20hs rezamos el rosario?', time:'18:30', date:'Hoy'},
-        {from:'Juan Rodriguez', text:'Si! Ahi estamos. Misterios Gloriosos hoy', time:'18:32', date:'Hoy'},
-        {from:'me', text:'Perfecto, nos conectamos a las 20', time:'18:35', date:'Hoy'},
-        {from:'Ana Perez', text:'Cuenten conmigo! 🙏', time:'18:40', date:'Hoy'},
-        {from:'Maria Garcia', text:'Hermoso! Recen tambien por la salud de Don Carlos, el papa de Juan', time:'18:42', date:'Hoy'},
-        {from:'Carlos Lopez', text:'Amen! Ahi nos sumamos. Dios les bendiga a todos', time:'18:50', date:'Hoy'},
-        {from:'Juan Rodriguez', text:'Gracias a todos por las oraciones, mi papa esta mejorando 🙌', time:'19:05', date:'Hoy'}
-    ],
-    'sample2': [
-        {from:'Padre Miguel', text:'Queridos hermanos, este sabado tenemos adoracion al Santisimo a las 17hs', time:'10:00', date:'Hoy'},
-        {from:'Laura Martinez', text:'Ahi estaremos Padre! Se necesita algo?', time:'10:15', date:'Hoy'},
-        {from:'Pedro Gonzalez', text:'Yo llevo las velas y las flores', time:'10:20', date:'Hoy'},
-        {from:'Sofia Ramirez', text:'Hermoso! Puedo llevar a las chicas del coro?', time:'10:25', date:'Hoy'},
-        {from:'Padre Miguel', text:'Por supuesto Sofia! Cuantas mas voces, mejor. El Senor se alegra con nosotros', time:'10:30', date:'Hoy'},
-        {from:'me', text:'Voy a estar ahi. Necesitan ayuda con algo mas?', time:'10:45', date:'Hoy'},
-        {from:'Laura Martinez', text:'Si podes traer un mantel blanco para el altar, genial!', time:'10:50', date:'Hoy'},
-        {from:'Padre Miguel', text:'Gracias a todos. Los espero. Que la Virgen los acompañe 🌹', time:'11:00', date:'Hoy'}
-    ],
-    'sample3': [
-        {from:'me', text:'Hola chicos! Arrancamos con la lectura de esta semana?', time:'20:00', date:'Ayer'},
-        {from:'Diego Torres', text:'Dale! Estoy leyendo Juan 6:35. Tremendo el pasaje', time:'20:05', date:'Ayer'},
-        {from:'Valentina Ruiz', text:'Que lindo grupo tenemos 🙏 Yo estoy con los Salmos', time:'20:10', date:'Ayer'}
-    ]
-};
+// Group chat messages (real only)
+var gcDefaultMessages = {};
 
 function getGcMessages(cenaculoId) {
     try {
@@ -5348,11 +5286,7 @@ function openCenaculoGroupChat() {
     document.getElementById('gc-header-members').textContent = totalCount + ' miembros · ' + activeCount + ' activos';
 
     // Set pinned message
-    var pinnedMsgs = {
-        'sample1': 'Intencion fijada: Recen por la salud de Don Carlos 🙏',
-        'sample2': 'Adoracion al Santisimo este sabado 17hs en la parroquia',
-        'sample3': 'Lectura de la semana: Juan 6:30-35'
-    };
+    var pinnedMsgs = {};
     var pinned = document.getElementById('gc-pinned');
     var pinnedText = pinnedMsgs[currentCenaculoId] || '';
     if (pinnedText) {
