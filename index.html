@@ -1939,8 +1939,8 @@ if (document.readyState !== 'loading') renderIglesiasGrid();
                         <input type="text" id="cenaculo-name" placeholder="Ej: Grupo del Rosario Familiar" style="width:100%;padding:10px 14px;border:1.5px solid var(--clr-border);border-radius:10px;font-size:0.85rem;background:var(--clr-bg-card);color:var(--clr-text-title);box-sizing:border-box"/>
                     </div>
                     <div class="auth-field" style="margin-bottom:12px">
-                        <label style="font-size:0.8rem;font-weight:600;color:var(--clr-text-title);margin-bottom:4px;display:block"><i class="ri-user-add-line"></i> Invitar Miembros (usuarios separados por coma)</label>
-                        <textarea id="cenaculo-invites" rows="3" placeholder="@maria, @juan, @carlos" style="width:100%;padding:10px 14px;border:1.5px solid var(--clr-border);border-radius:10px;font-size:0.85rem;background:var(--clr-bg-card);color:var(--clr-text-title);resize:none;font-family:inherit;box-sizing:border-box"></textarea>
+                        <label style="font-size:0.8rem;font-weight:600;color:var(--clr-text-title);margin-bottom:4px;display:block"><i class="ri-user-add-line"></i> Invitar Miembros (nombre exacto, separados por coma)</label>
+                        <textarea id="cenaculo-invites" rows="3" placeholder="Lorena Eulalia, palo, Edufer" style="width:100%;padding:10px 14px;border:1.5px solid var(--clr-border);border-radius:10px;font-size:0.85rem;background:var(--clr-bg-card);color:var(--clr-text-title);resize:none;font-family:inherit;box-sizing:border-box"></textarea>
                     </div>
                     <div class="auth-field" style="margin-bottom:14px">
                         <label style="font-size:0.8rem;font-weight:600;color:var(--clr-text-title);margin-bottom:4px;display:block"><i class="ri-lock-line"></i> Tipo de Acceso</label>
@@ -5035,17 +5035,32 @@ function setCenaculoAccess(type) {
     }
 }
 
-function createCenaculo() {
+async function createCenaculo() {
     var name = document.getElementById('cenaculo-name').value.trim();
     var invites = document.getElementById('cenaculo-invites').value.trim();
-    if (!name) { alert('Ingresa un nombre para el Cenaculo'); return; }
+    if (!name) { alert('Ingresa un nombre para el Cenáculo'); return; }
 
     var user = (typeof auth !== 'undefined' && auth.getCurrentUser) ? auth.getCurrentUser() : null;
-    var usernames = invites.split(',').map(function(e) { return e.trim().replace(/^@?/, '@'); }).filter(function(e) { return e.length > 1; });
-    var members = [{name: user ? user.name : 'Tu', username: user ? ('@' + user.name.toLowerCase().replace(/\s/g,'_')) : '@yo', role:'creador', active:true}];
-    usernames.forEach(function(u) {
-        var displayName = u.replace('@','').replace(/_/g,' ').replace(/\b\w/g, function(l){ return l.toUpperCase(); });
-        members.push({name: displayName, username: u, role:'miembro', active:false});
+    var myProfile = user ? await db.getProfileByEmail(user.email) : null;
+    var myName = myProfile ? myProfile.name : (user ? user.name : 'Tú');
+    var myId = myProfile ? myProfile.id : 'anon';
+
+    // Build members list - lookup real users by name
+    var members = [{name: myName, profileId: myId, role:'creador', active:true}];
+    var invitedNames = invites.split(',').map(function(e) { return e.trim(); }).filter(function(e) { return e.length > 0; });
+    var allUsers = await db.getAllUsers();
+    var invitedProfiles = [];
+
+    invitedNames.forEach(function(invName) {
+        var found = allUsers.find(function(u) {
+            return u.name.toLowerCase() === invName.toLowerCase();
+        });
+        if (found) {
+            members.push({name: found.name, profileId: found.id, role:'miembro', active:false});
+            invitedProfiles.push(found);
+        } else {
+            members.push({name: invName, profileId: null, role:'miembro', active:false});
+        }
     });
 
     var id = 'c_' + Date.now().toString(36);
@@ -5055,22 +5070,36 @@ function createCenaculo() {
         id: id, name: name, access: cenaculoAccessType,
         color: colors[Math.floor(Math.random()*colors.length)],
         icon: icons[Math.floor(Math.random()*icons.length)],
-        creatorId: user ? user.id : 'anon', members: members
+        creatorId: myId, members: members
     };
 
     var saved = getSavedCenaculos();
     saved[id] = cenaculo;
     saveCenaculos(saved);
     addCenaculoCard(cenaculo);
+
     // Sync to Supabase
     if (typeof db !== 'undefined' && db.createCenaculo) {
-        db.createCenaculo(cenaculo)
-            .then(function() { console.log('ï¿½Â½o. Cenáculo guardado en Supabase'); })
-            .catch(function(e) { console.error('Error guardando cenáculo:', e); });
+        db.createCenaculo(cenaculo).catch(function(e) { console.error('Error:', e); });
     }
+
+    // Send invitation notifications via chat message
+    var notifCount = 0;
+    for (var i = 0; i < invitedProfiles.length; i++) {
+        var p = invitedProfiles[i];
+        var msgText = '📨 ¡Te invitaron al Cenáculo "' + name + '"! Abrí la sección Cenáculos para unirte. 🙏';
+        await db.sendMessage(myId, p.id, msgText);
+        notifCount++;
+    }
+
     hideCreateCenaculo();
     document.getElementById('cenaculo-name').value = '';
     document.getElementById('cenaculo-invites').value = '';
+
+    var successMsg = '✅ Cenáculo "' + name + '" creado';
+    if (notifCount > 0) successMsg += ' · ' + notifCount + ' invitación' + (notifCount > 1 ? 'es' : '') + ' enviada' + (notifCount > 1 ? 's' : '');
+    if (invitedNames.length > notifCount) successMsg += ' · ' + (invitedNames.length - notifCount) + ' usuario(s) no encontrado(s)';
+    showMsgToast(successMsg);
 }
 
 function addCenaculoCard(c) {
