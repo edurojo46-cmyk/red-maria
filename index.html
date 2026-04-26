@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -3123,6 +3123,116 @@ function updateReactionDisplay(msgDiv, reactions) {
             display.appendChild(pill);
         }
     });
+}
+
+// === SHARE & FORWARD FUNCTIONS ===
+
+function copyMsgText(btn) {
+    var msgDiv = btn.closest('.chat-msg');
+    if (!msgDiv) return;
+    var textEl = msgDiv.querySelector('.chat-msg-text');
+    if (!textEl) return;
+    var text = textEl.textContent || textEl.innerText;
+    var img = textEl.querySelector('img');
+    if (img) text = img.src;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function() {
+            showMsgToast('Copiado ✓');
+        });
+    } else {
+        var ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        document.execCommand('copy'); ta.remove();
+        showMsgToast('Copiado ✓');
+    }
+}
+
+function shareMsgContent(btn) {
+    var msgDiv = btn.closest('.chat-msg');
+    if (!msgDiv) return;
+    var textEl = msgDiv.querySelector('.chat-msg-text');
+    if (!textEl) return;
+    var text = textEl.textContent || textEl.innerText;
+    var img = textEl.querySelector('img');
+    window._shareData = { text: text, imgSrc: img ? img.src : null, isImage: !!img };
+
+    var old = document.getElementById('share-options-modal');
+    if (old) old.remove();
+    var modal = document.createElement('div');
+    modal.id = 'share-options-modal';
+    modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:99998;display:flex;align-items:flex-end;justify-content:center;animation:fadeIn 0.2s';
+    modal.onclick = function(e) { if (e.target === modal) modal.remove(); };
+    var sheet = document.createElement('div');
+    sheet.style.cssText = 'background:var(--clr-card);border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:400px';
+    sheet.innerHTML = '<div style="width:40px;height:4px;background:var(--clr-border);border-radius:2px;margin:0 auto 16px"></div><h4 style="margin:0 0 16px;font-size:0.95rem;color:var(--clr-text-title);text-align:center">Compartir</h4><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;text-align:center">' +
+        '<div onclick="shareToWhatsApp()" style="cursor:pointer"><div style="width:48px;height:48px;border-radius:50%;background:#25D366;display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:1.3rem;color:white"><i class="ri-whatsapp-fill"></i></div><span style="font-size:0.7rem;color:var(--clr-text-muted)">WhatsApp</span></div>' +
+        '<div onclick="shareToTelegram()" style="cursor:pointer"><div style="width:48px;height:48px;border-radius:50%;background:#0088cc;display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:1.3rem;color:white"><i class="ri-telegram-fill"></i></div><span style="font-size:0.7rem;color:var(--clr-text-muted)">Telegram</span></div>' +
+        '<div onclick="shareNative()" style="cursor:pointer"><div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#3DA3D4,#2E8BC0);display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:1.3rem;color:white"><i class="ri-share-forward-fill"></i></div><span style="font-size:0.7rem;color:var(--clr-text-muted)">Más...</span></div>' +
+        '<div onclick="forwardToUser()" style="cursor:pointer"><div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#8B5CF6,#7C3AED);display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:1.3rem;color:white"><i class="ri-user-shared-fill"></i></div><span style="font-size:0.7rem;color:var(--clr-text-muted)">Reenviar</span></div>' +
+    '</div>';
+    modal.appendChild(sheet);
+    document.body.appendChild(modal);
+}
+
+function shareToWhatsApp() {
+    var d = window._shareData;
+    var msg = d.isImage ? '📷 Imagen de Red Maria' : d.text;
+    window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+    closeShareModal();
+}
+
+function shareToTelegram() {
+    var d = window._shareData;
+    var msg = d.isImage ? '📷 Imagen de Red Maria' : d.text;
+    window.open('https://t.me/share/url?url=' + encodeURIComponent(window.location.href) + '&text=' + encodeURIComponent(msg), '_blank');
+    closeShareModal();
+}
+
+function shareNative() {
+    var d = window._shareData;
+    if (navigator.share) {
+        navigator.share({ title: 'Red Maria', text: d.text }).catch(function(){});
+    } else { shareToWhatsApp(); }
+    closeShareModal();
+}
+
+async function forwardToUser() {
+    closeShareModal();
+    var d = window._shareData;
+    var localUser = auth.getCurrentUser();
+    if (!localUser) { showMsgToast('Iniciá sesión'); return; }
+    var profile = await db.getProfileByEmail(localUser.email);
+    if (!profile) { showMsgToast('Perfil no encontrado'); return; }
+    var users = (await db.getAllUsers()).filter(function(u) { return u.id !== profile.id; });
+    var old = document.getElementById('forward-modal');
+    if (old) old.remove();
+    var modal = document.createElement('div');
+    modal.id = 'forward-modal';
+    modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:99998;display:flex;align-items:center;justify-content:center';
+    modal.onclick = function(e) { if (e.target === modal) modal.remove(); };
+    var box = document.createElement('div');
+    box.style.cssText = 'background:var(--clr-card);border-radius:16px;padding:20px;width:85%;max-width:360px;max-height:70vh;overflow-y:auto';
+    box.innerHTML = '<h4 style="margin:0 0 12px;font-size:0.95rem;color:var(--clr-text-title)"><i class="ri-user-shared-fill" style="color:#8B5CF6"></i> Reenviar a...</h4>';
+    users.forEach(function(u) {
+        var item = document.createElement('div');
+        item.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px;border-radius:12px;cursor:pointer';
+        var color = getChatColor(u.name);
+        item.innerHTML = '<div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,'+color+','+color+'cc);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:0.85rem">'+(u.name||'?').charAt(0).toUpperCase()+'</div><div style="font-weight:600;font-size:0.85rem;color:var(--clr-text-title)">'+u.name+'</div>';
+        item.onclick = async function() {
+            var msgText = d.isImage ? '[IMG]' + d.imgSrc : '↪️ ' + d.text;
+            await db.sendMessage(profile.id, u.id, msgText);
+            modal.remove();
+            showMsgToast('Reenviado a ' + u.name + ' ✓');
+        };
+        box.appendChild(item);
+    });
+    modal.appendChild(box);
+    document.body.appendChild(modal);
+}
+
+function closeShareModal() {
+    var m = document.getElementById('share-options-modal');
+    if (m) m.remove();
 }
 
 // Full-screen image viewer
