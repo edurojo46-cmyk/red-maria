@@ -5466,15 +5466,22 @@ function sendGcMessage() {
     var text = input.value.trim();
     if (!text || !currentCenaculoId) return;
 
+    var userName = 'Yo';
+    try { userName = auth.getCurrentUser().name || 'Yo'; } catch(e) {}
+
     var now = new Date();
     var time = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+    var msg = { from: userName, text: text, time: time, date: 'Hoy' };
+
     var messages = getGcMessages(currentCenaculoId);
-    messages.push({ from: 'me', text: text, time: time, date: 'Hoy' });
+    messages.push(msg);
     saveGcMessages(currentCenaculoId, messages);
     input.value = '';
     renderGcMessages();
 
-    // Real messages only - no simulated replies
+    // Broadcast to all group members in real time
+    broadcastGcMessage(currentCenaculoId, msg);
+    console.log('[GC] Sent and broadcast:', text);
 }
 
 
