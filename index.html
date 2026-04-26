@@ -2915,12 +2915,15 @@ function renderContactList(convs, myId) {
     var list = document.getElementById('chat-contacts-list');
     list.querySelectorAll('.chat-contact, .chat-section-header').forEach(function(el) { el.remove(); });
     var ld = document.getElementById('chat-loading'); if(ld) ld.style.display = 'none';
+    var convPartnerIds = {};
     convs.forEach(function(c) {
+        convPartnerIds[c.partnerId] = true;
         var p = chatProfiles[c.partnerId] || { name: 'Usuario', username: '' };
         var color = getChatColor(p.name);
         var initial = (p.name||'?').charAt(0).toUpperCase();
         var lastText = c.lastMessage ? c.lastMessage.text : '';
         if (lastText && lastText.indexOf('[IMG]') === 0) lastText = '📷 Imagen';
+        if (lastText && lastText.indexOf('[VID]') === 0) lastText = '🎬 Video';
         if (lastText.length > 40) lastText = lastText.substring(0,40) + '...';
         var isSent = c.lastMessage && c.lastMessage.from_id === myId;
         var prefix = isSent ? '<i class="ri-check-double-fill" style="color:#3DA3D4;font-size:0.85rem"></i> ' : '';
@@ -2932,6 +2935,24 @@ function renderContactList(convs, myId) {
         div.innerHTML = '<div class="chat-avatar-wrapper"><div class="chat-contact-avatar" style="background:linear-gradient(135deg,'+color+','+color+'cc)">'+initial+'</div></div><div class="chat-contact-info"><div class="chat-contact-top"><h4>'+p.name+'</h4><span class="chat-time">'+timeStr+'</span></div><div class="chat-contact-bottom"><p class="chat-last-msg">'+prefix+lastText+'</p>'+unreadHtml+'</div></div>';
         list.appendChild(div);
     });
+    // Show remaining users that have no conversations yet
+    var others = Object.values(chatProfiles).filter(function(u) { return u.id !== myId && !convPartnerIds[u.id]; });
+    if (others.length > 0) {
+        var hdr = document.createElement('div');
+        hdr.className = 'chat-section-header';
+        hdr.style.cssText = 'padding:14px 16px 6px;font-size:0.68rem;font-weight:700;color:var(--clr-text-muted);text-transform:uppercase;letter-spacing:0.5px';
+        hdr.textContent = 'Otros usuarios';
+        list.appendChild(hdr);
+        others.forEach(function(u) {
+            var color = getChatColor(u.name);
+            var initial = (u.name||'?').charAt(0).toUpperCase();
+            var div = document.createElement('div');
+            div.className = 'chat-contact'; div.setAttribute('data-id', u.id);
+            div.onclick = function() { openChat(u.id); };
+            div.innerHTML = '<div class="chat-avatar-wrapper"><div class="chat-contact-avatar" style="background:linear-gradient(135deg,'+color+','+color+'cc)">'+initial+'</div></div><div class="chat-contact-info"><div class="chat-contact-top"><h4>'+u.name+'</h4></div><div class="chat-contact-bottom"><p class="chat-last-msg" style="color:var(--clr-text-muted)">Toca para chatear</p></div></div>';
+            list.appendChild(div);
+        });
+    }
 }
 
 async function refreshContactList() {
