@@ -2824,8 +2824,10 @@ async function initRealChat() {
     }
 }
 async function _initRealChatInner() {
+    console.log('=== CHAT INIT START ===');
     // Get user identity: first try local auth, then find Supabase profile by email
     if (!auth.isAuthenticated()) {
+        console.log('Chat: NOT authenticated');
         showChatEmpty('Iniciá sesión para chatear');
         return;
     }
@@ -2866,7 +2868,7 @@ async function _initRealChatInner() {
             return;
         }
     }
-    console.log('Chat: User identified as', myName, 'ID:', myId);
+    console.log('Chat: User identified as', myName, 'ID:', myId, 'sbClient:', !!sbClient);
     var loading = document.getElementById('chat-loading');
     if (loading) loading.style.display = 'block';
 
@@ -2939,6 +2941,7 @@ function renderContactList(convs, myId) {
         var color = getChatColor(p.name);
         var initial = (p.name||'?').charAt(0).toUpperCase();
         var lastText = c.lastMessage ? c.lastMessage.text : '';
+        if (lastText && lastText.indexOf('[IMG]') === 0) lastText = '📷 Imagen';
         if (lastText.length > 40) lastText = lastText.substring(0,40) + '...';
         var isSent = c.lastMessage && c.lastMessage.from_id === myId;
         var prefix = isSent ? '<i class="ri-check-double-fill" style="color:#3DA3D4;font-size:0.85rem"></i> ' : '';
