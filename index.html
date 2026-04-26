@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -2637,28 +2637,7 @@ function toggleHeart(btn) {
 var rezandoInterval = null;
 var rezandoMap = null;
 
-var rezandoUsers = [
-    {lat:-34.6037, lng:-58.3816, name:'María G.', city:'Buenos Aires', chatId:'maria'},
-    {lat:-34.6118, lng:-58.4173, name:'Juan R.', city:'Caballito', chatId:'juan'},
-    {lat:-34.5875, lng:-58.3974, name:'Laura M.', city:'Palermo', chatId:'laura'},
-    {lat:-34.6345, lng:-58.3654, name:'Sofía L.', city:'La Boca', chatId:'sofia'},
-    {lat:-34.5986, lng:-58.4520, name:'Pedro F.', city:'Flores', chatId:'pedro'},
-    {lat:-31.4201, lng:-64.1888, name:'Ana P.', city:'Córdoba', chatId:'ana'},
-    {lat:-32.9468, lng:-60.6393, name:'Carlos D.', city:'Rosario', chatId:'carlos'},
-    {lat:-34.9215, lng:-57.9545, name:'Lucía B.', city:'La Plata', chatId:'lucia'},
-    {lat:-38.9516, lng:-68.0591, name:'Martín S.', city:'Neuquén', chatId:'martin'},
-    {lat:-26.8241, lng:-65.2226, name:'Rosa T.', city:'Tucumán', chatId:'rosa'},
-    {lat:-34.6670, lng:-58.5130, name:'Diego H.', city:'Morón', chatId:'diego'},
-    {lat:-34.5520, lng:-58.4860, name:'Camila V.', city:'Belgrano', chatId:'camila'},
-    {lat:-34.6400, lng:-58.5210, name:'Pablo M.', city:'Haedo', chatId:'pablo'},
-    {lat:-34.5730, lng:-58.4380, name:'Valentina R.', city:'Villa Crespo', chatId:'valentina'},
-    {lat:-34.7580, lng:-58.4010, name:'Tomás A.', city:'Lanús', chatId:'tomas'},
-    {lat:-27.4513, lng:-58.9868, name:'Elena C.', city:'Corrientes', chatId:'elena'},
-    {lat:-33.3015, lng:-66.3376, name:'Roberto N.', city:'San Luis', chatId:'roberto'},
-    {lat:-34.5990, lng:-58.3730, name:'Inés F.', city:'San Telmo', chatId:'ines'},
-    {lat:-31.5375, lng:-68.5364, name:'Graciela O.', city:'San Juan', chatId:'graciela'},
-    {lat:-34.6260, lng:-58.4440, name:'Fernando K.', city:'Boedo', chatId:'fernando'}
-];
+var rezandoUsers = []; // Real users from Supabase
 
 var myRezandoMarker = null;
 
@@ -5347,49 +5326,6 @@ function sendGcMessage() {
     // Real messages only - no simulated replies
 }
 
-function simulateGcReplies() {
-    var c = sampleCenaculos[currentCenaculoId] || (getSavedCenaculos()[currentCenaculoId]);
-    if (!c) return;
-    var otherMembers = c.members.filter(function(m) { return m.name !== 'Tu' && m.name.indexOf('+') !== 0 && m.active; });
-    if (otherMembers.length === 0) return;
-
-    var gcReplies = [
-        'Amen! 🙏', 'Que lindo! Dios te bendiga', 'Estamos rezando por eso',
-        'Gracias por compartir!', 'Cuenta con nosotros', 'Ave Maria!',
-        'Hermoso mensaje', 'Recemos juntos por eso', 'Si! Nos sumamos',
-        'Dios los bendiga a todos ❤️', 'Que la Virgen nos acompañe 🌹',
-        'Estoy de acuerdo!', 'Oremos por la paz del mundo',
-        'Gracias por la intencion', 'Bendiciones para todos!'
-    ];
-
-    // Random 1-2 members reply
-    var replyCount = 1 + Math.floor(Math.random() * Math.min(2, otherMembers.length));
-    var shuffled = otherMembers.sort(function() { return Math.random() - 0.5; });
-
-    // Show typing indicator
-    var typingEl = document.getElementById('gc-typing');
-    var typingName = document.getElementById('gc-typing-name');
-
-    for (var i = 0; i < replyCount; i++) {
-        (function(member, delay) {
-            setTimeout(function() {
-                if (typingName) typingName.textContent = member.name;
-                if (typingEl) typingEl.style.display = 'flex';
-            }, delay - 800);
-
-            setTimeout(function() {
-                if (typingEl) typingEl.style.display = 'none';
-                var now2 = new Date();
-                var t2 = now2.getHours().toString().padStart(2,'0') + ':' + now2.getMinutes().toString().padStart(2,'0');
-                var reply = gcReplies[Math.floor(Math.random() * gcReplies.length)];
-                var messages = getGcMessages(currentCenaculoId);
-                messages.push({ from: member.name, text: reply, time: t2, date: 'Hoy' });
-                saveGcMessages(currentCenaculoId, messages);
-                renderGcMessages();
-            }, delay);
-        })(shuffled[i], 2000 + i * 2500 + Math.random() * 1500);
-    }
-}
 
 function handleGcFileUpload(input) {
     if (!input.files || !input.files.length || !currentCenaculoId) return;
