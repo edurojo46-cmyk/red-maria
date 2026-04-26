@@ -2805,7 +2805,7 @@ async function refreshReadTicks() {
     // Get messages I sent to this partner
     var msgs = await db.getConversationMessages(profile.id, currentChatId);
     msgs.forEach(function(m) {
-        if (m.from_id === profile.id && m.read) {
+        if (m.from_id === profile.id && (m.read === true || m.read === 'true')) {
             var el = document.querySelector('[data-msg-id="' + m.id + '"] .msg-read-tick');
             if (el && el.style.color !== 'rgb(74, 222, 128)') {
                 el.style.color = '#4ade80';
@@ -3051,7 +3051,7 @@ function renderContactList(convs, myId) {
         if (lastText && lastText.indexOf('[VID]') === 0) lastText = '🎬 Video';
         if (lastText.length > 40) lastText = lastText.substring(0,40) + '...';
         var isSent = c.lastMessage && c.lastMessage.from_id === myId;
-        var prefix = isSent ? '<i class="ri-check-double-fill" style="color:' + (c.lastMessage.read ? '#4ade80' : '#999') + ';font-size:0.85rem"></i> ' : '';
+        var prefix = isSent ? '<i class="ri-check-double-fill" style="color:' + (c.lastMessage.read === true || c.lastMessage.read === 'true' ? '#4ade80' : '#999') + ';font-size:0.85rem"></i> ' : '';
         var unreadHtml = c.unreadCount > 0 ? '<span class="chat-unread">' + c.unreadCount + '</span>' : '';
         var timeStr = c.lastMessage ? formatChatTime(c.lastMessage.created_at) : '';
         var div = document.createElement('div');
@@ -3180,7 +3180,7 @@ function appendMessageBubble(msg, isMe) {
     }
     var senderHtml = senderName ? '<div class="chat-msg-sender">' + senderName + '</div>' : '';
     div.innerHTML = senderHtml + '<div class="chat-msg-text">' + textContent + '</div>' + reactHtml +
-        '<div class="chat-msg-meta">' + time + (isMe ? ' <i class="ri-check-double-fill msg-read-tick" style="color:' + (msg.read ? '#4ade80' : 'rgba(255,255,255,0.45)') + ';font-size:0.7rem"></i>' : '') + '</div>';
+        '<div class="chat-msg-meta">' + time + (isMe ? ' <i class="ri-check-double-fill msg-read-tick" style="color:' + (msg.read === true || msg.read === 'true' ? '#4ade80' : 'rgba(255,255,255,0.45)') + ';font-size:0.7rem"></i>' : '') + '</div>';
     // Emoji reaction bar
     var emojiBar = document.createElement('div');
     emojiBar.className = 'msg-emoji-bar';
