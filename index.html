@@ -2815,6 +2815,10 @@ app.navigate = function(screenId) {
             if (rezandoMap) rezandoMap.invalidateSize();
         }, 400);
     }
+    // Load cenaculos from Supabase when entering cenaculo screen
+    if (screenId === 'screen-cenaculo') {
+        loadCenaculosFromSupabase();
+    }
     // Clear message badge when entering chat screen
     if (screenId === 'screen-chat') {
         if (typeof clearNavMsgBadge === 'function') clearNavMsgBadge();
@@ -5001,6 +5005,65 @@ var currentCenaculoId = null;
 // Sample data
 var sampleCenaculos = {}; // Solo cenaculos reales
 
+async function loadCenaculosFromSupabase() {
+    if (typeof db === 'undefined' || !db.getCenaculos) return;
+    try {
+        var user = auth.getCurrentUser();
+        var profile = user ? await db.getProfileByEmail(user.email) : null;
+        var myName = profile ? profile.name : '';
+        var myId = profile ? profile.id : '';
+        
+        var cenaculos = await db.getCenaculos(myId);
+        if (!cenaculos || cenaculos.length === 0) return;
+        
+        var list = document.getElementById('cenaculos-list');
+        if (!list) return;
+        
+        // Don't duplicate - check existing cards
+        var existingIds = {};
+        list.querySelectorAll('.cenaculo-item').forEach(function(el) {
+            var oid = el.getAttribute('data-cid');
+            if (oid) existingIds[oid] = true;
+        });
+        
+        cenaculos.forEach(function(c) {
+            if (existingIds[c.id]) return;
+            
+            // Check if user is a member
+            var isMember = false;
+            var members = c.cenaculo_members || [];
+            if (c.creator_id === myId) isMember = true;
+            members.forEach(function(m) {
+                if (m.name && m.name.toLowerCase() === myName.toLowerCase()) isMember = true;
+                if (m.user_id && m.user_id === myId) isMember = true;
+            });
+            if (!isMember) return;
+            
+            // Build cenaculo object for addCenaculoCard
+            var cenObj = {
+                id: c.id,
+                name: c.name,
+                access: c.access || 'private',
+                color: c.color || '#6366f1',
+                icon: c.icon || 'ri-team-fill',
+                creatorId: c.creator_id,
+                members: members.map(function(m) {
+                    return { name: m.name, role: m.role, active: false };
+                })
+            };
+            // Also save to localStorage
+            var saved = getSavedCenaculos();
+            if (!saved[c.id]) {
+                saved[c.id] = cenObj;
+                saveCenaculos(saved);
+            }
+            addCenaculoCard(cenObj);
+        });
+    } catch(e) {
+        console.error('Error loading cenaculos:', e);
+    }
+}
+
 function getSavedCenaculos() { try { return JSON.parse(localStorage.getItem(CENACULO_KEY)) || {}; } catch(e) { return {}; } }
 function saveCenaculos(data) { localStorage.setItem(CENACULO_KEY, JSON.stringify(data)); }
 
@@ -5108,6 +5171,7 @@ function addCenaculoCard(c) {
     var activeCount = c.members.filter(function(m){return m.active;}).length;
     var card = document.createElement('div');
     card.className = 'cenaculo-item glass card';
+    card.setAttribute('data-cid', c.id);
     card.style.cssText = 'padding:14px 16px;margin-bottom:10px;cursor:pointer;border-left:3px solid ' + c.color;
     card.onclick = function(){ openCenaculo(c.id); };
     card.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;align-items:center;gap:12px"><div style="width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,' + c.color + ',' + c.color + '99);display:flex;align-items:center;justify-content:center;color:white;font-size:1.1rem;flex-shrink:0"><i class="' + c.icon + '"></i></div><div><h4 style="margin:0;font-size:0.9rem;color:var(--clr-text-title)">' + c.name + '</h4><p style="margin:2px 0 0;font-size:0.75rem;color:var(--clr-text-muted)">' + c.members.length + ' miembros Â· <i class="ri-lock-fill"></i> ' + (c.access === 'private' ? 'Privado' : 'Con enlace') + '</p></div></div><div style="display:flex;align-items:center;gap:4px;font-size:0.7rem;color:#27ae60"><span class="pulse-dot small" style="width:6px;height:6px"></span> ' + activeCount + ' activos</div></div>';

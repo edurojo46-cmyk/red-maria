@@ -139,7 +139,8 @@ const db = {
             for (const m of cenaculo.members) {
                 await sbClient.from('cenaculo_members').insert({
                     cenaculo_id: data.id,
-                    username: m.username,
+                    user_id: m.profileId || null,
+                    username: m.username || null,
                     name: m.name,
                     role: m.role
                 });
