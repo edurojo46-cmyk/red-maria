@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -5248,14 +5248,7 @@ function startCenaculoVideoCall() {
     var c = getSavedCenaculos()[currentCenaculoId];
     if (!c) { console.warn('Cenaculo not found for GC:', currentCenaculoId); return; }
 
-    // Check if user is creator
-    var user = (typeof auth !== 'undefined' && auth.getCurrentUser) ? auth.getCurrentUser() : null;
-    var isCreator = c.creatorId === 'current' || (user && user.id === c.creatorId);
-    if (!isCreator) {
-        alert('Solo el creador del cenaculo puede iniciar la videollamada');
-        return;
-    }
-
+    // Any member can start or join the videocall
     // Use a fixed room name based on cenaculo ID so members always join the same room
     var overlay = document.getElementById('videocall-overlay');
     var container = document.getElementById('jitsi-container');
@@ -5267,6 +5260,14 @@ function startCenaculoVideoCall() {
     var displayName = user && user.name ? user.name : 'Peregrino';
     var iframeSrc = 'https://meet.jit.si/' + roomName + '#config.prejoinPageEnabled=false&config.startWithAudioMuted=false&config.startWithVideoMuted=false&config.defaultLanguage=es&userInfo.displayName=' + encodeURIComponent(displayName);
     container.innerHTML = '<iframe src="' + iframeSrc + '" style="width:100%;height:100%;border:none" allow="camera;microphone;fullscreen;display-capture;autoplay" allowfullscreen></iframe>';
+
+    // Notify group that a call started
+    var callTime2 = new Date().getHours().toString().padStart(2,'0') + ':' + new Date().getMinutes().toString().padStart(2,'0');
+    var callMsg2 = { from: displayName, text: displayName + ' inicio una videollamada. Unite!', time: callTime2, date: 'Hoy' };
+    var gcMsgs2 = getGcMessages(currentCenaculoId);
+    gcMsgs2.push(callMsg2);
+    saveGcMessages(currentCenaculoId, gcMsgs2);
+    broadcastGcMessage(currentCenaculoId, callMsg2);
 }
 
 function leaveCenaculo() {
