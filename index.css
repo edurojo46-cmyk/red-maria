@@ -4434,18 +4434,15 @@ body {
 }
 
 /* Media Messages */
-.chat-msg.sent img,
-.chat-msg.sent video {
-    max-width: 220px;
-    border-radius: 12px;
+.chat-msg img,
+.chat-msg video {
+    max-width: 100%;
+    border-radius: 10px;
     cursor: pointer;
-}
-
-.chat-msg.received img,
-.chat-msg.received video {
-    max-width: 220px;
-    border-radius: 12px;
-    cursor: pointer;
+    display: block;
+    border: none;
+    outline: none;
+    box-shadow: none;
 }
 
 /* === Message Wrapper with Actions === */
