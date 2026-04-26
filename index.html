@@ -2750,6 +2750,12 @@ function initRezandoMap() {
 // Init map when profile screen is shown
 var origNavigate = app.navigate.bind(app);
 app.navigate = function(screenId) {
+    // AUTH GATE: require login for all screens
+    var authScreens = ['screen-login', 'screen-register', 'screen-auth'];
+    if (authScreens.indexOf(screenId) === -1 && typeof auth !== 'undefined' && !auth.isAuthenticated()) {
+        origNavigate('screen-login');
+        return;
+    }
     origNavigate(screenId);
     if (screenId === 'screen-profile') {
         setTimeout(function() {
@@ -2763,9 +2769,16 @@ app.navigate = function(screenId) {
         if (typeof initRealChat === 'function') initRealChat();
     }
 };
-// Also init on DOMContentLoaded if profile is first visible
+// Force login screen on page load if not authenticated
 document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(initRezandoMap, 1000);
+    if (typeof auth !== 'undefined' && !auth.isAuthenticated()) {
+        // Hide all screens, show login
+        document.querySelectorAll('.screen').forEach(function(s) { s.style.display = 'none'; });
+        var loginScreen = document.getElementById('screen-login') || document.getElementById('screen-auth');
+        if (loginScreen) loginScreen.style.display = 'block';
+    } else {
+        setTimeout(initRezandoMap, 1000);
+    }
 });
 </script>
 
@@ -2974,7 +2987,13 @@ function appendMessageBubble(msg, isMe) {
     var div = document.createElement('div');
     div.className = 'chat-msg ' + (isMe ? 'sent' : '');
     var time = formatChatTime(msg.created_at);
-    div.innerHTML = '<div class="chat-msg-text">' + msg.text + '</div><div class="chat-msg-meta">' + time + (isMe ? ' <i class="ri-check-double-fill"></i>' : '') + '</div>';
+    // Detect image messages
+    var textContent = msg.text;
+    if (textContent && textContent.indexOf('[IMG]') === 0) {
+        var imgSrc = textContent.substring(5);
+        textContent = '<img src="' + imgSrc + '" style="max-width:100%;border-radius:12px;cursor:pointer;margin-bottom:4px" onclick="window.open(this.src)">';
+    }
+    div.innerHTML = '<div class="chat-msg-text">' + textContent + '</div><div class="chat-msg-meta">' + time + (isMe ? ' <i class="ri-check-double-fill"></i>' : '') + '</div>';
     var actions = document.createElement('div'); actions.className = 'msg-action-bar';
     actions.innerHTML = '<button class="msg-action-btn" title="Copiar" onclick="copyMsgText(this)"><i class="ri-file-copy-line"></i></button><button class="msg-action-btn" title="Compartir" onclick="shareMsgContent(this)"><i class="ri-share-forward-line"></i></button>';
     div.appendChild(actions);
@@ -2995,6 +3014,13 @@ async function sendMessage() {
 }
 
 function renderMessages() {}
+function showMsgToast(msg) {
+    var t = document.createElement('div');
+    t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.85);color:#fff;padding:10px 20px;border-radius:20px;font-size:0.8rem;z-index:9999;transition:opacity 0.3s';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(function(){ t.style.opacity='0'; setTimeout(function(){ t.remove(); },300); },2500);
+}
 function saveChats() {}
 
 function updateContactPreview(id, text, time) {
