@@ -2794,6 +2794,27 @@ function toggleMapHeart(btn) {
     }
 }
 
+// Refresh read ticks - polls read status for sent messages
+var readTickInterval = null;
+async function refreshReadTicks() {
+    if (!currentChatId) return;
+    var localUser = auth.getCurrentUser();
+    if (!localUser) return;
+    var profile = await db.getProfileByEmail(localUser.email);
+    if (!profile) return;
+    // Get messages I sent to this partner
+    var msgs = await db.getConversationMessages(profile.id, currentChatId);
+    msgs.forEach(function(m) {
+        if (m.from_id === profile.id && m.read) {
+            var el = document.querySelector('[data-msg-id="' + m.id + '"] .msg-read-tick');
+            if (el && el.style.color !== 'rgb(74, 222, 128)') {
+                el.style.color = '#4ade80';
+                el.style.transition = 'color 0.3s ease';
+            }
+        }
+    });
+}
+
 function openChatFromMap(profileId, name) {
     if (!profileId) return;
     app.navigate('screen-chat');
