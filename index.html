@@ -2979,6 +2979,21 @@ async function _initRealChatInner() {
     if (loading) loading.style.display = 'none';
     renderContactList(convs, myId);
 
+    // Subscribe to read receipt updates (when partner reads our messages)
+    if (typeof readReceiptSub !== 'undefined' && readReceiptSub) { try { readReceiptSub.unsubscribe(); } catch(e){} }
+    if (myId && sbClient) {
+        readReceiptSub = sbClient.channel('read-receipts-' + myId)
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: 'from_id=eq.' + myId }, function(payload) {
+                if (payload.new && payload.new.read === true) {
+                    var msgDiv = document.querySelector('[data-msg-id="' + payload.new.id + '"]');
+                    if (msgDiv) {
+                        var tick = msgDiv.querySelector('.msg-read-tick');
+                        if (tick) tick.style.color = '#4ade80';
+                    }
+                }
+            })
+            .subscribe();
+    }
     if (chatSubscription) { try { chatSubscription.unsubscribe(); } catch(e){} }
     if (myId) { chatSubscription = db.subscribeToMessages(myId, function(newMsg) {
         incrementNavMsgBadge();
@@ -3015,7 +3030,7 @@ function renderContactList(convs, myId) {
         if (lastText && lastText.indexOf('[VID]') === 0) lastText = '🎬 Video';
         if (lastText.length > 40) lastText = lastText.substring(0,40) + '...';
         var isSent = c.lastMessage && c.lastMessage.from_id === myId;
-        var prefix = isSent ? '<i class="ri-check-double-fill" style="color:#3DA3D4;font-size:0.85rem"></i> ' : '';
+        var prefix = isSent ? '<i class="ri-check-double-fill" style="color:' + (c.lastMessage.read ? '#4ade80' : '#999') + ';font-size:0.85rem"></i> ' : '';
         var unreadHtml = c.unreadCount > 0 ? '<span class="chat-unread">' + c.unreadCount + '</span>' : '';
         var timeStr = c.lastMessage ? formatChatTime(c.lastMessage.created_at) : '';
         var div = document.createElement('div');
@@ -3082,7 +3097,13 @@ async function openChat(partnerId) {
         if(msgArea) msgArea.innerHTML = '';
         messages.forEach(function(m) { appendMessageBubble(m, m.from_id === myId); });
         if(msgArea) msgArea.scrollTop = msgArea.scrollHeight;
-        if (myId) await db.markConversationAsRead(myId, partnerId);
+        if (myId) {
+        await db.markConversationAsRead(myId, partnerId);
+        // Update read ticks for messages WE sent that are now read
+        document.querySelectorAll('.chat-msg.sent .msg-read-tick').forEach(function(tick) {
+            tick.style.color = 'rgba(255,255,255,0.45)'; // our sent, not read by partner yet
+        });
+    }
     } catch(err) {
         console.error('Error loading messages:', err);
         if(msgArea) msgArea.innerHTML = '<div style="text-align:center;padding:20px;color:var(--clr-text-muted);font-size:0.8rem">Error al cargar mensajes</div>';
@@ -3138,7 +3159,7 @@ function appendMessageBubble(msg, isMe) {
     }
     var senderHtml = senderName ? '<div class="chat-msg-sender">' + senderName + '</div>' : '';
     div.innerHTML = senderHtml + '<div class="chat-msg-text">' + textContent + '</div>' + reactHtml +
-        '<div class="chat-msg-meta">' + time + (isMe ? ' <i class="ri-check-double-fill"></i>' : '') + '</div>';
+        '<div class="chat-msg-meta">' + time + (isMe ? ' <i class="ri-check-double-fill msg-read-tick" style="color:' + (msg.read ? '#4ade80' : 'rgba(255,255,255,0.45)') + ';font-size:0.7rem"></i>' : '') + '</div>';
     // Emoji reaction bar
     var emojiBar = document.createElement('div');
     emojiBar.className = 'msg-emoji-bar';
