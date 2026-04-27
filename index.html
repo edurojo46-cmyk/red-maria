@@ -4951,10 +4951,11 @@ function _startJitsi(roomName, container) {
     }
 
     // Desktop: Try Jitsi Meet API first, fallback to iframe
+    // IMPORTANT: Use meet.jit.si for both desktop and mobile so they join the SAME room
     if (typeof JitsiMeetExternalAPI !== 'undefined' && !window.jitsiLoadFailed) {
         try {
-            jitsiApi = new JitsiMeetExternalAPI('8x8.vc', {
-                roomName: 'vpaas-magic-cookie-30location/' + roomName,
+            jitsiApi = new JitsiMeetExternalAPI('meet.jit.si', {
+                roomName: roomName,
                 parentNode: container,
                 width: '100%',
                 height: '100%',
@@ -4992,10 +4993,11 @@ function _startJitsi(roomName, container) {
         }
     }
 
-    // Desktop iframe fallback - uses public Jitsi servers
+    // Desktop iframe fallback - same meet.jit.si server
     var iframeSrc = 'https://meet.jit.si/' + roomName + '#config.prejoinPageEnabled=false&config.startWithAudioMuted=false&config.startWithVideoMuted=false&config.defaultLanguage=es&userInfo.displayName=' + encodeURIComponent(displayName);
     container.innerHTML = '<iframe src="' + iframeSrc + '" style="width:100%;height:100%;border:none" allow="camera;microphone;fullscreen;display-capture;autoplay" allowfullscreen></iframe>';
 }
+
 
 function closeVideoCall() {
     var overlay = document.getElementById('videocall-overlay');
