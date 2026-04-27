@@ -4491,19 +4491,24 @@ function geocodeAddress() {
 </script>
 
 <script>
-// === WebRTC Video Call System (no external services, no login) ===
-var jitsiApi = null; // kept for compat
-var _vcPeer = null; // RTCPeerConnection
+// === WebRTC Video Call System (P2P, no external services) ===
+var jitsiApi = null;
+var _vcPeer = null;
 var _vcLocalStream = null;
 var _vcCallTimer = null;
 var _vcCallSeconds = 0;
 var _vcMicOn = true;
 var _vcCamOn = true;
+var _vcIsCaller = false;
+var _vcActiveCenaculoId = null;
+var _vcPendingICE = [];
 
 var _STUN_SERVERS = [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' }
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:stun4.l.google.com:19302' }
 ];
 
 async function _vcGetMedia() {
@@ -4522,7 +4527,7 @@ function _vcShowOverlay(title) {
     var t = document.getElementById('videocall-overlay-title');
     if (t) t.textContent = title || 'Videollamada';
     var st = document.getElementById('vc-status-msg');
-    if (st) st.textContent = 'Conectando...';
+    if (st) { st.style.display = 'block'; st.textContent = 'Conectando...'; }
     _vcCallSeconds = 0;
     var timer = document.getElementById('vc-call-timer');
     if (timer) timer.textContent = '00:00';
@@ -4541,37 +4546,30 @@ function _vcStartTimer() {
 }
 
 function _vcSendSignal(cenaculoId, type, data) {
-    if (!gcChannel) return;
+    if (!gcChannel) { console.warn('[VC] No GC channel for signal'); return; }
     var user = (typeof auth !== 'undefined' && auth.getCurrentUser) ? auth.getCurrentUser() : null;
     var name = user && user.name ? user.name : 'Peregrino';
-    var msg = { from: name, text: '__WEBRTC__|' + type + '|' + JSON.stringify(data), time: '', date: '' };
-    gcChannel.send({ type: 'broadcast', event: 'gc-msg', payload: msg });
+    var payload = { from: name, text: '__WEBRTC__|' + type + '|' + JSON.stringify(data), time: '', date: '' };
+    gcChannel.send({ type: 'broadcast', event: 'gc-msg', payload: payload });
+    console.log('[VC] Sent signal:', type);
 }
 
-async function _vcStartCall(cenaculoId, isCaller) {
-    _vcShowOverlay('Videollamada');
-    _cenaculoVideoCallActive = true;
-
-    _vcLocalStream = await _vcGetMedia();
-    if (!_vcLocalStream) {
-        document.getElementById('vc-status-msg').textContent = 'No se pudo acceder a camara/microfono';
-        return;
-    }
-
-    // Show local video
-    var localVid = document.getElementById('vc-local-video');
-    if (localVid) { localVid.srcObject = _vcLocalStream; }
-
-    // Create peer connection
+// Create the RTCPeerConnection and wire up events
+function _vcCreatePeer(cenaculoId) {
+    if (_vcPeer) { try { _vcPeer.close(); } catch(e){} }
     _vcPeer = new RTCPeerConnection({ iceServers: _STUN_SERVERS });
+    _vcPendingICE = [];
 
     // Add local tracks
-    _vcLocalStream.getTracks().forEach(function(track) {
-        _vcPeer.addTrack(track, _vcLocalStream);
-    });
+    if (_vcLocalStream) {
+        _vcLocalStream.getTracks().forEach(function(track) {
+            _vcPeer.addTrack(track, _vcLocalStream);
+        });
+    }
 
     // Handle remote stream
     _vcPeer.ontrack = function(ev) {
+        console.log('[VC] Got remote track');
         var remoteVid = document.getElementById('vc-remote-video');
         if (remoteVid && ev.streams && ev.streams[0]) {
             remoteVid.srcObject = ev.streams[0];
@@ -4589,38 +4587,112 @@ async function _vcStartCall(cenaculoId, isCaller) {
     };
 
     _vcPeer.onconnectionstatechange = function() {
+        console.log('[VC] Connection state:', _vcPeer.connectionState);
         var st = document.getElementById('vc-status-msg');
         if (_vcPeer.connectionState === 'connected') {
             if (st) st.style.display = 'none';
-        } else if (_vcPeer.connectionState === 'failed' || _vcPeer.connectionState === 'disconnected') {
+        } else if (_vcPeer.connectionState === 'failed') {
+            if (st) { st.style.display = 'block'; st.textContent = 'Conexion fallida. Intenta de nuevo.'; }
+        } else if (_vcPeer.connectionState === 'disconnected') {
             if (st) { st.style.display = 'block'; st.textContent = 'Conexion perdida...'; }
         }
     };
 
-    if (isCaller) {
-        // Create and send offer
-        var offer = await _vcPeer.createOffer();
-        await _vcPeer.setLocalDescription(offer);
-        _vcSendSignal(cenaculoId, 'offer', _vcPeer.localDescription);
-        var st = document.getElementById('vc-status-msg');
-        if (st) st.textContent = 'Esperando al otro participante...';
-    }
+    _vcPeer.oniceconnectionstatechange = function() {
+        console.log('[VC] ICE state:', _vcPeer.iceConnectionState);
+    };
+
+    return _vcPeer;
 }
 
+// CALLER: open camera and wait for receiver to accept
+async function _vcInitCaller(cenaculoId) {
+    _vcIsCaller = true;
+    _vcActiveCenaculoId = cenaculoId;
+    _cenaculoVideoCallActive = true;
+    _vcShowOverlay('Videollamada');
+
+    _vcLocalStream = await _vcGetMedia();
+    if (!_vcLocalStream) {
+        var st = document.getElementById('vc-status-msg');
+        if (st) st.textContent = 'No se pudo acceder a camara/microfono';
+        return;
+    }
+    var localVid = document.getElementById('vc-local-video');
+    if (localVid) localVid.srcObject = _vcLocalStream;
+
+    // Create peer but DON'T create offer yet — wait for 'ready' signal
+    _vcCreatePeer(cenaculoId);
+    var st = document.getElementById('vc-status-msg');
+    if (st) st.textContent = 'Llamando...';
+}
+
+// RECEIVER: open camera, create peer, send 'ready', wait for offer
+async function _vcInitReceiver(cenaculoId) {
+    _vcIsCaller = false;
+    _vcActiveCenaculoId = cenaculoId;
+    _cenaculoVideoCallActive = true;
+    _vcShowOverlay('Videollamada');
+
+    _vcLocalStream = await _vcGetMedia();
+    if (!_vcLocalStream) {
+        var st = document.getElementById('vc-status-msg');
+        if (st) st.textContent = 'No se pudo acceder a camara/microfono';
+        return;
+    }
+    var localVid = document.getElementById('vc-local-video');
+    if (localVid) localVid.srcObject = _vcLocalStream;
+
+    _vcCreatePeer(cenaculoId);
+    var st = document.getElementById('vc-status-msg');
+    if (st) st.textContent = 'Conectando con el otro participante...';
+
+    // Tell the caller we're ready
+    _vcSendSignal(cenaculoId, 'ready', {});
+}
+
+// Handle all WebRTC signals
 async function _vcHandleSignal(type, data, cenaculoId) {
-    if (type === 'offer') {
-        // We received an offer — we are the callee
-        if (!_vcPeer) await _vcStartCall(cenaculoId, false);
-        await _vcPeer.setRemoteDescription(new RTCSessionDescription(data));
-        var answer = await _vcPeer.createAnswer();
-        await _vcPeer.setLocalDescription(answer);
-        _vcSendSignal(cenaculoId, 'answer', _vcPeer.localDescription);
+    console.log('[VC] Received signal:', type);
+
+    if (type === 'ready') {
+        // Receiver is ready — caller creates and sends offer
+        if (_vcIsCaller && _vcPeer) {
+            console.log('[VC] Receiver ready, creating offer...');
+            var offer = await _vcPeer.createOffer();
+            await _vcPeer.setLocalDescription(offer);
+            _vcSendSignal(cenaculoId, 'offer', _vcPeer.localDescription);
+        }
+    } else if (type === 'offer') {
+        // Receiver got the offer
+        if (_vcPeer) {
+            console.log('[VC] Setting remote offer...');
+            await _vcPeer.setRemoteDescription(new RTCSessionDescription(data));
+            // Apply any pending ICE candidates
+            for (var i = 0; i < _vcPendingICE.length; i++) {
+                try { await _vcPeer.addIceCandidate(new RTCIceCandidate(_vcPendingICE[i])); }
+                catch(e) {}
+            }
+            _vcPendingICE = [];
+            var answer = await _vcPeer.createAnswer();
+            await _vcPeer.setLocalDescription(answer);
+            _vcSendSignal(cenaculoId, 'answer', _vcPeer.localDescription);
+            console.log('[VC] Sent answer');
+        }
     } else if (type === 'answer') {
-        if (_vcPeer) await _vcPeer.setRemoteDescription(new RTCSessionDescription(data));
+        // Caller got the answer
+        if (_vcPeer) {
+            console.log('[VC] Setting remote answer...');
+            await _vcPeer.setRemoteDescription(new RTCSessionDescription(data));
+        }
     } else if (type === 'ice') {
         if (_vcPeer) {
-            try { await _vcPeer.addIceCandidate(new RTCIceCandidate(data)); }
-            catch(e) { console.warn('[VC] ICE error:', e); }
+            if (_vcPeer.remoteDescription) {
+                try { await _vcPeer.addIceCandidate(new RTCIceCandidate(data)); }
+                catch(e) { console.warn('[VC] ICE error:', e); }
+            } else {
+                _vcPendingICE.push(data);
+            }
         }
     } else if (type === 'hangup') {
         closeVideoCall();
@@ -4644,6 +4716,7 @@ function vcToggleCam() {
     if (btn) btn.innerHTML = _vcCamOn ? '<i class="ri-camera-fill"></i>' : '<i class="ri-camera-off-fill" style="color:#ef4444"></i>';
     if (btn) btn.style.background = _vcCamOn ? 'rgba(255,255,255,0.15)' : 'rgba(239,68,68,0.3)';
 }
+
 
 var currentRosaryOrganizer = null;
 var currentRosaryData = null;
@@ -5400,8 +5473,8 @@ function startCenaculoVideoCall() {
     var currentUser = (typeof auth !== 'undefined' && auth.getCurrentUser) ? auth.getCurrentUser() : null;
     var displayName = currentUser && currentUser.name ? currentUser.name : 'Peregrino';
 
-    // Start WebRTC call as caller
-    _vcStartCall(currentCenaculoId, true);
+    // Start WebRTC call as caller (waits for receiver to accept)
+    _vcInitCaller(currentCenaculoId);
     var titleEl = document.getElementById('videocall-overlay-title');
     if (titleEl) titleEl.textContent = 'Red Maria - ' + c.name;
 
@@ -5425,9 +5498,9 @@ function acceptCenaculoCall() {
     var ov = document.getElementById('incoming-call-overlay');
     if (ov) { ov.classList.add('call-fade-out'); setTimeout(function(){ov.remove();},300); }
 
-    // Start WebRTC call as callee (will receive offer via broadcast)
+    // Start WebRTC call as receiver — sends 'ready' signal to caller
     setTimeout(function(){
-        _vcStartCall(cenaculoId, false);
+        _vcInitReceiver(cenaculoId);
         var c = getSavedCenaculos()[cenaculoId];
         var titleEl = document.getElementById('videocall-overlay-title');
         if (titleEl && c) titleEl.textContent = 'Red Maria - ' + c.name;
