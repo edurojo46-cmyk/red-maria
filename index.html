@@ -4529,19 +4529,11 @@ var _STUN_SERVERS = [
 
 async function _vcGetMedia() {
     var audioConstraints = {
-        echoCancellation: { exact: true },
-        noiseSuppression: { exact: true },
-        autoGainControl: { exact: true },
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
         sampleRate: 22050,
-        channelCount: 1,
-        latency: { ideal: 0.01 },
-        // Chrome-specific advanced constraints
-        googEchoCancellation: true,
-        googAutoGainControl: true,
-        googNoiseSuppression: true,
-        googHighpassFilter: true,
-        googEchoCancellation2: true,
-        googDAEchoCancellation: true
+        channelCount: 1
     };
     try {
         var stream = await navigator.mediaDevices.getUserMedia({ 
@@ -4662,9 +4654,20 @@ function _vcCreatePeer(cenaculoId) {
         var remoteVid = document.getElementById('vc-remote-video');
         if (remoteVid && ev.streams && ev.streams[0]) {
             remoteVid.srcObject = ev.streams[0];
+            // Reduce remote audio volume to prevent mic feedback
+            remoteVid.volume = 0.5;
             var st = document.getElementById('vc-status-msg');
             if (st) st.style.display = 'none';
             _vcStartTimer();
+
+            // On desktop, auto-mute mic to prevent feedback, user can unmute
+            if (!_isMobileDevice() && _vcLocalStream && _vcMicOn) {
+                _vcMicOn = false;
+                _vcLocalStream.getAudioTracks().forEach(function(t) { t.enabled = false; });
+                var btn = document.getElementById('vc-btn-mic');
+                if (btn) { btn.innerHTML = '<i class="ri-mic-off-fill" style="color:#ef4444"></i>'; btn.style.background = 'rgba(239,68,68,0.3)'; }
+                if (typeof showMsgToast === 'function') showMsgToast('🎤 Mic muteado para evitar ruido. Tocá el botón para hablar.');
+            }
         }
     };
 
