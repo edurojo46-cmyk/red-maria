@@ -4541,7 +4541,7 @@ var _STUN_SERVERS = [
 async function _vcGetMedia() {
     // Try progressively simpler constraints until one works
     var attempts = [
-        // Attempt 1: HD video + processed audio
+        // Attempt 1: HD video + audio with echo cancellation
         {
             video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 }, facingMode: 'user' },
             audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
@@ -4551,9 +4551,9 @@ async function _vcGetMedia() {
             video: { facingMode: 'user' },
             audio: { echoCancellation: true, noiseSuppression: true }
         },
-        // Attempt 3: Any video + any audio
+        // Attempt 3: Any video + any audio (simplest)
         { video: true, audio: true },
-        // Attempt 4: Audio only (no camera)
+        // Attempt 4: Audio only (no camera available)
         { video: false, audio: true }
     ];
 
@@ -4561,72 +4561,18 @@ async function _vcGetMedia() {
         try {
             console.log('[VC] Trying media attempt', i + 1);
             var stream = await navigator.mediaDevices.getUserMedia(attempts[i]);
-            console.log('[VC] Media acquired with attempt', i + 1,
-                '- Video tracks:', stream.getVideoTracks().length,
-                '- Audio tracks:', stream.getAudioTracks().length);
-            // Apply audio processing on attempts with specific audio constraints
-            if (i <= 1) {
-                return _vcProcessAudio(stream);
-            }
+            console.log('[VC] ✓ Media OK with attempt', i + 1,
+                '- Video:', stream.getVideoTracks().length,
+                '- Audio:', stream.getAudioTracks().length);
             return stream;
         } catch(e) {
-            console.warn('[VC] Attempt', i + 1, 'failed:', e.name, e.message);
+            console.warn('[VC] Attempt', i + 1, 'failed:', e.name, '-', e.message);
         }
     }
 
     console.error('[VC] All media attempts failed');
     if (typeof showMsgToast === 'function') showMsgToast('⚠️ No se pudo acceder a la cámara/micrófono. Verificá los permisos del navegador.');
     return null;
-}
-
-// Apply audio processing to reduce feedback and echo
-function _vcProcessAudio(stream) {
-    try {
-        var ctx = new (window.AudioContext || window.webkitAudioContext)();
-        var source = ctx.createMediaStreamSource(stream);
-
-        // High-pass filter: removes low-frequency rumble/feedback
-        var highpass = ctx.createBiquadFilter();
-        highpass.type = 'highpass';
-        highpass.frequency.value = 200; // Cut below 200Hz
-
-        // Compressor/limiter: prevents sudden loud spikes from feedback
-        var compressor = ctx.createDynamicsCompressor();
-        compressor.threshold.value = -30;
-        compressor.knee.value = 20;
-        compressor.ratio.value = 12;
-        compressor.attack.value = 0.003;
-        compressor.release.value = 0.1;
-
-        // Gain: reduce mic volume slightly to prevent feedback loop
-        var gain = ctx.createGain();
-        gain.gain.value = 0.8;
-
-        // Chain: source -> highpass -> compressor -> gain -> destination
-        source.connect(highpass);
-        highpass.connect(compressor);
-        compressor.connect(gain);
-
-        var dest = ctx.createMediaStreamDestination();
-        gain.connect(dest);
-
-        // Create new stream: processed audio + original video
-        var processedStream = new MediaStream();
-        // Add processed audio track
-        dest.stream.getAudioTracks().forEach(function(t) { processedStream.addTrack(t); });
-        // Keep original video tracks
-        stream.getVideoTracks().forEach(function(t) { processedStream.addTrack(t); });
-
-        // Store context and original stream for cleanup
-        processedStream._audioCtx = ctx;
-        processedStream._originalStream = stream;
-
-        console.log('[VC] Audio processing applied (highpass + compressor + gain reduction)');
-        return processedStream;
-    } catch(e) {
-        console.warn('[VC] Audio processing failed, using raw stream:', e);
-        return stream;
-    }
 }
 
 function _vcShowOverlay(title) {
@@ -5416,11 +5362,6 @@ function closeVideoCall() {
     // Stop WebRTC
     if (_vcPeer) { try { _vcPeer.close(); } catch(e){} _vcPeer = null; }
     if (_vcLocalStream) {
-        // Clean up audio processing context
-        if (_vcLocalStream._audioCtx) { try { _vcLocalStream._audioCtx.close(); } catch(e){} }
-        if (_vcLocalStream._originalStream) {
-            _vcLocalStream._originalStream.getTracks().forEach(function(t) { t.stop(); });
-        }
         _vcLocalStream.getTracks().forEach(function(t) { t.stop(); });
         _vcLocalStream = null;
     }
