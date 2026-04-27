@@ -201,10 +201,28 @@ const app = {
         this.filterBuscarCards(document.getElementById('buscar-search-input')?.value || '');
     },
 
-    renderProfileMyRosaries() {
+    async renderProfileMyRosaries() {
         const container = document.getElementById('profile-my-rosaries'); if (!container) return;
         const user = auth.getCurrentUser(); if (!user) return;
-        const allRosaries = this.getActiveRosaries();
+
+        // Load from Supabase first, fallback to localStorage
+        let allRosaries = this.getActiveRosaries();
+        if (typeof db !== 'undefined' && db.getRosaries) {
+            try {
+                var remote = await db.getRosaries();
+                if (remote && remote.length > 0) {
+                    allRosaries = remote.map(function(r) {
+                        return {
+                            id: r.id, place: r.place, address: r.address || '', date: r.date, time: r.time,
+                            mystery: r.mystery, intention: r.intention, lat: r.lat, lng: r.lng,
+                            participants: r.participants || 1, creatorId: r.creator_id,
+                            creatorName: r.creator_name || 'Anónimo'
+                        };
+                    });
+                }
+            } catch(e) { console.warn('[Profile] Supabase rosaries failed:', e.message); }
+        }
+
         const myRosaries = allRosaries.filter(r => r.creatorId === user.id);
 
         if (myRosaries.length === 0) {
@@ -214,10 +232,7 @@ const app = {
         let html = '';
         myRosaries.forEach(r => {
             const ds = this.formatDate(r.date);
-            const confirmedKey = 'redmaria_confirmed_' + r.id;
-            let confirmed = [];
-            try { confirmed = JSON.parse(localStorage.getItem(confirmedKey)) || []; } catch(e) {}
-            const confirmCount = confirmed.length;
+            const confirmCount = r.participants || 1;
             html += '<div class="profile-rosary-card glass card">' +
                 '<div class="profile-rosary-header">' +
                     '<div class="profile-rosary-icon coord-icon"><i class="ri-shield-star-fill"></i></div>' +
@@ -232,7 +247,7 @@ const app = {
                         '<span class="profile-rosary-badge coord-badge"><i class="ri-shield-star-fill"></i> Coordinador</span>' +
                         '<span class="profile-rosary-confirmed"><i class="ri-check-double-fill"></i> ' + confirmCount + ' confirmados</span>' +
                     '</div>' +
-                    '<button class="btn btn-primary profile-rosary-btn" onclick="app._currentRosary = app.getRosaries().find(x => x.id === \'' + r.id + '\'); app.navigate(\'screen-rezo\')"><i class="ri-play-circle-fill"></i> Rezar</button>' +
+                    '<button class="btn btn-primary profile-rosary-btn" onclick="app._currentRosary = {id:\'' + r.id + '\',place:\'' + (r.place||'').replace(/'/g, "\\'") + '\',date:\'' + (r.date||'') + '\',time:\'' + (r.time||'') + '\',mystery:\'' + (r.mystery||'') + '\',intention:\'' + (r.intention||'').replace(/'/g, "\\'") + '\',creatorId:\'' + (r.creatorId||'') + '\',creatorName:\'' + (r.creatorName||'').replace(/'/g, "\\'") + '\',participants:' + (r.participants||1) + '}; app.navigate(\'screen-rezo\')"><i class="ri-play-circle-fill"></i> Rezar</button>' +
                 '</div>' +
             '</div>';
         });
@@ -323,7 +338,7 @@ const app = {
             db.createRosary({
                 id: r.id, place: r.place, address: r.address || '', date: r.date, time: r.time,
                 mystery: r.mystery, intention: r.intention, lat: r.lat, lng: r.lng,
-                creator_id: null,
+                creator_id: r.creatorId || null,
                 creator_name: r.creatorName || 'Anónimo', participants: r.participants || 1
             }).then(function() { console.log('✅ Rosario guardado en Supabase'); })
               .catch(function(e) { console.error('❌ Error guardando rosario en Supabase:', e.message || e); });
