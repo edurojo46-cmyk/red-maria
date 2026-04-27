@@ -5363,6 +5363,15 @@ function closeVideoCall() {
     if (wasActive && !_vcHangupReceived && currentCenaculoId && gcChannel) {
         _vcSendSignal(currentCenaculoId, 'hangup', {});
     }
+
+    // Send call cancel signal so the other person's ringtone stops
+    if (currentCenaculoId) {
+        var cancelUser = 'Yo';
+        try { cancelUser = auth.getCurrentUser().name || 'Yo'; } catch(e) {}
+        var cancelMsg = { from: cancelUser, text: '__CALLCANCEL__|' + currentCenaculoId, time: '', date: '' };
+        if (typeof broadcastGcMessage === 'function') broadcastGcMessage(currentCenaculoId, cancelMsg);
+        if (typeof _broadcastOnCallChannel === 'function') _broadcastOnCallChannel(currentCenaculoId, cancelMsg);
+    }
     _vcHangupReceived = false;
     _vcOfferSent = false;
     _vcAnswerSent = false;
@@ -6092,6 +6101,23 @@ function _subscribeForCalls(cenaculoId) {
         try { myName = auth.getCurrentUser().name || 'Yo'; } catch(e) {}
         if (msg.from === myName) return;
 
+        // Handle call cancel on global channel too
+        if (msg.text && msg.text.indexOf('__CALLCANCEL__') === 0) {
+            console.log('[VC-GLOBAL] Call cancelled by', msg.from);
+            if (typeof _stopIncomingRingtone === 'function') _stopIncomingRingtone();
+            var ov = document.getElementById('incoming-call-overlay');
+            if (ov) { ov.classList.add('call-fade-out'); setTimeout(function(){ov.remove();},300); }
+            if (typeof _incomingCallState !== 'undefined') {
+                _incomingCallState.cenaculoId = null; _incomingCallState.roomName = null; _incomingCallState.callerName = null;
+            }
+            if (typeof _swRegistration !== 'undefined' && _swRegistration) {
+                _swRegistration.getNotifications().then(function(notifs) {
+                    notifs.forEach(function(n) { if (n.tag && n.tag.indexOf('incoming-call') !== -1) n.close(); });
+                }).catch(function(){});
+            }
+            return;
+        }
+
         // Only handle VIDEOCALL signals on this listener
         if (msg.text && msg.text.indexOf('__VIDEOCALL__') === 0) {
             var parts = msg.text.split('|');
@@ -6209,6 +6235,24 @@ function joinGcChannel(cenaculoId) {
         try { myName = auth.getCurrentUser().name || 'Yo'; } catch(e) {}
         if (msg.from === myName) return;
 
+
+        // === DETECT CALL CANCEL (caller hung up before answer) ===
+        if (msg.text && msg.text.indexOf('__CALLCANCEL__') === 0) {
+            console.log('[VC] Call cancelled by', msg.from);
+            if (typeof _stopIncomingRingtone === 'function') _stopIncomingRingtone();
+            var ov = document.getElementById('incoming-call-overlay');
+            if (ov) { ov.classList.add('call-fade-out'); setTimeout(function(){ov.remove();},300); }
+            if (typeof _incomingCallState !== 'undefined') {
+                _incomingCallState.cenaculoId = null; _incomingCallState.roomName = null; _incomingCallState.callerName = null;
+            }
+            // Close system notification too
+            if (typeof _swRegistration !== 'undefined' && _swRegistration) {
+                _swRegistration.getNotifications().then(function(notifs) {
+                    notifs.forEach(function(n) { if (n.tag && n.tag.indexOf('incoming-call') !== -1) n.close(); });
+                }).catch(function(){});
+            }
+            return;
+        }
 
         // === DETECT VIDEO CALL SIGNAL ===
         if (msg.text && msg.text.indexOf('__VIDEOCALL__') === 0) {
