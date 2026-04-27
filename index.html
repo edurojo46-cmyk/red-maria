@@ -248,13 +248,13 @@
         <div class="buscar-stats-banner">
             <div class="buscar-stat">
                 <i class="ri-map-pin-fill" style="color:#3DA3D4"></i>
-                <span class="buscar-stat-num" id="buscar-stat-rosaries">5</span>
+                <span class="buscar-stat-num" id="buscar-stat-rosaries">0</span>
                 <span class="buscar-stat-label">Rosarios</span>
             </div>
             <div class="buscar-stat-divider"></div>
             <div class="buscar-stat">
                 <i class="ri-group-fill" style="color:#27ae60"></i>
-                <span class="buscar-stat-num" id="buscar-stat-people">77</span>
+                <span class="buscar-stat-num" id="buscar-stat-people">0</span>
                 <span class="buscar-stat-label">Personas</span>
             </div>
             <div class="buscar-stat-divider"></div>
@@ -269,38 +269,14 @@
         <div class="buscar-cards-area">
             <div class="buscar-cards-header">
                 <h3><i class="ri-hand-heart-fill"></i> Rosarios Cercanos</h3>
-                <span class="buscar-cards-count" id="buscar-cards-count">5 encontrados</span>
+                <span class="buscar-cards-count" id="buscar-cards-count">0 encontrados</span>
             </div>
             <div class="rosary-list" id="rosary-list">
-                <div class="rosary-card glass card" onclick="app.navigate('screen-rezo')">
-                    <div class="rosary-card-accent" style="background:linear-gradient(135deg,#3DA3D4,#2E8BC0)"></div>
-                    <div class="rosary-card-header">
-                        <div class="rosary-card-icon"><i class="ri-map-pin-fill"></i></div>
-                        <div class="rosary-card-info">
-                            <h3 id="sheet-place-name">Plaza San Martín</h3>
-                            <p id="sheet-place-time"><i class="ri-time-line"></i> Hoy 19:00 hs Â· Misterios Gozosos</p>
-                        </div>
-                        <div class="rosary-card-participants"><span>24</span><i class="ri-group-fill"></i></div>
-                    </div>
-                    <div class="rosary-card-details">
-                        <div class="rosary-card-detail"><i class="ri-candle-fill" style="color:#e67e22"></i> Por la Paz del Mundo</div>
-                        <div class="rosary-card-detail"><i class="ri-map-pin-range-fill" style="color:#27ae60"></i> Retiro, CABA</div>
-                    </div>
-                    <div class="rosary-card-footer">
-                        <div class="rosary-card-avatars">
-                            <div class="rc-avatar" style="background:#3DA3D4">M</div>
-                            <div class="rc-avatar" style="background:#27ae60">J</div>
-                            <div class="rc-avatar" style="background:#e67e22">P</div>
-                            <span class="rc-avatar-more">+21</span>
-                        </div>
-                        <button class="btn btn-primary btn-join-new" onclick="event.stopPropagation(); app.navigate('screen-rezo')"><i class="ri-add-circle-fill"></i> Unirme</button>
-                    </div>
-                </div>
             </div>
-            <div class="buscar-empty-state" id="buscar-empty" style="display:none">
+            <div class="buscar-empty-state" id="buscar-empty">
                 <i class="ri-search-eye-line"></i>
-                <h4>No se encontraron rosarios</h4>
-                <p>Intentá con otra búsqueda o creá uno nuevo</p>
+                <h4>No hay rosarios creados aún</h4>
+                <p>Sé el primero en crear un rosario en tu zona</p>
                 <button class="btn btn-primary" onclick="app.navigate('screen-create-rosary')"><i class="ri-add-line"></i> Crear Rosario</button>
             </div>
         </div>

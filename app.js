@@ -46,29 +46,33 @@ const app = {
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(this.buscarMap);
         L.control.zoom({ position: 'topright' }).addTo(this.buscarMap);
 
-        // Add sample markers for rosaries
-        const sampleMarkers = [
-            { id: 'sample_1', lat: -34.5955, lng: -58.3739, name: 'Plaza San Martín', time: '19:00', mystery: 'Gozosos', intention: 'Por la Paz del Mundo', participants: 24 },
-            { id: 'sample_2', lat: -34.6037, lng: -58.3816, name: 'Plaza de Mayo', time: '18:00', mystery: 'Dolorosos', intention: 'Por los enfermos', participants: 15 },
-            { id: 'sample_3', lat: -34.5875, lng: -58.3921, name: 'Plaza Francia', time: '17:30', mystery: 'Gloriosos', intention: 'Por las familias', participants: 12 },
-            { id: 'sample_4', lat: -34.6083, lng: -58.3712, name: 'Plaza Dorrego', time: '20:00', mystery: 'Luminosos', intention: 'Por la juventud', participants: 8 },
-            { id: 'sample_5', lat: -34.5794, lng: -58.4199, name: 'Plaza Serrano', time: '19:30', mystery: 'Gozosos', intention: 'Por las vocaciones', participants: 18 },
-        ];
-        sampleMarkers.forEach(m => {
-            const icon = L.divIcon({ className: 'custom-marker-wrapper', html: '<div class="custom-map-marker"><i class="ri-map-pin-fill" style="font-size:1.2rem;color:white"></i><span class="marker-count">' + m.participants + '</span></div>', iconSize: [40, 48], iconAnchor: [20, 48] });
-            const marker = L.marker([m.lat, m.lng], { icon }).addTo(this.buscarMap);
-            marker.bindPopup(() => this._buildMapPopup(m.id, m.name, m.time, m.mystery, m.intention, m.participants), { className: 'rosary-map-popup', maxWidth: 260 });
-        });
-
         // Add saved rosaries markers (only active/future ones)
-        this.getActiveRosaries().forEach(r => {
+        const activeRosaries = this.getActiveRosaries();
+        let totalPeople = 0;
+        activeRosaries.forEach(r => {
             if (r.lat && r.lng) {
                 const pCount = r.participants || 1;
+                totalPeople += pCount;
                 const icon = L.divIcon({ className: 'custom-marker-wrapper', html: '<div class="custom-map-marker user-marker"><i class="ri-map-pin-fill" style="font-size:1rem;color:white"></i><span class="marker-count">' + pCount + '</span></div>', iconSize: [36, 44], iconAnchor: [18, 44] });
                 const marker = L.marker([r.lat, r.lng], { icon }).addTo(this.buscarMap);
                 marker.bindPopup(() => this._buildMapPopup(r.id, r.place, r.time, r.mystery, r.intention, r.participants || 1), { className: 'rosary-map-popup', maxWidth: 260 });
             }
         });
+
+        // Update stats
+        const statRos = document.getElementById('buscar-stat-rosaries');
+        const statPpl = document.getElementById('buscar-stat-people');
+        const countEl = document.getElementById('buscar-cards-count');
+        const emptyEl = document.getElementById('buscar-empty');
+        if (statRos) statRos.textContent = activeRosaries.length;
+        if (statPpl) statPpl.textContent = totalPeople;
+        if (countEl) countEl.textContent = activeRosaries.length + ' encontrados';
+        if (emptyEl) emptyEl.style.display = activeRosaries.length === 0 ? '' : 'none';
+
+        // Render cards for real rosaries
+        const list = document.getElementById('rosary-list');
+        if (list) list.innerHTML = '';
+        activeRosaries.forEach(r => this.addRosaryCard(r));
     },
 
     _buildMapPopup(id, name, time, mystery, intention, participants) {
