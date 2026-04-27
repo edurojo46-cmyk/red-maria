@@ -1,18 +1,41 @@
-// === Red Maria Service Worker ===
-// Handles background notifications for incoming video calls
+// === Red Maria Service Worker v3 ===
+// Handles background notifications + cache busting
 
-const CACHE_NAME = 'redmaria-v2';
+const CACHE_NAME = 'redmaria-v3';
 
-// Install event
+// Install event - force immediate activation
 self.addEventListener('install', function(event) {
-    console.log('[SW] Installing v2...');
+    console.log('[SW] Installing v3...');
     self.skipWaiting();
 });
 
-// Activate event
+// Activate event - clean old caches
 self.addEventListener('activate', function(event) {
-    console.log('[SW] Activated v2');
-    event.waitUntil(self.clients.claim());
+    console.log('[SW] Activated v3');
+    event.waitUntil(
+        caches.keys().then(function(names) {
+            return Promise.all(
+                names.filter(function(n) { return n !== CACHE_NAME; })
+                    .map(function(n) { console.log('[SW] Deleting old cache:', n); return caches.delete(n); })
+            );
+        }).then(function() { return self.clients.claim(); })
+    );
+});
+
+// Network-first fetch: always get fresh files, fallback to cache only offline
+self.addEventListener('fetch', function(event) {
+    event.respondWith(
+        fetch(event.request).then(function(response) {
+            // Cache a copy for offline fallback
+            if (response.ok && event.request.method === 'GET') {
+                var clone = response.clone();
+                caches.open(CACHE_NAME).then(function(cache) { cache.put(event.request, clone); });
+            }
+            return response;
+        }).catch(function() {
+            return caches.match(event.request);
+        })
+    );
 });
 
 // Vibration pattern: mimics a phone ring (long vibrations with pauses)
