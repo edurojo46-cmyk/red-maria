@@ -101,13 +101,16 @@ const db = {
 
     async joinRosary(rosaryId, userId) {
         if (!sbClient) return;
+        var user = (typeof auth !== 'undefined' && auth.getCurrentUser) ? auth.getCurrentUser() : null;
+        var userName = user ? user.name : 'Anónimo';
         await sbClient.from('rosary_participants').upsert({
             rosary_id: rosaryId,
             user_id: userId,
+            user_name: userName,
             joined_at: new Date().toISOString()
         });
         // Increment participant count
-        await sbClient.rpc('increment_participants', { row_id: rosaryId });
+        try { await sbClient.rpc('increment_participants', { row_id: rosaryId }); } catch(e) {}
     },
 
     async leaveRosary(rosaryId, userId) {
@@ -116,7 +119,19 @@ const db = {
             .delete()
             .eq('rosary_id', rosaryId)
             .eq('user_id', userId);
-        await sbClient.rpc('decrement_participants', { row_id: rosaryId });
+        try { await sbClient.rpc('decrement_participants', { row_id: rosaryId }); } catch(e) {}
+    },
+
+    async getParticipants(rosaryId) {
+        if (!sbClient) return [];
+        const { data, error } = await sbClient.from('rosary_participants')
+            .select('user_id, user_name, joined_at')
+            .eq('rosary_id', rosaryId)
+            .order('joined_at', { ascending: true });
+        if (error) { console.error('Error fetching participants:', error); return []; }
+        return (data || []).map(function(p) {
+            return { id: p.user_id, name: p.user_name || 'Anónimo', role: 'participante' };
+        });
     },
 
     // ==================== CENACULOS ====================

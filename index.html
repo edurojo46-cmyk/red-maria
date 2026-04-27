@@ -4876,7 +4876,7 @@ function updateRezoPage(rosaryData) {
 }
 
 // Render confirmed participants list
-function renderConfirmedParticipants(rosaryData) {
+async function renderConfirmedParticipants(rosaryData) {
     var list = document.getElementById('rezo-confirmed-list');
     var countEl = document.getElementById('rezo-confirmed-count');
     var joinArea = document.getElementById('rezo-join-area');
@@ -4888,24 +4888,31 @@ function renderConfirmedParticipants(rosaryData) {
     var isJoined = rosaryId && joined.some(function(j) { return j.id === rosaryId; });
     var isCoordinator = isCurrentUserOrganizer();
 
-    // Get confirmed users for this rosary from localStorage
-    var confirmedKey = 'redmaria_confirmed_' + (rosaryId || 'default');
+    // Load confirmed from Supabase first, fallback to localStorage
     var confirmed = [];
-    try { confirmed = JSON.parse(localStorage.getItem(confirmedKey)) || []; } catch(e) { confirmed = []; }
+    if (rosaryId && typeof db !== 'undefined' && db.getParticipants) {
+        try {
+            confirmed = await db.getParticipants(rosaryId);
+            console.log('[Participants] Loaded', confirmed.length, 'from Supabase');
+        } catch(e) {
+            console.warn('[Participants] Supabase failed:', e.message);
+        }
+    }
 
-    // Always include the coordinator
+    // If Supabase returned nothing, try localStorage as fallback
+    if (confirmed.length === 0) {
+        var confirmedKey = 'redmaria_confirmed_' + (rosaryId || 'default');
+        try { confirmed = JSON.parse(localStorage.getItem(confirmedKey)) || []; } catch(e) { confirmed = []; }
+    }
+
+    // Always include the coordinator at the top
     var creatorName = rosaryData ? (rosaryData.creatorName || 'Anónimo') : 'Anónimo';
     var creatorId = rosaryData ? rosaryData.creatorId : null;
     if (creatorId && !confirmed.some(function(c) { return c.id === creatorId; })) {
         confirmed.unshift({ id: creatorId, name: creatorName, role: 'coordinador' });
-        localStorage.setItem(confirmedKey, JSON.stringify(confirmed));
     }
-
-    // Add current user if joined
-    if (isJoined && user && !confirmed.some(function(c) { return c.id === user.id; })) {
-        confirmed.push({ id: user.id, name: user.name, role: 'participante' });
-        localStorage.setItem(confirmedKey, JSON.stringify(confirmed));
-    }
+    // Mark the coordinator role
+    confirmed.forEach(function(c) { if (c.id === creatorId) c.role = 'coordinador'; });
 
     if (countEl) countEl.textContent = confirmed.length;
 
@@ -4938,17 +4945,30 @@ function renderConfirmedParticipants(rosaryData) {
 }
 
 // Join/Leave current rosary from rezo page
-function joinCurrentRosary() {
+async function joinCurrentRosary() {
     if (!currentRosaryData) return;
     var r = currentRosaryData;
     app.joinRosary(r.id, r.place || 'Rosario', r.time || '', r.mystery || '', r.intention || '', r.participants || 1);
+
+    // Save to Supabase
+    var user = auth.getCurrentUser();
+    if (user && typeof db !== 'undefined' && db.joinRosary) {
+        try { await db.joinRosary(r.id, user.id); } catch(e) { console.error('Join sync error:', e); }
+    }
+
     renderConfirmedParticipants(currentRosaryData);
 }
 
-function leaveCurrentRosary() {
+async function leaveCurrentRosary() {
     if (!currentRosaryData) return;
-    // Also remove from confirmed list
     var user = auth.getCurrentUser();
+
+    // Remove from Supabase
+    if (user && typeof db !== 'undefined' && db.leaveRosary) {
+        try { await db.leaveRosary(currentRosaryData.id, user.id); } catch(e) { console.error('Leave sync error:', e); }
+    }
+
+    // Also remove from local confirmed list
     if (user) {
         var confirmedKey = 'redmaria_confirmed_' + currentRosaryData.id;
         var confirmed = [];
