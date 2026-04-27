@@ -341,11 +341,6 @@
             <div class="community-intentions">
                 <h3 class="mysteries-title"><i class="ri-chat-heart-fill"></i> Intenciones de la Comunidad</h3>
                 <div class="community-intentions-list" id="community-intentions-list">
-                    <div class="community-intention glass"><div class="ci-avatar" style="background:#A8C4DE">M</div><div class="ci-content"><span class="ci-name">María García</span><p>Por la salud de mi familia "YT"</p></div><div class="ci-heart-area"><button class="ci-heart-btn" onclick="toggleHeart(this)"><i class="ri-heart-line"></i></button><span class="ci-heart-count">12</span></div></div>
-                    <div class="community-intention glass"><div class="ci-avatar" style="background:#F4D35E">J</div><div class="ci-content"><span class="ci-name">Juan Rodríguez</span><p>Por los jóvenes que buscan a Dios</p></div><div class="ci-heart-area"><button class="ci-heart-btn" onclick="toggleHeart(this)"><i class="ri-heart-line"></i></button><span class="ci-heart-count">8</span></div></div>
-                    <div class="community-intention glass"><div class="ci-avatar" style="background:#B5D6A7">L</div><div class="ci-content"><span class="ci-name">Laura Martínez</span><p>Por la paz en el mundo ??</p></div><div class="ci-heart-area"><button class="ci-heart-btn" onclick="toggleHeart(this)"><i class="ri-heart-line"></i></button><span class="ci-heart-count">24</span></div></div>
-                    <div class="community-intention glass"><div class="ci-avatar" style="background:#E8A0BF">S</div><div class="ci-content"><span class="ci-name">Sofía López</span><p>Por los enfermos y su pronta recuperación</p></div><div class="ci-heart-area"><button class="ci-heart-btn" onclick="toggleHeart(this)"><i class="ri-heart-line"></i></button><span class="ci-heart-count">15</span></div></div>
-                    <div class="community-intention glass"><div class="ci-avatar" style="background:#C4B5FD">P</div><div class="ci-content"><span class="ci-name">Pedro Fernández</span><p>Por las vocaciones sacerdotales y religiosas</p></div><div class="ci-heart-area"><button class="ci-heart-btn" onclick="toggleHeart(this)"><i class="ri-heart-line"></i></button><span class="ci-heart-count">6</span></div></div>
                 </div>
             </div>
         </div>
@@ -398,14 +393,14 @@
                 <div class="rz-event-header">
                     <div class="rz-event-icon"><i class="ri-map-pin-fill"></i></div>
                     <div class="rz-event-info">
-                        <h3 id="rezo-place-name">Plaza San Martín</h3>
-                        <p id="rezo-place-time"><i class="ri-time-line"></i> Hoy 19:00 hs Â· Misterios Gozosos</p>
+                        <h3 id="rezo-place-name">Sin rosario activo</h3>
+                        <p id="rezo-place-time"><i class="ri-time-line"></i> —</p>
                     </div>
-                    <div class="rz-live-badge"><span class="pulse-dot"></span> EN VIVO</div>
+                    <div class="rz-live-badge" id="rz-live-badge" style="display:none"><span class="pulse-dot"></span> EN VIVO</div>
                 </div>
                 <div class="rz-intention" id="rezo-intention">
                     <i class="ri-candle-fill" style="color:#e67e22"></i>
-                    <span>Por la Paz del Mundo</span>
+                    <span>—</span>
                 </div>
             </div>
 
@@ -529,10 +524,10 @@
     <section id="screen-event" class="screen gradient-bg">
         <div class="top-bar glass transparent"><button class="icon-btn" onclick="app.navigate('screen-map')"><i class="ri-arrow-left-line"></i></button><div class="stars-deco"><i class="ri-star-s-fill"></i><i class="ri-star-fill"></i><i class="ri-star-s-fill"></i></div><button class="icon-btn"><i class="ri-user-star-fill"></i></button></div>
         <div class="event-scrollarea">
-            <h2 class="page-title">Rosario en Plaza San Martín</h2><p class="page-subtitle">Hoy 19:00 hs</p>
-            <div class="intention-pill glass"><i class="ri-candle-fill"></i> Por la Paz del Mundo <i class="ri-candle-fill"></i></div>
+            <h2 class="page-title" id="details-title">Rosario</h2><p class="page-subtitle" id="details-subtitle"></p>
+            <div class="intention-pill glass" id="details-intention"><i class="ri-candle-fill"></i> — <i class="ri-candle-fill"></i></div>
             <div class="action-buttons-stack"><button class="btn btn-primary" onclick="app.navigate('screen-live')">Confirmar Asistencia</button><button class="btn btn-secondary-outline">Enviar Intención</button></div>
-            <div class="details-list"><div class="detail-item"><div class="detail-icon"><i class="ri-group-fill"></i></div><div class="detail-text">Misterios Gozosos</div></div><div class="detail-item"><div class="detail-icon"><i class="ri-phone-fill"></i></div><div class="detail-text">Coordinador: Ana Pérez</div></div><div class="detail-item"><div class="detail-icon"><i class="ri-map-pin-user-fill"></i></div><div class="detail-text">24 Confirmados</div></div></div>
+            <div class="details-list" id="details-info-list"></div>
             <button class="btn btn-primary btn-nav glass-btn"><i class="ri-navigation-fill"></i> Cómo llegar</button>
             <div class="desktop-park-image glass card"><div class="park-img-wrapper"><img src="assets/splash_landscape.png" alt="Parque"/></div></div>
         </div>
