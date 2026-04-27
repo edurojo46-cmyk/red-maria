@@ -5236,7 +5236,10 @@ async function openCenaculo(id) {
     });
 
     // Auto-connect GC channel so we can receive video call signals
-    if (typeof joinGcChannel === 'function') joinGcChannel(id);
+    if (typeof joinGcChannel === 'function') {
+        joinGcChannel(id);
+        if (typeof showMsgToast === 'function') showMsgToast('Canal conectado: ' + id.substring(0, 8) + '...');
+    }
 }
 
 function closeCenaculoDetail() {
@@ -5645,6 +5648,7 @@ function joinGcChannel(cenaculoId) {
         var myName = 'Yo';
         try { myName = auth.getCurrentUser().name || 'Yo'; } catch(e) {}
         if (msg.from === myName) return;
+        if (typeof showMsgToast === 'function') showMsgToast('[DEBUG] Msg recibido de: ' + msg.from);
 
         // === DETECT VIDEO CALL SIGNAL ===
         if (msg.text && msg.text.indexOf('__VIDEOCALL__') === 0) {
@@ -5652,6 +5656,7 @@ function joinGcChannel(cenaculoId) {
             // parts: [__VIDEOCALL__, roomName, cenaculoName, color, icon]
             if (parts.length >= 5) {
                 console.log('[VC] INCOMING CALL via GC from:', msg.from);
+                if (typeof showMsgToast === 'function') showMsgToast('[DEBUG] LLAMADA DETECTADA de ' + msg.from);
                 var vcO = document.getElementById('videocall-overlay');
                 if (vcO && vcO.style.display === 'flex') return; // already in call
                 if (document.getElementById('incoming-call-overlay')) return; // already ringing
@@ -5675,6 +5680,9 @@ function joinGcChannel(cenaculoId) {
     });
     gcChannel.subscribe(function(status) {
         console.log('GC channel ' + cenaculoId + ':', status);
+        if (status === 'SUBSCRIBED' && typeof showMsgToast === 'function') {
+            showMsgToast('[DEBUG] Canal GC suscrito OK: gc-' + cenaculoId.substring(0, 8));
+        }
     });
 }
 
