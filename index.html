@@ -415,7 +415,7 @@
                     <div class="rz-coord-avatar" id="rezo-coord-avatar">A</div>
                     <div class="rz-coord-info">
                         <span class="rz-coord-label" id="rezo-coord-label"><i class="ri-shield-star-fill"></i> Coordinador/a</span>
-                        <h4 id="rezo-coord-name">Ana Pérez</h4>
+                        <h4 id="rezo-coord-name"></h4>
                     </div>
                     <div class="rz-coord-status"><span class="pulse-dot small" style="background:#27ae60"></span> Activa</div>
                 </div>
@@ -426,7 +426,7 @@
                 <div class="rz-counter glass card">
                     <div class="rz-counter-ring">
                         <div class="rz-counter-ring-inner"></div>
-                        <div class="rz-counter-number" id="online-count">47</div>
+                        <div class="rz-counter-number" id="online-count">0</div>
                     </div>
                     <div class="rz-counter-text">
                         <span class="rz-counter-label">Personas Conectadas</span>
@@ -453,7 +453,7 @@
                     <h4>Participantes</h4>
                 </div>
                 <div class="participants-grid" id="participants-grid"></div>
-                <div class="rz-overflow glass"><i class="ri-more-fill"></i> <span>+24 más rezando</span></div>
+                <div class="rz-overflow glass" id="rz-overflow-more" style="display:none"><i class="ri-more-fill"></i> <span id="rz-overflow-text"></span></div>
             </div>
 
             <!-- Intenciones -->
@@ -461,7 +461,7 @@
                 <div class="rz-section-header">
                     <div class="rz-section-icon" style="background:linear-gradient(135deg,#e67e22,#f39c12)"><i class="ri-chat-heart-fill"></i></div>
                     <h4>Intenciones</h4>
-                    <span class="rz-section-badge" id="rezo-intenciones-count">3</span>
+                    <span class="rz-section-badge" id="rezo-intenciones-count">0</span>
                 </div>
                 <!-- Formulario para agregar intención -->
                 <div class="rz-add-intention glass card">
@@ -474,30 +474,6 @@
                     </div>
                 </div>
                 <div class="rz-intentions-list" id="rezo-intentions-list">
-                    <div class="rz-intention-item glass">
-                        <div class="rz-int-avatar" style="background:linear-gradient(135deg,#A8C4DE,#6a9cc4)">M</div>
-                        <div class="rz-int-content">
-                            <span class="rz-int-name">María García</span>
-                            <p>Por la salud de mi familia</p>
-                        </div>
-                        <span class="rz-int-time">hace 2 min</span>
-                    </div>
-                    <div class="rz-intention-item glass">
-                        <div class="rz-int-avatar" style="background:linear-gradient(135deg,#F4D35E,#e0a800)">J</div>
-                        <div class="rz-int-content">
-                            <span class="rz-int-name">Juan Rodríguez</span>
-                            <p>Por los jóvenes que buscan a Dios</p>
-                        </div>
-                        <span class="rz-int-time">hace 5 min</span>
-                    </div>
-                    <div class="rz-intention-item glass">
-                        <div class="rz-int-avatar" style="background:linear-gradient(135deg,#B5D6A7,#6abf4c)">L</div>
-                        <div class="rz-int-content">
-                            <span class="rz-int-name">Laura Martínez</span>
-                            <p>Por la paz en el mundo</p>
-                        </div>
-                        <span class="rz-int-time">hace 8 min</span>
-                    </div>
                 </div>
             </div>
 
@@ -2385,7 +2361,7 @@ if (document.readyState !== 'loading') renderIglesiasGrid();
                 </button>
                 <div class="rezando-counter" id="rezando-counter">
                     <span class="pulse-dot small"></span>
-                    <span id="rezando-count">47</span> personas rezando ahora
+                    <span id="rezando-count">0</span> personas rezando ahora
                 </div>
                 <div class="rezando-map-wrapper" id="rezando-map-wrapper">
                     <div id="rezando-map" style="width:100%;height:100%;border-radius:16px;"></div>
@@ -4946,7 +4922,7 @@ function updateRezoPage(rosaryData) {
     var coordName = document.getElementById('rezo-coord-name');
     var coordAvatar = document.getElementById('rezo-coord-avatar');
     var coordLabel = document.getElementById('rezo-coord-label');
-    var creatorName = rosaryData ? (rosaryData.creatorName || 'Anónimo') : 'Ana Pérez';
+    var creatorName = rosaryData ? (rosaryData.creatorName || 'Anónimo') : 'Anónimo';
     if (coordName) coordName.textContent = creatorName;
     if (coordAvatar) coordAvatar.textContent = creatorName.charAt(0).toUpperCase();
     if (coordLabel) coordLabel.textContent = 'Coordinador/a';
@@ -4980,7 +4956,7 @@ function renderConfirmedParticipants(rosaryData) {
     try { confirmed = JSON.parse(localStorage.getItem(confirmedKey)) || []; } catch(e) { confirmed = []; }
 
     // Always include the coordinator
-    var creatorName = rosaryData ? (rosaryData.creatorName || 'Anónimo') : 'Ana Pérez';
+    var creatorName = rosaryData ? (rosaryData.creatorName || 'Anónimo') : 'Anónimo';
     var creatorId = rosaryData ? rosaryData.creatorId : null;
     if (creatorId && !confirmed.some(function(c) { return c.id === creatorId; })) {
         confirmed.unshift({ id: creatorId, name: creatorName, role: 'coordinador' });
