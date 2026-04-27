@@ -5694,12 +5694,8 @@ function acceptCenaculoCall() {
     var cenaculoId = _incomingCallState.cenaculoId;
     var ov = document.getElementById('incoming-call-overlay');
     if (ov) { ov.classList.add('call-fade-out'); setTimeout(function(){ov.remove();},300); }
-    // Close any system notification
-    if (_swRegistration) {
-        _swRegistration.getNotifications().then(function(notifs) {
-            notifs.forEach(function(n) { if (n.tag && n.tag.indexOf('incoming-call') !== -1) n.close(); });
-        }).catch(function(){});
-    }
+    // Stop Service Worker ringing + close system notification
+    _cancelCallNotification();
 
     // Start WebRTC call as receiver — sends 'ready' signal to caller
     setTimeout(function(){
@@ -5770,12 +5766,8 @@ function declineCenaculoCall() {
     var ov = document.getElementById('incoming-call-overlay');
     if (ov) { ov.classList.add('call-fade-out'); setTimeout(function(){ov.remove();},300); }
     _incomingCallState.cenaculoId = null; _incomingCallState.roomName = null; _incomingCallState.callerName = null;
-    // Close any system notification
-    if (_swRegistration) {
-        _swRegistration.getNotifications({ tag: 'incoming-call' }).then(function(notifs) {
-            notifs.forEach(function(n) { n.close(); });
-        }).catch(function(){});
-    }
+    // Stop Service Worker ringing + close system notification
+    _cancelCallNotification();
 }
 
 
@@ -6049,40 +6041,57 @@ function _showCallNotification(data) {
     if (!('Notification' in window)) return;
     if (Notification.permission !== 'granted') return;
 
-    // Try Service Worker notification first (works in background)
-    if (_swRegistration) {
-        navigator.serviceWorker.controller && navigator.serviceWorker.controller.postMessage({
-            type: 'INCOMING_CALL',
-            cenaculoId: data.cenaculoId,
-            callerName: data.callerName,
-            cenaculoName: data.cenaculoName,
-            roomName: data.roomName
-        });
-        // Also try direct SW registration
-        _swRegistration.active && _swRegistration.active.postMessage({
-            type: 'INCOMING_CALL',
-            cenaculoId: data.cenaculoId,
-            callerName: data.callerName,
-            cenaculoName: data.cenaculoName,
-            roomName: data.roomName
-        });
+    var callMsg = {
+        type: 'INCOMING_CALL',
+        cenaculoId: data.cenaculoId,
+        callerName: data.callerName,
+        cenaculoName: data.cenaculoName,
+        roomName: data.roomName
+    };
+
+    // Try Service Worker notification first (works in background + lock screen)
+    if (_swRegistration && _swRegistration.active) {
+        _swRegistration.active.postMessage(callMsg);
+        return;
+    }
+    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage(callMsg);
         return;
     }
 
-    // Fallback: basic notification (works when tab is in background but not closed)
+    // Fallback: basic notification
     try {
         var notif = new Notification('📞 Llamada entrante - Red Maria', {
             body: data.callerName + ' te está llamando desde ' + (data.cenaculoName || 'un cenáculo'),
             icon: 'assets/mary_avatar.png',
             tag: 'incoming-call',
+            renotify: true,
             requireInteraction: true,
-            vibrate: [200, 100, 200, 100, 200]
+            silent: false,
+            vibrate: [500, 200, 500, 200, 500, 400, 500, 200, 500, 200, 500]
         });
         notif.onclick = function() {
             window.focus();
             notif.close();
         };
     } catch(e) { console.warn('[Notifications] Error:', e); }
+}
+
+// Stop ringing in the Service Worker
+function _cancelCallNotification() {
+    // Tell SW to stop ringing
+    if (_swRegistration && _swRegistration.active) {
+        _swRegistration.active.postMessage({ type: 'CANCEL_CALL' });
+    }
+    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: 'CANCEL_CALL' });
+    }
+    // Also close any basic notifications
+    if (_swRegistration) {
+        _swRegistration.getNotifications().then(function(notifs) {
+            notifs.forEach(function(n) { if (n.tag && n.tag.indexOf('incoming-call') !== -1) n.close(); });
+        }).catch(function(){});
+    }
 }
 
 // Subscribe to a cenáculo channel for call detection (doesn't affect active chat channel)
@@ -6110,11 +6119,7 @@ function _subscribeForCalls(cenaculoId) {
             if (typeof _incomingCallState !== 'undefined') {
                 _incomingCallState.cenaculoId = null; _incomingCallState.roomName = null; _incomingCallState.callerName = null;
             }
-            if (typeof _swRegistration !== 'undefined' && _swRegistration) {
-                _swRegistration.getNotifications().then(function(notifs) {
-                    notifs.forEach(function(n) { if (n.tag && n.tag.indexOf('incoming-call') !== -1) n.close(); });
-                }).catch(function(){});
-            }
+            _cancelCallNotification();
             return;
         }
 
@@ -6245,12 +6250,7 @@ function joinGcChannel(cenaculoId) {
             if (typeof _incomingCallState !== 'undefined') {
                 _incomingCallState.cenaculoId = null; _incomingCallState.roomName = null; _incomingCallState.callerName = null;
             }
-            // Close system notification too
-            if (typeof _swRegistration !== 'undefined' && _swRegistration) {
-                _swRegistration.getNotifications().then(function(notifs) {
-                    notifs.forEach(function(n) { if (n.tag && n.tag.indexOf('incoming-call') !== -1) n.close(); });
-                }).catch(function(){});
-            }
+            _cancelCallNotification();
             return;
         }
 
