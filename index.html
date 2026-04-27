@@ -4504,6 +4504,9 @@ var _vcIsCaller = false;
 var _vcActiveCenaculoId = null;
 var _vcPendingICE = [];
 var _cenaculoVideoCallActive = false;
+var _vcOfferSent = false;
+var _vcAnswerSent = false;
+var _vcHangupReceived = false;
 
 var _STUN_SERVERS = [
     { urls: 'stun:stun.l.google.com:19302' },
@@ -4636,6 +4639,9 @@ async function _vcInitCaller(cenaculoId) {
     if (localVid) localVid.srcObject = _vcLocalStream;
 
     // Create peer but DON'T create offer yet — wait for 'ready' signal
+    _vcOfferSent = false;
+    _vcAnswerSent = false;
+    _vcHangupReceived = false;
     _vcCreatePeer(cenaculoId);
     var st = document.getElementById('vc-status-msg');
     if (st) st.textContent = 'Llamando...';
@@ -4657,61 +4663,69 @@ async function _vcInitReceiver(cenaculoId) {
     var localVid = document.getElementById('vc-local-video');
     if (localVid) localVid.srcObject = _vcLocalStream;
 
+    _vcOfferSent = false;
+    _vcAnswerSent = false;
+    _vcHangupReceived = false;
     _vcCreatePeer(cenaculoId);
     var st = document.getElementById('vc-status-msg');
     if (st) st.textContent = 'Conectando con el otro participante...';
 
     // Tell the caller we're ready (send 3 times for reliability)
     _vcSendSignal(cenaculoId, 'ready', {});
-    setTimeout(function() { _vcSendSignal(cenaculoId, 'ready', {}); }, 500);
-    setTimeout(function() { _vcSendSignal(cenaculoId, 'ready', {}); }, 1500);
+    setTimeout(function() { if (!_vcAnswerSent) _vcSendSignal(cenaculoId, 'ready', {}); }, 800);
+    setTimeout(function() { if (!_vcAnswerSent) _vcSendSignal(cenaculoId, 'ready', {}); }, 2000);
 }
 
 // Handle all WebRTC signals
 async function _vcHandleSignal(type, data, cenaculoId) {
     console.log('[VC] Received signal:', type);
-
-    if (type === 'ready') {
-        // Receiver is ready — caller creates and sends offer
-        if (_vcIsCaller && _vcPeer) {
-            console.log('[VC] Receiver ready, creating offer...');
-            var offer = await _vcPeer.createOffer();
-            await _vcPeer.setLocalDescription(offer);
-            _vcSendSignal(cenaculoId, 'offer', _vcPeer.localDescription);
-        }
-    } else if (type === 'offer') {
-        // Receiver got the offer
-        if (_vcPeer) {
-            console.log('[VC] Setting remote offer...');
-            await _vcPeer.setRemoteDescription(new RTCSessionDescription(data));
-            // Apply any pending ICE candidates
-            for (var i = 0; i < _vcPendingICE.length; i++) {
-                try { await _vcPeer.addIceCandidate(new RTCIceCandidate(_vcPendingICE[i])); }
-                catch(e) {}
+    try {
+        if (type === 'ready') {
+            // Receiver is ready — caller creates and sends offer (ONCE)
+            if (_vcIsCaller && _vcPeer && !_vcOfferSent) {
+                _vcOfferSent = true;
+                console.log('[VC] Receiver ready, creating offer...');
+                var offer = await _vcPeer.createOffer();
+                await _vcPeer.setLocalDescription(offer);
+                _vcSendSignal(cenaculoId, 'offer', _vcPeer.localDescription);
             }
-            _vcPendingICE = [];
-            var answer = await _vcPeer.createAnswer();
-            await _vcPeer.setLocalDescription(answer);
-            _vcSendSignal(cenaculoId, 'answer', _vcPeer.localDescription);
-            console.log('[VC] Sent answer');
-        }
-    } else if (type === 'answer') {
-        // Caller got the answer
-        if (_vcPeer) {
-            console.log('[VC] Setting remote answer...');
-            await _vcPeer.setRemoteDescription(new RTCSessionDescription(data));
-        }
-    } else if (type === 'ice') {
-        if (_vcPeer) {
-            if (_vcPeer.remoteDescription) {
-                try { await _vcPeer.addIceCandidate(new RTCIceCandidate(data)); }
-                catch(e) { console.warn('[VC] ICE error:', e); }
-            } else {
-                _vcPendingICE.push(data);
+        } else if (type === 'offer') {
+            // Receiver got the offer (process only ONCE)
+            if (_vcPeer && !_vcAnswerSent) {
+                _vcAnswerSent = true;
+                console.log('[VC] Setting remote offer...');
+                await _vcPeer.setRemoteDescription(new RTCSessionDescription(data));
+                for (var i = 0; i < _vcPendingICE.length; i++) {
+                    try { await _vcPeer.addIceCandidate(new RTCIceCandidate(_vcPendingICE[i])); }
+                    catch(e) {}
+                }
+                _vcPendingICE = [];
+                var answer = await _vcPeer.createAnswer();
+                await _vcPeer.setLocalDescription(answer);
+                _vcSendSignal(cenaculoId, 'answer', _vcPeer.localDescription);
+                console.log('[VC] Sent answer');
             }
+        } else if (type === 'answer') {
+            if (_vcPeer && _vcPeer.signalingState === 'have-local-offer') {
+                console.log('[VC] Setting remote answer...');
+                await _vcPeer.setRemoteDescription(new RTCSessionDescription(data));
+            }
+        } else if (type === 'ice') {
+            if (_vcPeer) {
+                if (_vcPeer.remoteDescription) {
+                    try { await _vcPeer.addIceCandidate(new RTCIceCandidate(data)); }
+                    catch(e) {}
+                } else {
+                    _vcPendingICE.push(data);
+                }
+            }
+        } else if (type === 'hangup') {
+            // Mark as received so we don't send hangup back (prevents infinite loop)
+            _vcHangupReceived = true;
+            closeVideoCall();
         }
-    } else if (type === 'hangup') {
-        closeVideoCall();
+    } catch(e) {
+        console.error('[VC] Signal handling error:', e);
     }
 }
 
@@ -5214,6 +5228,8 @@ function _isMobileDevice() {
 }
 
 function closeVideoCall() {
+    var wasActive = !!_vcPeer;
+
     // Stop WebRTC
     if (_vcPeer) { try { _vcPeer.close(); } catch(e){} _vcPeer = null; }
     if (_vcLocalStream) {
@@ -5222,10 +5238,13 @@ function closeVideoCall() {
     }
     if (_vcCallTimer) { clearInterval(_vcCallTimer); _vcCallTimer = null; }
 
-    // Send hangup signal
-    if (currentCenaculoId && gcChannel) {
+    // Only send hangup if WE are closing (not if we received a hangup)
+    if (wasActive && !_vcHangupReceived && currentCenaculoId && gcChannel) {
         _vcSendSignal(currentCenaculoId, 'hangup', {});
     }
+    _vcHangupReceived = false;
+    _vcOfferSent = false;
+    _vcAnswerSent = false;
 
     // Reset UI
     var overlay = document.getElementById('videocall-overlay');
@@ -5241,7 +5260,7 @@ function closeVideoCall() {
     var titleEl = document.getElementById('videocall-overlay-title');
     if (titleEl) titleEl.textContent = 'Videollamada';
 
-    if (typeof _cenaculoVideoCallActive !== 'undefined' && _cenaculoVideoCallActive) {
+    if (_cenaculoVideoCallActive) {
         _cenaculoVideoCallActive = false;
         return;
     }
