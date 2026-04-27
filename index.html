@@ -522,10 +522,11 @@
             <span id="vc-call-timer" style="color:rgba(255,255,255,0.7);font-size:0.8rem;font-family:monospace">00:00</span>
         </div>
         <div id="vc-status-msg" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:white;font-size:1rem;text-align:center;z-index:10000">Conectando...</div>
-        <div style="position:absolute;bottom:0;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:20px;padding:20px;background:linear-gradient(to top,rgba(0,0,0,0.7),transparent);z-index:10000">
-            <button id="vc-btn-mic" onclick="vcToggleMic()" style="width:52px;height:52px;border-radius:50%;border:none;background:rgba(255,255,255,0.15);color:white;font-size:1.3rem;cursor:pointer"><i class="ri-mic-fill"></i></button>
-            <button onclick="closeVideoCall()" style="width:60px;height:60px;border-radius:50%;border:none;background:#ef4444;color:white;font-size:1.5rem;cursor:pointer"><i class="ri-phone-fill" style="transform:rotate(135deg);display:block"></i></button>
-            <button id="vc-btn-cam" onclick="vcToggleCam()" style="width:52px;height:52px;border-radius:50%;border:none;background:rgba(255,255,255,0.15);color:white;font-size:1.3rem;cursor:pointer"><i class="ri-camera-fill"></i></button>
+        <div style="position:absolute;bottom:0;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:16px;padding:20px;background:linear-gradient(to top,rgba(0,0,0,0.7),transparent);z-index:10000">
+            <button id="vc-btn-mic" onclick="vcToggleMic()" style="width:50px;height:50px;border-radius:50%;border:none;background:rgba(255,255,255,0.15);color:white;font-size:1.2rem;cursor:pointer"><i class="ri-mic-fill"></i></button>
+            <button id="vc-btn-screen" onclick="vcShareScreen()" style="width:50px;height:50px;border-radius:50%;border:none;background:rgba(255,255,255,0.15);color:white;font-size:1.2rem;cursor:pointer" title="Compartir pantalla"><i class="ri-computer-fill"></i></button>
+            <button onclick="closeVideoCall()" style="width:58px;height:58px;border-radius:50%;border:none;background:#ef4444;color:white;font-size:1.4rem;cursor:pointer"><i class="ri-phone-fill" style="transform:rotate(135deg);display:block"></i></button>
+            <button id="vc-btn-cam" onclick="vcToggleCam()" style="width:50px;height:50px;border-radius:50%;border:none;background:rgba(255,255,255,0.15);color:white;font-size:1.2rem;cursor:pointer"><i class="ri-camera-fill"></i></button>
         </div>
     </div>
 
@@ -4509,15 +4510,27 @@ var _STUN_SERVERS = [
     { urls: 'stun:stun1.l.google.com:19302' },
     { urls: 'stun:stun2.l.google.com:19302' },
     { urls: 'stun:stun3.l.google.com:19302' },
-    { urls: 'stun:stun4.l.google.com:19302' }
+    { urls: 'stun:stun4.l.google.com:19302' },
+    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
 ];
 
 async function _vcGetMedia() {
+    var audioConstraints = {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        sampleRate: 44100
+    };
     try {
-        return await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        return await navigator.mediaDevices.getUserMedia({ 
+            video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }, 
+            audio: audioConstraints 
+        });
     } catch(e) {
         console.warn('[VC] Camera failed, trying audio only:', e);
-        try { return await navigator.mediaDevices.getUserMedia({ video: false, audio: true }); }
+        try { return await navigator.mediaDevices.getUserMedia({ video: false, audio: audioConstraints }); }
         catch(e2) { console.error('[VC] No media:', e2); return null; }
     }
 }
@@ -4648,8 +4661,10 @@ async function _vcInitReceiver(cenaculoId) {
     var st = document.getElementById('vc-status-msg');
     if (st) st.textContent = 'Conectando con el otro participante...';
 
-    // Tell the caller we're ready
+    // Tell the caller we're ready (send 3 times for reliability)
     _vcSendSignal(cenaculoId, 'ready', {});
+    setTimeout(function() { _vcSendSignal(cenaculoId, 'ready', {}); }, 500);
+    setTimeout(function() { _vcSendSignal(cenaculoId, 'ready', {}); }, 1500);
 }
 
 // Handle all WebRTC signals
@@ -4716,6 +4731,35 @@ function vcToggleCam() {
     var btn = document.getElementById('vc-btn-cam');
     if (btn) btn.innerHTML = _vcCamOn ? '<i class="ri-camera-fill"></i>' : '<i class="ri-camera-off-fill" style="color:#ef4444"></i>';
     if (btn) btn.style.background = _vcCamOn ? 'rgba(255,255,255,0.15)' : 'rgba(239,68,68,0.3)';
+}
+
+async function vcShareScreen() {
+    if (!_vcPeer || !_vcLocalStream) return;
+    try {
+        var screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+        var screenTrack = screenStream.getVideoTracks()[0];
+        // Replace camera track with screen track
+        var senders = _vcPeer.getSenders();
+        var videoSender = senders.find(function(s) { return s.track && s.track.kind === 'video'; });
+        if (videoSender) {
+            videoSender.replaceTrack(screenTrack);
+        }
+        // Show screen in local preview
+        var localVid = document.getElementById('vc-local-video');
+        if (localVid) localVid.srcObject = screenStream;
+        // Update button
+        var btn = document.getElementById('vc-btn-screen');
+        if (btn) { btn.style.background = 'rgba(99,102,241,0.5)'; btn.innerHTML = '<i class="ri-stop-circle-fill" style="color:#a5b4fc"></i>'; }
+        // When user stops sharing, revert to camera
+        screenTrack.onended = function() {
+            var camTrack = _vcLocalStream.getVideoTracks()[0];
+            if (videoSender && camTrack) videoSender.replaceTrack(camTrack);
+            if (localVid) localVid.srcObject = _vcLocalStream;
+            if (btn) { btn.style.background = 'rgba(255,255,255,0.15)'; btn.innerHTML = '<i class="ri-computer-fill"></i>'; }
+        };
+    } catch(e) {
+        console.warn('[VC] Screen share cancelled:', e);
+    }
 }
 
 
