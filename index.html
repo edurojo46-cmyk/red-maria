@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Red Maria</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="assets/mary_avatar.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
@@ -5546,6 +5551,9 @@ async function startCenaculoVideoCall() {
     var callTime2 = new Date().getHours().toString().padStart(2,'0') + ':' + new Date().getMinutes().toString().padStart(2,'0');
     var signalMsg = { from: displayName, text: '__VIDEOCALL__|' + currentCenaculoId + '|' + c.name + '|' + (c.color||'#6366f1') + '|' + (c.icon||'ri-team-fill'), time: callTime2, date: 'Hoy' };
     if (typeof broadcastGcMessage === 'function') broadcastGcMessage(currentCenaculoId, signalMsg);
+    // Also broadcast on the global call channel so it reaches users on any screen
+    // The global listeners subscribe to 'gc-call-{id}', so we must send there too
+    _broadcastOnCallChannel(currentCenaculoId, signalMsg);
     var visibleMsg = { from: displayName, text: '📹 ' + displayName + ' inicio una videollamada. ¡Unite!', time: callTime2, date: 'Hoy' };
     var gcMsgs2 = getGcMessages(currentCenaculoId);
     gcMsgs2.push(visibleMsg);
@@ -5561,6 +5569,12 @@ function acceptCenaculoCall() {
     var cenaculoId = _incomingCallState.cenaculoId;
     var ov = document.getElementById('incoming-call-overlay');
     if (ov) { ov.classList.add('call-fade-out'); setTimeout(function(){ov.remove();},300); }
+    // Close any system notification
+    if (_swRegistration) {
+        _swRegistration.getNotifications().then(function(notifs) {
+            notifs.forEach(function(n) { if (n.tag && n.tag.indexOf('incoming-call') !== -1) n.close(); });
+        }).catch(function(){});
+    }
 
     // Start WebRTC call as receiver — sends 'ready' signal to caller
     setTimeout(function(){
@@ -5631,6 +5645,12 @@ function declineCenaculoCall() {
     var ov = document.getElementById('incoming-call-overlay');
     if (ov) { ov.classList.add('call-fade-out'); setTimeout(function(){ov.remove();},300); }
     _incomingCallState.cenaculoId = null; _incomingCallState.roomName = null; _incomingCallState.callerName = null;
+    // Close any system notification
+    if (_swRegistration) {
+        _swRegistration.getNotifications({ tag: 'incoming-call' }).then(function(notifs) {
+            notifs.forEach(function(n) { n.close(); });
+        }).catch(function(){});
+    }
 }
 
 
@@ -5856,6 +5876,207 @@ function sendGcMessage() {
 var gcChannel = null;
 var gcChannelId = null;
 
+// === MULTI-CHANNEL SYSTEM: Subscribe to ALL cenáculos for call detection ===
+var _allGcChannels = {}; // { cenaculoId: channel }
+var _swRegistration = null; // Service Worker registration
+
+// Register Service Worker and request notification permissions
+function _initNotifications() {
+    // Register Service Worker
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').then(function(reg) {
+            _swRegistration = reg;
+            console.log('[SW] Service Worker registered');
+        }).catch(function(err) {
+            console.warn('[SW] Registration failed:', err);
+        });
+
+        // Listen for messages from Service Worker (notification actions)
+        navigator.serviceWorker.addEventListener('message', function(event) {
+            if (!event.data) return;
+            if (event.data.type === 'ACCEPT_CALL') {
+                // User tapped Accept on the notification
+                if (event.data.cenaculoId) {
+                    currentCenaculoId = event.data.cenaculoId;
+                    // Make sure GC channel is the active one for WebRTC
+                    joinGcChannel(event.data.cenaculoId);
+                }
+                acceptCenaculoCall();
+            } else if (event.data.type === 'DECLINE_CALL') {
+                declineCenaculoCall();
+            }
+        });
+    }
+
+    // Request notification permission
+    if ('Notification' in window && Notification.permission === 'default') {
+        // Delay to avoid blocking on load
+        setTimeout(function() {
+            Notification.requestPermission().then(function(perm) {
+                console.log('[Notifications] Permission:', perm);
+            });
+        }, 3000);
+    }
+}
+
+// Show a system notification for incoming call (works even in background)
+function _showCallNotification(data) {
+    if (!('Notification' in window)) return;
+    if (Notification.permission !== 'granted') return;
+
+    // Try Service Worker notification first (works in background)
+    if (_swRegistration) {
+        navigator.serviceWorker.controller && navigator.serviceWorker.controller.postMessage({
+            type: 'INCOMING_CALL',
+            cenaculoId: data.cenaculoId,
+            callerName: data.callerName,
+            cenaculoName: data.cenaculoName,
+            roomName: data.roomName
+        });
+        // Also try direct SW registration
+        _swRegistration.active && _swRegistration.active.postMessage({
+            type: 'INCOMING_CALL',
+            cenaculoId: data.cenaculoId,
+            callerName: data.callerName,
+            cenaculoName: data.cenaculoName,
+            roomName: data.roomName
+        });
+        return;
+    }
+
+    // Fallback: basic notification (works when tab is in background but not closed)
+    try {
+        var notif = new Notification('📞 Llamada entrante - Red Maria', {
+            body: data.callerName + ' te está llamando desde ' + (data.cenaculoName || 'un cenáculo'),
+            icon: 'assets/mary_avatar.png',
+            tag: 'incoming-call',
+            requireInteraction: true,
+            vibrate: [200, 100, 200, 100, 200]
+        });
+        notif.onclick = function() {
+            window.focus();
+            notif.close();
+        };
+    } catch(e) { console.warn('[Notifications] Error:', e); }
+}
+
+// Subscribe to a cenáculo channel for call detection (doesn't affect active chat channel)
+function _subscribeForCalls(cenaculoId) {
+    if (_allGcChannels[cenaculoId]) return; // already subscribed
+    if (!sbClient) return;
+
+    var ch = sbClient.channel('gc-call-' + cenaculoId, {
+        config: { broadcast: { self: false } }
+    });
+
+    ch.on('broadcast', { event: 'gc-msg' }, function(payload) {
+        var msg = payload.payload;
+        if (!msg) return;
+        var myName = 'Yo';
+        try { myName = auth.getCurrentUser().name || 'Yo'; } catch(e) {}
+        if (msg.from === myName) return;
+
+        // Only handle VIDEOCALL signals on this listener
+        if (msg.text && msg.text.indexOf('__VIDEOCALL__') === 0) {
+            var parts = msg.text.split('|');
+            if (parts.length >= 5) {
+                console.log('[VC-GLOBAL] INCOMING CALL from', msg.from, 'on cenáculo', cenaculoId);
+
+                var vcO = document.getElementById('videocall-overlay');
+                if (vcO && vcO.style.display === 'flex') return;
+                if (document.getElementById('incoming-call-overlay')) return;
+
+                var callData = {
+                    cenaculoId: cenaculoId,
+                    callerName: msg.from,
+                    roomName: parts[1],
+                    cenaculoName: parts[2],
+                    cenaculoColor: parts[3],
+                    cenaculoIcon: parts[4]
+                };
+
+                // Show in-app overlay
+                showIncomingCenaculoCall(callData);
+
+                // ALSO show system notification (works in background!)
+                _showCallNotification(callData);
+
+                // If the active channel is different, switch to this cenáculo
+                if (gcChannelId !== cenaculoId) {
+                    joinGcChannel(cenaculoId);
+                    currentCenaculoId = cenaculoId;
+                }
+            }
+        }
+    });
+
+    ch.subscribe(function(status) {
+        if (status === 'SUBSCRIBED') {
+            console.log('[VC-GLOBAL] Listening for calls on cenáculo:', cenaculoId);
+        }
+    });
+
+    _allGcChannels[cenaculoId] = ch;
+}
+
+// Subscribe to ALL user's cenáculos for call detection
+function _subscribeAllCenaculosForCalls() {
+    var saved = getSavedCenaculos();
+    Object.keys(saved).forEach(function(cId) {
+        _subscribeForCalls(cId);
+    });
+    console.log('[VC-GLOBAL] Subscribed to', Object.keys(_allGcChannels).length, 'cenáculo channels for calls');
+}
+
+// Broadcast a message on the global call channel for a cenáculo
+function _broadcastOnCallChannel(cenaculoId, msg) {
+    if (!sbClient) return;
+    // If we already have a subscription channel for this cenáculo, use it
+    if (_allGcChannels[cenaculoId]) {
+        try {
+            _allGcChannels[cenaculoId].send({ type: 'broadcast', event: 'gc-msg', payload: msg });
+        } catch(e) { console.warn('[VC] Global broadcast error:', e); }
+        return;
+    }
+    // Otherwise create a temporary channel to send the signal
+    var tempCh = sbClient.channel('gc-call-' + cenaculoId);
+    tempCh.subscribe(function(status) {
+        if (status === 'SUBSCRIBED') {
+            tempCh.send({ type: 'broadcast', event: 'gc-msg', payload: msg }).then(function() {
+                console.log('[VC] Call signal sent on global channel gc-call-' + cenaculoId);
+                // Clean up temp channel after a short delay
+                setTimeout(function() { try { tempCh.unsubscribe(); } catch(e){} }, 2000);
+            });
+        }
+    });
+}
+
+// Init notifications and global channel subscriptions after auth
+function _initGlobalCallListening() {
+    _initNotifications();
+    // Wait for Supabase client to be ready
+    var attempts = 0;
+    var checkInterval = setInterval(function() {
+        attempts++;
+        if (sbClient && (typeof auth !== 'undefined' && auth.isAuthenticated())) {
+            clearInterval(checkInterval);
+            // Load cenáculos first, then subscribe
+            loadCenaculosFromSupabase().then(function() {
+                _subscribeAllCenaculosForCalls();
+            }).catch(function() {
+                // Still subscribe to locally saved cenáculos
+                _subscribeAllCenaculosForCalls();
+            });
+        }
+        if (attempts > 30) clearInterval(checkInterval); // Stop after 30s
+    }, 1000);
+}
+
+// Start global call listening on page load
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(_initGlobalCallListening, 2000);
+});
+
 function joinGcChannel(cenaculoId) {
     if (gcChannel && gcChannelId === cenaculoId) return;
     if (gcChannel) { try { gcChannel.unsubscribe(); } catch(e){} }
@@ -5883,14 +6104,18 @@ function joinGcChannel(cenaculoId) {
                 var vcO = document.getElementById('videocall-overlay');
                 if (vcO && vcO.style.display === 'flex') return; // already in call
                 if (document.getElementById('incoming-call-overlay')) return; // already ringing
-                showIncomingCenaculoCall({
+
+                var callData = {
                     cenaculoId: cenaculoId,
                     callerName: msg.from,
                     roomName: parts[1],
                     cenaculoName: parts[2],
                     cenaculoColor: parts[3],
                     cenaculoIcon: parts[4]
-                });
+                };
+                showIncomingCenaculoCall(callData);
+                // Show system notification too
+                _showCallNotification(callData);
             }
             return; // Don't save signal messages to chat
         }
@@ -5916,7 +6141,6 @@ function joinGcChannel(cenaculoId) {
     });
     gcChannel.subscribe(function(status) {
         console.log('GC channel ' + cenaculoId + ':', status);
-
     });
 }
 
