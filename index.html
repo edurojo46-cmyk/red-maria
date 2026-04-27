@@ -3580,7 +3580,7 @@ function answerCall() {
     // Open Jitsi after brief delay
     setTimeout(function() {
         var roomName = 'RedMaria_' + currentChatId + '_' + Date.now().toString(36);
-        var jitsiUrl = 'https://meet.ffmuc.net/' + roomName;
+        var jitsiUrl = 'https://framatalk.org/' + roomName;
         window.open(jitsiUrl, '_blank');
 
         // Log in chat
@@ -4936,7 +4936,7 @@ function _startJitsi(roomName, container) {
 
     // On mobile, open Jitsi in a new tab (iframes can't access camera on many mobile browsers)
     if (_isMobileDevice()) {
-        var jitsiUrl = 'https://meet.ffmuc.net/' + roomName + '#config.prejoinPageEnabled=false&config.startWithAudioMuted=false&config.startWithVideoMuted=false&userInfo.displayName=' + encodeURIComponent(displayName);
+        var jitsiUrl = 'https://framatalk.org/' + roomName + '#config.prejoinPageEnabled=false&config.startWithAudioMuted=false&config.startWithVideoMuted=false&userInfo.displayName=' + encodeURIComponent(displayName);
         container.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:20px;padding:20px;text-align:center">' +
             '<div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:2rem;color:white"><i class="ri-vidicon-fill"></i></div>' +
             '<h3 style="color:white;margin:0;font-size:1.2rem">Videollamada Activa</h3>' +
@@ -4952,7 +4952,7 @@ function _startJitsi(roomName, container) {
 
     // Desktop: Try Jitsi Meet API first, fallback to iframe
     // Desktop: iframe to free anonymous Jitsi server (no login needed)
-    var iframeSrc = 'https://meet.ffmuc.net/' + roomName + '#config.prejoinPageEnabled=false&config.startWithAudioMuted=false&config.startWithVideoMuted=false&userInfo.displayName=' + encodeURIComponent(displayName);
+    var iframeSrc = 'https://framatalk.org/' + roomName + '#config.prejoinPageEnabled=false&config.startWithAudioMuted=false&config.startWithVideoMuted=false&userInfo.displayName=' + encodeURIComponent(displayName);
     container.innerHTML = '<iframe src="' + iframeSrc + '" style="width:100%;height:100%;border:none" allow="camera;microphone;fullscreen;display-capture;autoplay" allowfullscreen></iframe>';
 }
 
@@ -5256,7 +5256,7 @@ function startCenaculoVideoCall() {
 
     // On mobile, open Jitsi directly in new tab (no overlay needed)
     if (_isMobileDevice()) {
-        var mobileUrl = 'https://meet.ffmuc.net/' + roomName + '#config.prejoinPageEnabled=false&userInfo.displayName=' + encodeURIComponent(displayName);
+        var mobileUrl = 'https://framatalk.org/' + roomName + '#config.prejoinPageEnabled=false&userInfo.displayName=' + encodeURIComponent(displayName);
         window.open(mobileUrl, '_blank');
         showMsgToast('Videollamada abierta en nueva pestaña');
     } else {
@@ -5354,7 +5354,7 @@ function acceptCenaculoCall() {
     if (_isMobileDevice()) {
         var user = (typeof auth !== 'undefined' && auth.getCurrentUser) ? auth.getCurrentUser() : null;
         var dn = user && user.name ? user.name : 'Peregrino';
-        var url = 'https://meet.ffmuc.net/' + roomName + '#config.prejoinPageEnabled=false&userInfo.displayName=' + encodeURIComponent(dn);
+        var url = 'https://framatalk.org/' + roomName + '#config.prejoinPageEnabled=false&userInfo.displayName=' + encodeURIComponent(dn);
         setTimeout(function(){ window.open(url, '_blank'); }, 350);
     } else {
         var c = getSavedCenaculos()[cenaculoId];
