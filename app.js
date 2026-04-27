@@ -27,9 +27,41 @@ const app = {
         document.querySelectorAll('.header-nav a').forEach(a => a.addEventListener('click', e => e.preventDefault()));
     },
 
-    loadRosaryCards() {
+    async loadRosaryCards() {
         const list = document.getElementById('rosary-list'); if (!list) return;
-        this.getActiveRosaries().forEach(r => this.addRosaryCard(r));
+        // Load from Supabase first, fallback to localStorage
+        var rosaries = this.getActiveRosaries();
+        if (typeof db !== 'undefined' && db.getRosaries) {
+            try {
+                var remote = await db.getRosaries();
+                if (remote && remote.length > 0) {
+                    // Map Supabase fields to local format
+                    rosaries = remote.map(function(r) {
+                        return {
+                            id: r.id, place: r.place, address: r.address || '', date: r.date, time: r.time,
+                            mystery: r.mystery, intention: r.intention, lat: r.lat, lng: r.lng,
+                            participants: r.participants || 1, creatorId: r.creator_id,
+                            creatorName: r.creator_name || 'Anónimo'
+                        };
+                    });
+                    // Save to localStorage for offline
+                    localStorage.setItem('redmaria_rosaries', JSON.stringify(rosaries));
+                    console.log('[Rosaries] Loaded', rosaries.length, 'from Supabase');
+                }
+            } catch(e) {
+                console.warn('[Rosaries] Supabase failed, using local:', e.message);
+            }
+        }
+        // Filter active
+        rosaries = rosaries.filter(r => !this.isRosaryExpired(r));
+        rosaries.forEach(r => this.addRosaryCard(r));
+        // Update stats
+        var countEl = document.getElementById('buscar-cards-count');
+        var emptyEl = document.getElementById('buscar-empty');
+        var statRos = document.getElementById('buscar-stat-rosaries');
+        if (countEl) countEl.textContent = rosaries.length + ' encontrados';
+        if (emptyEl) emptyEl.style.display = rosaries.length === 0 ? '' : 'none';
+        if (statRos) statRos.textContent = rosaries.length;
     },
 
     initPickerMap() {
@@ -40,14 +72,30 @@ const app = {
         this.pickerMap.on('click', e => this.setPickerLocation(e.latlng.lat, e.latlng.lng));
     },
 
-    initBuscarMap() {
+    async initBuscarMap() {
         if (this.buscarMap) { this.buscarMap.invalidateSize(); return; }
         this.buscarMap = L.map('buscar-map', { zoomControl: false, attributionControl: false }).setView([-34.5955, -58.3739], 13);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(this.buscarMap);
         L.control.zoom({ position: 'topright' }).addTo(this.buscarMap);
 
-        // Add saved rosaries markers (only active/future ones)
-        const activeRosaries = this.getActiveRosaries();
+        // Load rosaries from Supabase then localStorage
+        var activeRosaries = this.getActiveRosaries();
+        if (typeof db !== 'undefined' && db.getRosaries) {
+            try {
+                var remote = await db.getRosaries();
+                if (remote && remote.length > 0) {
+                    activeRosaries = remote.map(function(r) {
+                        return {
+                            id: r.id, place: r.place, address: r.address || '', date: r.date, time: r.time,
+                            mystery: r.mystery, intention: r.intention, lat: r.lat, lng: r.lng,
+                            participants: r.participants || 1, creatorId: r.creator_id,
+                            creatorName: r.creator_name || 'Anónimo'
+                        };
+                    });
+                    localStorage.setItem('redmaria_rosaries', JSON.stringify(activeRosaries));
+                }
+            } catch(e) { console.warn('[Map] Supabase failed:', e.message); }
+        }
         let totalPeople = 0;
         activeRosaries.forEach(r => {
             if (r.lat && r.lng) {
