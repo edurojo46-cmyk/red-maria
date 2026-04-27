@@ -6025,21 +6025,65 @@ function _initNotifications() {
         });
     }
 
-    // Request notification permission
-    if ('Notification' in window && Notification.permission === 'default') {
-        // Delay to avoid blocking on load
-        setTimeout(function() {
-            Notification.requestPermission().then(function(perm) {
-                console.log('[Notifications] Permission:', perm);
-            });
-        }, 3000);
+    // Request notification permission - show visible banner so user taps (required on mobile)
+    if ('Notification' in window) {
+        if (Notification.permission === 'default') {
+            // Show a visible banner asking user to enable notifications
+            setTimeout(function() {
+                _showNotificationBanner();
+            }, 4000);
+        } else if (Notification.permission === 'granted') {
+            console.log('[Notifications] Permission already granted');
+        } else {
+            console.log('[Notifications] Permission denied');
+        }
     }
+}
+
+function _showNotificationBanner() {
+    if (document.getElementById('notif-permission-banner')) return;
+    var banner = document.createElement('div');
+    banner.id = 'notif-permission-banner';
+    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;padding:14px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 20px rgba(0,0,0,0.3);animation:slideDown 0.4s ease;font-family:Inter,sans-serif';
+    banner.innerHTML = '<div style="flex:1"><div style="font-weight:700;font-size:0.9rem">🔔 Activar Notificaciones</div><div style="font-size:0.75rem;opacity:0.85;margin-top:2px">Para recibir llamadas aunque la app esté minimizada</div></div>' +
+        '<button id="notif-accept-btn" style="background:white;color:#6366f1;border:none;padding:8px 16px;border-radius:8px;font-weight:700;font-size:0.8rem;cursor:pointer;white-space:nowrap">Activar</button>' +
+        '<button onclick="this.parentElement.remove()" style="background:none;border:none;color:white;font-size:1.2rem;cursor:pointer;padding:4px">✕</button>';
+    document.body.appendChild(banner);
+
+    // Add animation
+    var style = document.createElement('style');
+    style.textContent = '@keyframes slideDown{from{transform:translateY(-100%)}to{transform:translateY(0)}}';
+    document.head.appendChild(style);
+
+    document.getElementById('notif-accept-btn').addEventListener('click', function() {
+        Notification.requestPermission().then(function(perm) {
+            console.log('[Notifications] Permission:', perm);
+            if (perm === 'granted') {
+                banner.innerHTML = '<div style="flex:1;text-align:center;font-weight:600">✅ ¡Notificaciones activadas!</div>';
+                banner.style.background = '#22c55e';
+                setTimeout(function() { banner.remove(); }, 2000);
+            } else {
+                banner.innerHTML = '<div style="flex:1;text-align:center;font-weight:600">❌ Notificaciones denegadas. Activálas en ajustes del navegador.</div>';
+                banner.style.background = '#ef4444';
+                setTimeout(function() { banner.remove(); }, 4000);
+            }
+        });
+    });
 }
 
 // Show a system notification for incoming call (works even in background)
 function _showCallNotification(data) {
+    // Always try to vibrate the device (works without notification permission!)
+    if (navigator.vibrate) {
+        // Ring pattern: vibrate for 60 seconds
+        navigator.vibrate([500, 200, 500, 200, 500, 400, 500, 200, 500, 200, 500, 400, 500, 200, 500, 200, 500, 400, 500, 200, 500, 200, 500]);
+    }
+
     if (!('Notification' in window)) return;
-    if (Notification.permission !== 'granted') return;
+    if (Notification.permission !== 'granted') {
+        console.log('[Notifications] Permission not granted, vibration only');
+        return;
+    }
 
     var callMsg = {
         type: 'INCOMING_CALL',
@@ -6079,6 +6123,8 @@ function _showCallNotification(data) {
 
 // Stop ringing in the Service Worker
 function _cancelCallNotification() {
+    // Stop vibration
+    if (navigator.vibrate) navigator.vibrate(0);
     // Tell SW to stop ringing
     if (_swRegistration && _swRegistration.active) {
         _swRegistration.active.postMessage({ type: 'CANCEL_CALL' });
