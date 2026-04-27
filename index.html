@@ -2429,30 +2429,6 @@ if (document.readyState !== 'loading') renderIglesiasGrid();
                     </div>
                     <span class="notif-time">ahora</span>
                 </div>
-                <div class="notif-card glass card">
-                    <div class="notif-icon" style="background:linear-gradient(135deg,#3DA3D4,#2E8BC0)"><i class="ri-map-pin-fill"></i></div>
-                    <div class="notif-content">
-                        <h5>Rosario cerca tuyo</h5>
-                        <p>Hay un rosario a las 19:00 hs en Plaza San Martín. ¡Sumate!</p>
-                    </div>
-                    <span class="notif-time">hace 5 min</span>
-                </div>
-                <div class="notif-card glass card">
-                    <div class="notif-icon" style="background:linear-gradient(135deg,#f0a500,#e67e22)"><i class="ri-group-fill"></i></div>
-                    <div class="notif-content">
-                        <h5>Comunidad creciendo</h5>
-                        <p>24 personas se unieron hoy. ¡La red sigue creciendo!</p>
-                    </div>
-                    <span class="notif-time">hace 1 hr</span>
-                </div>
-                <div class="notif-card glass card">
-                    <div class="notif-icon" style="background:linear-gradient(135deg,#C4B5FD,#8B5CF6)"><i class="ri-heart-3-fill"></i></div>
-                    <div class="notif-content">
-                        <h5>Nueva intención</h5>
-                        <p>María García pidió oración por la salud de su familia.</p>
-                    </div>
-                    <span class="notif-time">hace 2 hr</span>
-                </div>
             </div>
             <h4 class="section-heading"><i class="ri-calendar-check-line"></i> Mis Turnos de Oración</h4>
             <div id="profile-my-slots" class="profile-slots-container">
@@ -4228,15 +4204,6 @@ var searchIndex = [
     {type:'page',icon:'ri-chat-3-fill',title:'Mensajes',desc:'Mensajes con la comunidad',action:"app.navigate('screen-chat')"},
     {type:'page',icon:'ri-eye-fill',title:'Apariciones',desc:'Historia de las apariciones marianas',action:"app.navigate('screen-apariciones')"},
     {type:'page',icon:'ri-user-fill',title:'Mi Perfil',desc:'Tu información y notificaciones',action:"app.navigate('screen-profile')"},
-    // Usuarios
-    {type:'user',icon:'ri-user-heart-fill',title:'María García',desc:'Buenos Aires Â· Rezando · Reza x mí',action:"app.navigate('screen-chat');setTimeout(function(){openChat('maria')},300)"},
-    {type:'user',icon:'ri-user-heart-fill',title:'Juan Rodríguez',desc:'Caballito Â· Activo hoy',action:"app.navigate('screen-chat');setTimeout(function(){openChat('juan')},300)"},
-    {type:'user',icon:'ri-user-heart-fill',title:'Laura Martínez',desc:'Palermo Â· Activa ayer',action:"app.navigate('screen-chat');setTimeout(function(){openChat('laura')},300)"},
-    {type:'user',icon:'ri-user-heart-fill',title:'Sofía López',desc:'Centro Â· Activa ayer',action:"app.navigate('screen-chat');setTimeout(function(){openChat('sofia')},300)"},
-    {type:'user',icon:'ri-user-heart-fill',title:'Pedro Fernández',desc:'Flores Â· Activo el lunes',action:"app.navigate('screen-chat');setTimeout(function(){openChat('pedro')},300)"},
-    {type:'user',icon:'ri-user-heart-fill',title:'Ana Pérez',desc:'Coordinadora Â· Activa el domingo',action:"app.navigate('screen-chat');setTimeout(function(){openChat('ana')},300)"},
-    // Rosarios
-    {type:'rosary',icon:'ri-map-pin-fill',title:'Plaza San Martín',desc:'Hoy 19:00 Â· Misterios Gozosos Â· 24 participantes',action:"app.navigate('screen-rezo')"},
     // Misterios
     {type:'content',icon:'ri-sparkling-fill',title:'Misterios Gozosos',desc:'Lunes y Sábados Â· Encarnación e infancia de Jesús',action:"app.navigate('screen-como-rezar')"},
     {type:'content',icon:'ri-drop-fill',title:'Misterios Dolorosos',desc:'Martes y Viernes Â· Pasión y muerte de Cristo',action:"app.navigate('screen-como-rezar')"},

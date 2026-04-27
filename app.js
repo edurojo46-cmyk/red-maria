@@ -667,12 +667,9 @@ const app = {
     generateSplashBeads() { const c = document.getElementById('splash-beads'); for (let i=0;i<44;i++) { const a=(i/44)*Math.PI*2; if(a>Math.PI*0.35&&a<Math.PI*0.65)continue; const b=document.createElement('div'); b.className='rosary-bead'; b.style.left=(90+80*Math.cos(a))+'px'; b.style.top=(90+80*Math.sin(a))+'px'; c.appendChild(b); } },
     generateLiveBeads() { const c=document.getElementById('live-beads'); for(let i=0;i<7;i++){const b=document.createElement('div');b.className='live-bead';if(i===3)b.classList.add('active');c.appendChild(b);} },
     generateParticipants() {
-        const g=document.getElementById('participants-grid'); if(!g)return;
-        const n=['María G.','Juan R.','Laura M.','Pedro F.','Sofía L.','Carlos A.','Ana P.','Diego S.','Valentina B.','Martín H.','Camila R.','Lucas T.','Isabella N.','Mateo V.','Emma C.','Santiago D.','Mía F.','Sebastián G.','Catalina J.','Nicolás K.','Lucía M.','Tomás P.','Julieta Q.','Benjamín R.'];
-        const c=['#A8C4DE','#F4D35E','#B5D6A7','#E8A0BF','#C4B5FD','#8FACC5','#FFB4A2','#89CFF0','#B2F2BB','#FFD6A5','#FDCFE8','#A0C4FF','#BDB2FF','#FFC6FF','#CAFFBF','#9BF6FF','#FDD7AA','#D4A5A5','#A5DEE5','#E0BBE4','#957DAD','#D291BC','#FEC8D8','#FFDFD3'];
-        n.forEach((name,i)=>{ const p=document.createElement('div');p.className='participant-item';p.style.animationDelay=i*0.05+'s'; const on=Math.random()>0.15; p.innerHTML='<div class="participant-avatar" style="background:'+c[i%c.length]+'">'+name.charAt(0)+(on?'<span class="online-dot"></span>':'')+'</div><span class="participant-name">'+name+'</span>'; g.appendChild(p); });
+        // No fake participants - real data only
     },
-    startOnlineCounter() { const c=document.getElementById('online-count'); if(!c)return; setInterval(()=>{const v=parseInt(c.textContent);c.textContent=Math.max(35,Math.min(99,v+(Math.random()>0.4?1:-1)));},3000); },
+    startOnlineCounter() { /* disabled - no fake counter */ },
 
     // ---- ROSARIO CONTINUO ----
     continuoChangeDay(delta) {
@@ -683,17 +680,7 @@ const app = {
     getContinuoSlots(dateKey) {
         const all = JSON.parse(localStorage.getItem(this.CONTINUO_KEY) || '{}');
         if (!all[dateKey]) {
-            // Generate random pre-filled slots for this date
-            const slots = {};
-            const names = ['María G.','Juan R.','Laura M.','Pedro F.','Sofía L.','Carlos A.','Ana P.','Diego S.'];
-            for (let h = 0; h < 24; h++) {
-                const people = [];
-                const count = Math.floor(Math.random() * 4);
-                const shuffled = [...names].sort(() => Math.random() - 0.5);
-                for (let i = 0; i < count; i++) people.push(shuffled[i]);
-                if (people.length > 0) slots[h] = people;
-            }
-            all[dateKey] = slots;
+            all[dateKey] = {};
             localStorage.setItem(this.CONTINUO_KEY, JSON.stringify(all));
         } else {
             // Migrate legacy single-string format to array format
