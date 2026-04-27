@@ -4541,19 +4541,20 @@ var _STUN_SERVERS = [
 async function _vcGetMedia() {
     // Try progressively simpler constraints until one works
     var attempts = [
-        // Attempt 1: HD video + audio with echo cancellation
+        // 1: HD video + audio
         {
             video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 }, facingMode: 'user' },
             audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
         },
-        // Attempt 2: Basic video + basic audio
-        {
-            video: { facingMode: 'user' },
-            audio: { echoCancellation: true, noiseSuppression: true }
-        },
-        // Attempt 3: Any video + any audio (simplest)
+        // 2: Basic video + audio
+        { video: { facingMode: 'user' }, audio: true },
+        // 3: Any video + any audio
         { video: true, audio: true },
-        // Attempt 4: Audio only (no camera available)
+        // 4: HD video only (no mic available)
+        { video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' }, audio: false },
+        // 5: Basic video only
+        { video: true, audio: false },
+        // 6: Audio only (no camera)
         { video: false, audio: true }
     ];
 
@@ -4561,9 +4562,13 @@ async function _vcGetMedia() {
         try {
             console.log('[VC] Trying media attempt', i + 1);
             var stream = await navigator.mediaDevices.getUserMedia(attempts[i]);
-            console.log('[VC] ✓ Media OK with attempt', i + 1,
-                '- Video:', stream.getVideoTracks().length,
-                '- Audio:', stream.getAudioTracks().length);
+            var hasVideo = stream.getVideoTracks().length > 0;
+            var hasAudio = stream.getAudioTracks().length > 0;
+            console.log('[VC] ✓ Media OK with attempt', i + 1, '- Video:', hasVideo, '- Audio:', hasAudio);
+            // Warn user if no mic
+            if (!hasAudio && typeof showMsgToast === 'function') {
+                showMsgToast('⚠️ Sin micrófono — solo se enviará video. El otro participante no te escuchará.');
+            }
             return stream;
         } catch(e) {
             console.warn('[VC] Attempt', i + 1, 'failed:', e.name, '-', e.message);
@@ -4571,7 +4576,7 @@ async function _vcGetMedia() {
     }
 
     console.error('[VC] All media attempts failed');
-    if (typeof showMsgToast === 'function') showMsgToast('⚠️ No se pudo acceder a la cámara/micrófono. Verificá los permisos del navegador.');
+    if (typeof showMsgToast === 'function') showMsgToast('⚠️ No se pudo acceder a la cámara/micrófono.');
     return null;
 }
 
