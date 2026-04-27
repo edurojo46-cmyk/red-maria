@@ -4502,6 +4502,7 @@ var _vcCamOn = true;
 var _vcIsCaller = false;
 var _vcActiveCenaculoId = null;
 var _vcPendingICE = [];
+var _cenaculoVideoCallActive = false;
 
 var _STUN_SERVERS = [
     { urls: 'stun:stun.l.google.com:19302' },
@@ -5466,7 +5467,7 @@ var _cenaculoVideoCallActive = false;
 var _incomingCallState = { ringtoneInterval: null, audioCtx: null, timeout: null, cenaculoId: null, roomName: null, callerName: null };
 
 // === START A CENACULO VIDEO CALL ===
-function startCenaculoVideoCall() {
+async function startCenaculoVideoCall() {
     var c = getSavedCenaculos()[currentCenaculoId];
     if (!c) { alert('Error: cenaculo no encontrado'); return; }
 
@@ -5474,11 +5475,11 @@ function startCenaculoVideoCall() {
     var displayName = currentUser && currentUser.name ? currentUser.name : 'Peregrino';
 
     // Start WebRTC call as caller (waits for receiver to accept)
-    _vcInitCaller(currentCenaculoId);
+    await _vcInitCaller(currentCenaculoId);
     var titleEl = document.getElementById('videocall-overlay-title');
     if (titleEl) titleEl.textContent = 'Red Maria - ' + c.name;
 
-    // Send call signal + chat message via GC broadcast
+    // Send call signal AFTER overlay is showing (prevents race condition)
     var callTime2 = new Date().getHours().toString().padStart(2,'0') + ':' + new Date().getMinutes().toString().padStart(2,'0');
     var signalMsg = { from: displayName, text: '__VIDEOCALL__|' + currentCenaculoId + '|' + c.name + '|' + (c.color||'#6366f1') + '|' + (c.icon||'ri-team-fill'), time: callTime2, date: 'Hoy' };
     if (typeof broadcastGcMessage === 'function') broadcastGcMessage(currentCenaculoId, signalMsg);
@@ -5797,7 +5798,9 @@ function joinGcChannel(cenaculoId) {
     if (gcChannel) { try { gcChannel.unsubscribe(); } catch(e){} }
     if (!sbClient) return;
     gcChannelId = cenaculoId;
-    gcChannel = sbClient.channel('gc-' + cenaculoId);
+    gcChannel = sbClient.channel('gc-' + cenaculoId, {
+        config: { broadcast: { self: false } }
+    });
     gcChannel.on('broadcast', { event: 'gc-msg' }, function(payload) {
         var msg = payload.payload;
         if (!msg) return;
