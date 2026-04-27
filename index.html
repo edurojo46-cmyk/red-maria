@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -515,7 +515,7 @@
         <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px;background:rgba(0,0,0,0.9);z-index:10000">
             <div style="display:flex;align-items:center;gap:10px">
                 <span class="pulse-dot" style="background:#ef4444"></span>
-                <span style="color:white;font-weight:700;font-size:0.9rem">Red Maria - Rosario en Vivo</span>
+                <span id="videocall-overlay-title" style="color:white;font-weight:700;font-size:0.9rem">Red Maria - Rosario en Vivo</span>
             </div>
             <button onclick="closeVideoCall()" style="background:rgba(239,68,68,0.9);border:none;color:white;padding:8px 16px;border-radius:10px;font-weight:700;font-size:0.85rem;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all 0.2s" onmouseover="this.style.background='#ef4444'" onmouseout="this.style.background='rgba(239,68,68,0.9)'"><i class="ri-phone-fill" style="transform:rotate(135deg)"></i> Salir</button>
         </div>
@@ -4924,12 +4924,33 @@ function joinVideoCall(roomName) {
     _startJitsi(roomName, container);
 }
 
+function _isMobileDevice() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+           (window.innerWidth <= 768 && 'ontouchstart' in window);
+}
+
 function _startJitsi(roomName, container) {
     // Get user info
     var user = (typeof auth !== 'undefined' && auth.getCurrentUser) ? auth.getCurrentUser() : null;
     var displayName = user && user.name ? user.name : 'Peregrino';
 
-    // Try Jitsi Meet API first, fallback to iframe
+    // On mobile, open Jitsi in a new tab (iframes can't access camera on many mobile browsers)
+    if (_isMobileDevice()) {
+        var jitsiUrl = 'https://meet.jit.si/' + roomName + '#config.prejoinPageEnabled=false&config.startWithAudioMuted=false&config.startWithVideoMuted=false&config.defaultLanguage=es&userInfo.displayName=' + encodeURIComponent(displayName);
+        container.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:20px;padding:20px;text-align:center">' +
+            '<div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:2rem;color:white"><i class="ri-vidicon-fill"></i></div>' +
+            '<h3 style="color:white;margin:0;font-size:1.2rem">Videollamada Activa</h3>' +
+            '<p style="color:rgba(255,255,255,0.6);margin:0;font-size:0.85rem;max-width:280px">En dispositivos moviles la videollamada se abre en una pestaña aparte para mejor compatibilidad con la camara.</p>' +
+            '<a href="' + jitsiUrl + '" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#27ae60,#2ecc71);color:white;padding:14px 28px;border-radius:14px;font-weight:700;font-size:0.95rem;text-decoration:none;box-shadow:0 6px 24px rgba(39,174,96,0.4);transition:transform 0.2s" onmouseover="this.style.transform=\'scale(1.05)\'" onmouseout="this.style.transform=\'scale(1)\'">' +
+                '<i class="ri-vidicon-fill" style="font-size:1.2rem"></i> Unirme a la Videollamada</a>' +
+            '<button onclick="closeVideoCall()" style="background:none;border:1.5px solid rgba(255,255,255,0.3);color:rgba(255,255,255,0.7);padding:10px 24px;border-radius:12px;font-size:0.85rem;cursor:pointer;font-weight:600;margin-top:8px"><i class="ri-close-line"></i> Cerrar</button>' +
+        '</div>';
+        // Auto-open in new tab
+        window.open(jitsiUrl, '_blank');
+        return;
+    }
+
+    // Desktop: Try Jitsi Meet API first, fallback to iframe
     if (typeof JitsiMeetExternalAPI !== 'undefined' && !window.jitsiLoadFailed) {
         try {
             jitsiApi = new JitsiMeetExternalAPI('8x8.vc', {
@@ -4950,7 +4971,7 @@ function _startJitsi(roomName, container) {
                     ],
                     notifications: [],
                     hideConferenceSubject: false,
-                    subject: 'Rosario en Vivo - Red Maria'
+                    subject: 'Red Maria - Videollamada'
                 },
                 interfaceConfigOverwrite: {
                     SHOW_JITSI_WATERMARK: false,
@@ -4971,7 +4992,7 @@ function _startJitsi(roomName, container) {
         }
     }
 
-    // Iframe fallback - uses public Jitsi servers
+    // Desktop iframe fallback - uses public Jitsi servers
     var iframeSrc = 'https://meet.jit.si/' + roomName + '#config.prejoinPageEnabled=false&config.startWithAudioMuted=false&config.startWithVideoMuted=false&config.defaultLanguage=es&userInfo.displayName=' + encodeURIComponent(displayName);
     container.innerHTML = '<iframe src="' + iframeSrc + '" style="width:100%;height:100%;border:none" allow="camera;microphone;fullscreen;display-capture;autoplay" allowfullscreen></iframe>';
 }
@@ -4985,14 +5006,25 @@ function closeVideoCall() {
     }
     if (container) container.innerHTML = '';
     if (overlay) overlay.style.display = 'none';
-    // If coordinator closed the call, clear the active room
-    if (isCurrentUserOrganizer()) {
+
+    // Reset overlay title
+    var titleEl = document.getElementById('videocall-overlay-title');
+    if (titleEl) titleEl.textContent = 'Red Maria - Rosario en Vivo';
+
+    // Handle cenáculo video call cleanup
+    if (typeof _cenaculoVideoCallActive !== 'undefined' && _cenaculoVideoCallActive) {
+        _cenaculoVideoCallActive = false;
+        return;
+    }
+
+    // If coordinator closed the Rosary call, clear the active room
+    if (typeof isCurrentUserOrganizer === 'function' && isCurrentUserOrganizer()) {
         activeVideoCallRoom = null;
         if (currentRosaryData && currentRosaryData.id) {
             localStorage.removeItem('redmaria_videocall_' + currentRosaryData.id);
         }
     }
-    updateVideoCallButton();
+    if (typeof updateVideoCallButton === 'function') updateVideoCallButton();
 }
 </script>
 
@@ -5200,6 +5232,9 @@ async function openCenaculo(id) {
         row.innerHTML = '<div style="width:32px;height:32px;border-radius:50%;background:' + bgColor + ';display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;flex-shrink:0;color:#333">' + initial + '</div><div style="flex:1"><div style="font-size:0.82rem;font-weight:600;color:var(--clr-text-title)">' + m.name + roleTag + '</div><div style="font-size:0.7rem;color:var(--clr-text-muted)">' + (m.username || '') + '</div></div>' + statusDot;
         membersDiv.appendChild(row);
     });
+
+    // Auto-connect GC channel so we can receive video call signals
+    if (typeof joinGcChannel === 'function') joinGcChannel(id);
 }
 
 function closeCenaculoDetail() {
@@ -5244,31 +5279,136 @@ function inviteMember() {
     }
 }
 
+var _cenaculoVideoCallActive = false;
+var _incomingCallState = { ringtoneInterval: null, audioCtx: null, timeout: null, cenaculoId: null, roomName: null, callerName: null };
+
+// === START A CENACULO VIDEO CALL ===
 function startCenaculoVideoCall() {
     var c = getSavedCenaculos()[currentCenaculoId];
-    if (!c) { console.warn('Cenaculo not found for GC:', currentCenaculoId); return; }
+    if (!c) { alert('Error: cenaculo no encontrado'); return; }
 
-    // Any member can start or join the videocall
-    // Use a fixed room name based on cenaculo ID so members always join the same room
+    var currentUser = (typeof auth !== 'undefined' && auth.getCurrentUser) ? auth.getCurrentUser() : null;
+    var displayName = currentUser && currentUser.name ? currentUser.name : 'Peregrino';
+    var roomName = 'RedMaria-Cenaculo-' + currentCenaculoId;
+
+    // On mobile, open Jitsi directly in new tab (no overlay needed)
+    if (_isMobileDevice()) {
+        var mobileUrl = 'https://meet.jit.si/' + roomName + '#config.prejoinPageEnabled=false&config.startWithAudioMuted=false&config.startWithVideoMuted=false&userInfo.displayName=' + encodeURIComponent(displayName);
+        window.open(mobileUrl, '_blank');
+        showMsgToast('Videollamada abierta en nueva pestaña');
+    } else {
+        _openCenaculoJitsi(roomName, c);
+    }
+
+    // Send call signal + chat message via GC broadcast (already works!)
+    var callTime2 = new Date().getHours().toString().padStart(2,'0') + ':' + new Date().getMinutes().toString().padStart(2,'0');
+    // Signal message for other devices to detect
+    var signalMsg = { from: displayName, text: '__VIDEOCALL__|' + roomName + '|' + c.name + '|' + (c.color||'#6366f1') + '|' + (c.icon||'ri-team-fill'), time: callTime2, date: 'Hoy' };
+    if (typeof broadcastGcMessage === 'function') broadcastGcMessage(currentCenaculoId, signalMsg);
+    // Also save a visible chat message
+    var visibleMsg = { from: displayName, text: '📹 ' + displayName + ' inicio una videollamada. ¡Unite!', time: callTime2, date: 'Hoy' };
+    var gcMsgs2 = getGcMessages(currentCenaculoId);
+    gcMsgs2.push(visibleMsg);
+    saveGcMessages(currentCenaculoId, gcMsgs2);
+    if (typeof broadcastGcMessage === 'function') broadcastGcMessage(currentCenaculoId, visibleMsg);
+    if (currentCenaculoId) renderGcMessages();
+}
+
+function _openCenaculoJitsi(roomName, cenaculo) {
     var overlay = document.getElementById('videocall-overlay');
     var container = document.getElementById('jitsi-container');
     if (!overlay || !container) return;
+    var titleEl = document.getElementById('videocall-overlay-title');
+    if (titleEl) titleEl.textContent = 'Red Maria - ' + cenaculo.name;
+    _cenaculoVideoCallActive = true;
     overlay.style.display = 'flex';
     container.innerHTML = '';
-
-    var roomName = 'RedMaria-Cenaculo-' + currentCenaculoId;
-    var displayName = user && user.name ? user.name : 'Peregrino';
-    var iframeSrc = 'https://meet.jit.si/' + roomName + '#config.prejoinPageEnabled=false&config.startWithAudioMuted=false&config.startWithVideoMuted=false&config.defaultLanguage=es&userInfo.displayName=' + encodeURIComponent(displayName);
-    container.innerHTML = '<iframe src="' + iframeSrc + '" style="width:100%;height:100%;border:none" allow="camera;microphone;fullscreen;display-capture;autoplay" allowfullscreen></iframe>';
-
-    // Notify group that a call started
-    var callTime2 = new Date().getHours().toString().padStart(2,'0') + ':' + new Date().getMinutes().toString().padStart(2,'0');
-    var callMsg2 = { from: displayName, text: displayName + ' inicio una videollamada. Unite!', time: callTime2, date: 'Hoy' };
-    var gcMsgs2 = getGcMessages(currentCenaculoId);
-    gcMsgs2.push(callMsg2);
-    saveGcMessages(currentCenaculoId, gcMsgs2);
-    broadcastGcMessage(currentCenaculoId, callMsg2);
+    _startJitsi(roomName, container);
 }
+
+// (Call detection now handled in GC message receiver below)
+
+function showIncomingCenaculoCall(data) {
+    var existing = document.getElementById('incoming-call-overlay');
+    if (existing) existing.remove();
+    _incomingCallState.cenaculoId = data.cenaculoId;
+    _incomingCallState.roomName = data.roomName;
+    _incomingCallState.callerName = data.callerName;
+    var ov = document.createElement('div');
+    ov.className = 'call-overlay'; ov.id = 'incoming-call-overlay';
+    ov.innerHTML = '<div class="call-card">' +
+        '<div class="call-pulse-ring" style="border-color:rgba(99,102,241,0.4)"></div>' +
+        '<div class="call-pulse-ring call-pulse-ring-2" style="border-color:rgba(99,102,241,0.4)"></div>' +
+        '<div class="call-avatar" style="background:linear-gradient(135deg,' + (data.cenaculoColor||'#6366f1') + ',' + (data.cenaculoColor||'#6366f1') + 'aa)"><i class="' + (data.cenaculoIcon||'ri-team-fill') + '" style="font-size:2.5rem"></i></div>' +
+        '<div class="call-group-label"><i class="ri-vidicon-fill"></i> Videollamada entrante</div>' +
+        '<h2 class="call-name">' + (data.cenaculoName||'Cenaculo') + '</h2>' +
+        '<p class="call-status"><i class="ri-phone-fill call-ring-icon"></i> ' + data.callerName + ' te esta llamando...</p>' +
+        '<div class="call-actions">' +
+        '<button class="call-btn call-btn-decline" onclick="declineCenaculoCall()" title="Rechazar"><i class="ri-phone-fill"></i></button>' +
+        '<button class="call-btn call-btn-accept" onclick="acceptCenaculoCall()" title="Unirme"><i class="ri-vidicon-fill"></i></button>' +
+        '</div></div>';
+    document.body.appendChild(ov);
+    _startIncomingRingtone();
+    _incomingCallState.timeout = setTimeout(function(){ declineCenaculoCall(); }, 45000);
+}
+
+function _startIncomingRingtone() {
+    try {
+        var ctx = new (window.AudioContext || window.webkitAudioContext)();
+        _incomingCallState.audioCtx = ctx;
+        function playRing() {
+            if (!_incomingCallState.audioCtx) return;
+            try {
+                var n=ctx.currentTime;
+                var o1=ctx.createOscillator(),o2=ctx.createOscillator(),g=ctx.createGain();
+                o1.type='sine';o1.frequency.value=523;o2.type='sine';o2.frequency.value=659;g.gain.value=0.18;
+                o1.connect(g);o2.connect(g);g.connect(ctx.destination);o1.start(n);o2.start(n);o1.stop(n+0.5);o2.stop(n+0.5);
+                var o3=ctx.createOscillator(),o4=ctx.createOscillator(),g2=ctx.createGain();
+                o3.type='sine';o3.frequency.value=659;o4.type='sine';o4.frequency.value=784;g2.gain.value=0.18;
+                o3.connect(g2);o4.connect(g2);g2.connect(ctx.destination);o3.start(n+0.6);o4.start(n+0.6);o3.stop(n+1.1);o4.stop(n+1.1);
+                var o5=ctx.createOscillator(),o6=ctx.createOscillator(),g3=ctx.createGain();
+                o5.type='sine';o5.frequency.value=784;o6.type='sine';o6.frequency.value=988;g3.gain.value=0.15;
+                o5.connect(g3);o6.connect(g3);g3.connect(ctx.destination);o5.start(n+1.2);o6.start(n+1.2);o5.stop(n+1.8);o6.stop(n+1.8);
+            } catch(e){}
+        }
+        playRing(); _incomingCallState.ringtoneInterval = setInterval(playRing, 3000);
+    } catch(e) {}
+}
+
+function _stopIncomingRingtone() {
+    if (_incomingCallState.ringtoneInterval) { clearInterval(_incomingCallState.ringtoneInterval); _incomingCallState.ringtoneInterval = null; }
+    if (_incomingCallState.audioCtx) { try{_incomingCallState.audioCtx.close();}catch(e){} _incomingCallState.audioCtx = null; }
+    if (_incomingCallState.timeout) { clearTimeout(_incomingCallState.timeout); _incomingCallState.timeout = null; }
+}
+
+function acceptCenaculoCall() {
+    _stopIncomingRingtone();
+    var roomName = _incomingCallState.roomName, cenaculoId = _incomingCallState.cenaculoId;
+    var ov = document.getElementById('incoming-call-overlay');
+    if (ov) { ov.classList.add('call-fade-out'); setTimeout(function(){ov.remove();},300); }
+
+    // On mobile, open Jitsi in new tab directly
+    if (_isMobileDevice()) {
+        var user = (typeof auth !== 'undefined' && auth.getCurrentUser) ? auth.getCurrentUser() : null;
+        var dn = user && user.name ? user.name : 'Peregrino';
+        var url = 'https://meet.jit.si/' + roomName + '#config.prejoinPageEnabled=false&userInfo.displayName=' + encodeURIComponent(dn);
+        setTimeout(function(){ window.open(url, '_blank'); }, 350);
+    } else {
+        var c = getSavedCenaculos()[cenaculoId];
+        var cd = c || { name:'Cenaculo', color:'#6366f1', icon:'ri-team-fill' };
+        setTimeout(function(){ _openCenaculoJitsi(roomName, cd); }, 350);
+    }
+}
+
+function declineCenaculoCall() {
+    _stopIncomingRingtone();
+    var ov = document.getElementById('incoming-call-overlay');
+    if (ov) { ov.classList.add('call-fade-out'); setTimeout(function(){ov.remove();},300); }
+    _incomingCallState.cenaculoId = null; _incomingCallState.roomName = null; _incomingCallState.callerName = null;
+}
+
+
+
 
 function leaveCenaculo() {
     if (confirm('¿Seguro que quieres salir de este cenaculo?')) {
@@ -5503,7 +5643,29 @@ function joinGcChannel(cenaculoId) {
         var myName = 'Yo';
         try { myName = auth.getCurrentUser().name || 'Yo'; } catch(e) {}
         if (msg.from === myName) return;
-        // Save and render
+
+        // === DETECT VIDEO CALL SIGNAL ===
+        if (msg.text && msg.text.indexOf('__VIDEOCALL__') === 0) {
+            var parts = msg.text.split('|');
+            // parts: [__VIDEOCALL__, roomName, cenaculoName, color, icon]
+            if (parts.length >= 5) {
+                console.log('[VC] INCOMING CALL via GC from:', msg.from);
+                var vcO = document.getElementById('videocall-overlay');
+                if (vcO && vcO.style.display === 'flex') return; // already in call
+                if (document.getElementById('incoming-call-overlay')) return; // already ringing
+                showIncomingCenaculoCall({
+                    cenaculoId: cenaculoId,
+                    callerName: msg.from,
+                    roomName: parts[1],
+                    cenaculoName: parts[2],
+                    cenaculoColor: parts[3],
+                    cenaculoIcon: parts[4]
+                });
+            }
+            return; // Don't save signal messages to chat
+        }
+
+        // Normal chat message - save and render
         var messages = getGcMessages(cenaculoId);
         messages.push(msg);
         saveGcMessages(cenaculoId, messages);
