@@ -512,14 +512,21 @@
 
     <!-- VIDEO CALL OVERLAY -->
     <div id="videocall-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;background:#000;flex-direction:column">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px;background:rgba(0,0,0,0.9);z-index:10000">
+        <video id="vc-remote-video" autoplay playsinline style="width:100%;height:100%;object-fit:cover;background:#111"></video>
+        <video id="vc-local-video" autoplay playsinline muted style="position:absolute;bottom:90px;right:16px;width:120px;height:160px;object-fit:cover;border-radius:14px;border:2px solid rgba(255,255,255,0.3);z-index:10001;background:#222"></video>
+        <div style="position:absolute;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:linear-gradient(to bottom,rgba(0,0,0,0.7),transparent);z-index:10000">
             <div style="display:flex;align-items:center;gap:10px">
                 <span class="pulse-dot" style="background:#ef4444"></span>
-                <span id="videocall-overlay-title" style="color:white;font-weight:700;font-size:0.9rem">Red Maria - Rosario en Vivo</span>
+                <span id="videocall-overlay-title" style="color:white;font-weight:700;font-size:0.9rem">Videollamada</span>
             </div>
-            <button onclick="closeVideoCall()" style="background:rgba(239,68,68,0.9);border:none;color:white;padding:8px 16px;border-radius:10px;font-weight:700;font-size:0.85rem;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all 0.2s" onmouseover="this.style.background='#ef4444'" onmouseout="this.style.background='rgba(239,68,68,0.9)'"><i class="ri-phone-fill" style="transform:rotate(135deg)"></i> Salir</button>
+            <span id="vc-call-timer" style="color:rgba(255,255,255,0.7);font-size:0.8rem;font-family:monospace">00:00</span>
         </div>
-        <div id="jitsi-container" style="flex:1;width:100%;overflow:hidden"></div>
+        <div id="vc-status-msg" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:white;font-size:1rem;text-align:center;z-index:10000">Conectando...</div>
+        <div style="position:absolute;bottom:0;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:20px;padding:20px;background:linear-gradient(to top,rgba(0,0,0,0.7),transparent);z-index:10000">
+            <button id="vc-btn-mic" onclick="vcToggleMic()" style="width:52px;height:52px;border-radius:50%;border:none;background:rgba(255,255,255,0.15);color:white;font-size:1.3rem;cursor:pointer"><i class="ri-mic-fill"></i></button>
+            <button onclick="closeVideoCall()" style="width:60px;height:60px;border-radius:50%;border:none;background:#ef4444;color:white;font-size:1.5rem;cursor:pointer"><i class="ri-phone-fill" style="transform:rotate(135deg);display:block"></i></button>
+            <button id="vc-btn-cam" onclick="vcToggleCam()" style="width:52px;height:52px;border-radius:50%;border:none;background:rgba(255,255,255,0.15);color:white;font-size:1.3rem;cursor:pointer"><i class="ri-camera-fill"></i></button>
+        </div>
     </div>
 
     <!-- 3. EVENT -->
@@ -4483,10 +4490,161 @@ function geocodeAddress() {
 }
 </script>
 
-<script> window.jitsiLoadFailed = true; </script> <!-- No external Jitsi API needed, using iframe -->
 <script>
-// Video Call System using Jitsi Meet
-var jitsiApi = null;
+// === WebRTC Video Call System (no external services, no login) ===
+var jitsiApi = null; // kept for compat
+var _vcPeer = null; // RTCPeerConnection
+var _vcLocalStream = null;
+var _vcCallTimer = null;
+var _vcCallSeconds = 0;
+var _vcMicOn = true;
+var _vcCamOn = true;
+
+var _STUN_SERVERS = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' }
+];
+
+async function _vcGetMedia() {
+    try {
+        return await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    } catch(e) {
+        console.warn('[VC] Camera failed, trying audio only:', e);
+        try { return await navigator.mediaDevices.getUserMedia({ video: false, audio: true }); }
+        catch(e2) { console.error('[VC] No media:', e2); return null; }
+    }
+}
+
+function _vcShowOverlay(title) {
+    var ov = document.getElementById('videocall-overlay');
+    if (ov) ov.style.display = 'flex';
+    var t = document.getElementById('videocall-overlay-title');
+    if (t) t.textContent = title || 'Videollamada';
+    var st = document.getElementById('vc-status-msg');
+    if (st) st.textContent = 'Conectando...';
+    _vcCallSeconds = 0;
+    var timer = document.getElementById('vc-call-timer');
+    if (timer) timer.textContent = '00:00';
+}
+
+function _vcStartTimer() {
+    if (_vcCallTimer) clearInterval(_vcCallTimer);
+    _vcCallSeconds = 0;
+    _vcCallTimer = setInterval(function() {
+        _vcCallSeconds++;
+        var m = Math.floor(_vcCallSeconds / 60).toString().padStart(2, '0');
+        var s = (_vcCallSeconds % 60).toString().padStart(2, '0');
+        var el = document.getElementById('vc-call-timer');
+        if (el) el.textContent = m + ':' + s;
+    }, 1000);
+}
+
+function _vcSendSignal(cenaculoId, type, data) {
+    if (!gcChannel) return;
+    var user = (typeof auth !== 'undefined' && auth.getCurrentUser) ? auth.getCurrentUser() : null;
+    var name = user && user.name ? user.name : 'Peregrino';
+    var msg = { from: name, text: '__WEBRTC__|' + type + '|' + JSON.stringify(data), time: '', date: '' };
+    gcChannel.send({ type: 'broadcast', event: 'gc-msg', payload: msg });
+}
+
+async function _vcStartCall(cenaculoId, isCaller) {
+    _vcShowOverlay('Videollamada');
+    _cenaculoVideoCallActive = true;
+
+    _vcLocalStream = await _vcGetMedia();
+    if (!_vcLocalStream) {
+        document.getElementById('vc-status-msg').textContent = 'No se pudo acceder a camara/microfono';
+        return;
+    }
+
+    // Show local video
+    var localVid = document.getElementById('vc-local-video');
+    if (localVid) { localVid.srcObject = _vcLocalStream; }
+
+    // Create peer connection
+    _vcPeer = new RTCPeerConnection({ iceServers: _STUN_SERVERS });
+
+    // Add local tracks
+    _vcLocalStream.getTracks().forEach(function(track) {
+        _vcPeer.addTrack(track, _vcLocalStream);
+    });
+
+    // Handle remote stream
+    _vcPeer.ontrack = function(ev) {
+        var remoteVid = document.getElementById('vc-remote-video');
+        if (remoteVid && ev.streams && ev.streams[0]) {
+            remoteVid.srcObject = ev.streams[0];
+            var st = document.getElementById('vc-status-msg');
+            if (st) st.style.display = 'none';
+            _vcStartTimer();
+        }
+    };
+
+    // Send ICE candidates
+    _vcPeer.onicecandidate = function(ev) {
+        if (ev.candidate) {
+            _vcSendSignal(cenaculoId, 'ice', ev.candidate);
+        }
+    };
+
+    _vcPeer.onconnectionstatechange = function() {
+        var st = document.getElementById('vc-status-msg');
+        if (_vcPeer.connectionState === 'connected') {
+            if (st) st.style.display = 'none';
+        } else if (_vcPeer.connectionState === 'failed' || _vcPeer.connectionState === 'disconnected') {
+            if (st) { st.style.display = 'block'; st.textContent = 'Conexion perdida...'; }
+        }
+    };
+
+    if (isCaller) {
+        // Create and send offer
+        var offer = await _vcPeer.createOffer();
+        await _vcPeer.setLocalDescription(offer);
+        _vcSendSignal(cenaculoId, 'offer', _vcPeer.localDescription);
+        var st = document.getElementById('vc-status-msg');
+        if (st) st.textContent = 'Esperando al otro participante...';
+    }
+}
+
+async function _vcHandleSignal(type, data, cenaculoId) {
+    if (type === 'offer') {
+        // We received an offer — we are the callee
+        if (!_vcPeer) await _vcStartCall(cenaculoId, false);
+        await _vcPeer.setRemoteDescription(new RTCSessionDescription(data));
+        var answer = await _vcPeer.createAnswer();
+        await _vcPeer.setLocalDescription(answer);
+        _vcSendSignal(cenaculoId, 'answer', _vcPeer.localDescription);
+    } else if (type === 'answer') {
+        if (_vcPeer) await _vcPeer.setRemoteDescription(new RTCSessionDescription(data));
+    } else if (type === 'ice') {
+        if (_vcPeer) {
+            try { await _vcPeer.addIceCandidate(new RTCIceCandidate(data)); }
+            catch(e) { console.warn('[VC] ICE error:', e); }
+        }
+    } else if (type === 'hangup') {
+        closeVideoCall();
+    }
+}
+
+function vcToggleMic() {
+    if (!_vcLocalStream) return;
+    _vcMicOn = !_vcMicOn;
+    _vcLocalStream.getAudioTracks().forEach(function(t) { t.enabled = _vcMicOn; });
+    var btn = document.getElementById('vc-btn-mic');
+    if (btn) btn.innerHTML = _vcMicOn ? '<i class="ri-mic-fill"></i>' : '<i class="ri-mic-off-fill" style="color:#ef4444"></i>';
+    if (btn) btn.style.background = _vcMicOn ? 'rgba(255,255,255,0.15)' : 'rgba(239,68,68,0.3)';
+}
+
+function vcToggleCam() {
+    if (!_vcLocalStream) return;
+    _vcCamOn = !_vcCamOn;
+    _vcLocalStream.getVideoTracks().forEach(function(t) { t.enabled = _vcCamOn; });
+    var btn = document.getElementById('vc-btn-cam');
+    if (btn) btn.innerHTML = _vcCamOn ? '<i class="ri-camera-fill"></i>' : '<i class="ri-camera-off-fill" style="color:#ef4444"></i>';
+    if (btn) btn.style.background = _vcCamOn ? 'rgba(255,255,255,0.15)' : 'rgba(239,68,68,0.3)';
+}
+
 var currentRosaryOrganizer = null;
 var currentRosaryData = null;
 var activeVideoCallRoom = null; // Stores room name when coordinator starts call
@@ -4895,33 +5053,41 @@ function tryOpenVideoCall() {
 
 function openVideoCall() {
     var overlay = document.getElementById('videocall-overlay');
-    var container = document.getElementById('jitsi-container');
-    if (!overlay || !container) return;
+    if (!overlay) return;
 
-    overlay.style.display = 'flex';
-    container.innerHTML = '';
-
-    // Generate a unique room name and store it so others can join
+    // Generate a unique room name
     var roomName = 'RedMaria-Rosario-' + new Date().toISOString().split('T')[0].replace(/-/g, '') + '-' + Math.random().toString(36).substr(2, 6);
     activeVideoCallRoom = roomName;
-    // Store in localStorage so other users in the same browser can see it
     if (currentRosaryData && currentRosaryData.id) {
         localStorage.setItem('redmaria_videocall_' + currentRosaryData.id, roomName);
     }
-    // Update button for others
     updateVideoCallButton();
 
-    _startJitsi(roomName, container);
+    // Start WebRTC call as caller — but this is Rosary call, not cenáculo
+    // For rosary calls, just show local video for now
+    _vcShowOverlay('Red Maria - Rosario en Vivo');
+    _vcGetMedia().then(function(stream) {
+        if (stream) {
+            _vcLocalStream = stream;
+            var localVid = document.getElementById('vc-local-video');
+            if (localVid) localVid.srcObject = stream;
+            var st = document.getElementById('vc-status-msg');
+            if (st) st.textContent = 'Esperando participantes...';
+        }
+    });
 }
 
 function joinVideoCall(roomName) {
-    var overlay = document.getElementById('videocall-overlay');
-    var container = document.getElementById('jitsi-container');
-    if (!overlay || !container) return;
-
-    overlay.style.display = 'flex';
-    container.innerHTML = '';
-    _startJitsi(roomName, container);
+    _vcShowOverlay('Red Maria - Rosario en Vivo');
+    _vcGetMedia().then(function(stream) {
+        if (stream) {
+            _vcLocalStream = stream;
+            var localVid = document.getElementById('vc-local-video');
+            if (localVid) localVid.srcObject = stream;
+            var st = document.getElementById('vc-status-msg');
+            if (st) st.textContent = 'Conectado al rosario';
+        }
+    });
 }
 
 function _isMobileDevice() {
@@ -4929,55 +5095,39 @@ function _isMobileDevice() {
            (window.innerWidth <= 768 && 'ontouchstart' in window);
 }
 
-function _startJitsi(roomName, container) {
-    // Get user info
-    var user = (typeof auth !== 'undefined' && auth.getCurrentUser) ? auth.getCurrentUser() : null;
-    var displayName = user && user.name ? user.name : 'Peregrino';
-
-    // On mobile, open Jitsi in a new tab (iframes can't access camera on many mobile browsers)
-    if (_isMobileDevice()) {
-        var jitsiUrl = 'https://framatalk.org/' + roomName + '#config.prejoinPageEnabled=false&config.startWithAudioMuted=false&config.startWithVideoMuted=false&userInfo.displayName=' + encodeURIComponent(displayName);
-        container.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:20px;padding:20px;text-align:center">' +
-            '<div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:2rem;color:white"><i class="ri-vidicon-fill"></i></div>' +
-            '<h3 style="color:white;margin:0;font-size:1.2rem">Videollamada Activa</h3>' +
-            '<p style="color:rgba(255,255,255,0.6);margin:0;font-size:0.85rem;max-width:280px">En dispositivos moviles la videollamada se abre en una pestaña aparte para mejor compatibilidad con la camara.</p>' +
-            '<a href="' + jitsiUrl + '" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#27ae60,#2ecc71);color:white;padding:14px 28px;border-radius:14px;font-weight:700;font-size:0.95rem;text-decoration:none;box-shadow:0 6px 24px rgba(39,174,96,0.4);transition:transform 0.2s" onmouseover="this.style.transform=\'scale(1.05)\'" onmouseout="this.style.transform=\'scale(1)\'">' +
-                '<i class="ri-vidicon-fill" style="font-size:1.2rem"></i> Unirme a la Videollamada</a>' +
-            '<button onclick="closeVideoCall()" style="background:none;border:1.5px solid rgba(255,255,255,0.3);color:rgba(255,255,255,0.7);padding:10px 24px;border-radius:12px;font-size:0.85rem;cursor:pointer;font-weight:600;margin-top:8px"><i class="ri-close-line"></i> Cerrar</button>' +
-        '</div>';
-        // Auto-open in new tab
-        window.open(jitsiUrl, '_blank');
-        return;
-    }
-
-    // Desktop: Try Jitsi Meet API first, fallback to iframe
-    // Desktop: iframe to free anonymous Jitsi server (no login needed)
-    var iframeSrc = 'https://framatalk.org/' + roomName + '#config.prejoinPageEnabled=false&config.startWithAudioMuted=false&config.startWithVideoMuted=false&userInfo.displayName=' + encodeURIComponent(displayName);
-    container.innerHTML = '<iframe src="' + iframeSrc + '" style="width:100%;height:100%;border:none" allow="camera;microphone;fullscreen;display-capture;autoplay" allowfullscreen></iframe>';
-}
-
-
 function closeVideoCall() {
-    var overlay = document.getElementById('videocall-overlay');
-    var container = document.getElementById('jitsi-container');
-    if (jitsiApi) {
-        try { jitsiApi.dispose(); } catch(e) {}
-        jitsiApi = null;
+    // Stop WebRTC
+    if (_vcPeer) { try { _vcPeer.close(); } catch(e){} _vcPeer = null; }
+    if (_vcLocalStream) {
+        _vcLocalStream.getTracks().forEach(function(t) { t.stop(); });
+        _vcLocalStream = null;
     }
-    if (container) container.innerHTML = '';
+    if (_vcCallTimer) { clearInterval(_vcCallTimer); _vcCallTimer = null; }
+
+    // Send hangup signal
+    if (currentCenaculoId && gcChannel) {
+        _vcSendSignal(currentCenaculoId, 'hangup', {});
+    }
+
+    // Reset UI
+    var overlay = document.getElementById('videocall-overlay');
     if (overlay) overlay.style.display = 'none';
+    var localVid = document.getElementById('vc-local-video');
+    var remoteVid = document.getElementById('vc-remote-video');
+    if (localVid) localVid.srcObject = null;
+    if (remoteVid) remoteVid.srcObject = null;
+    var st = document.getElementById('vc-status-msg');
+    if (st) { st.style.display = 'block'; st.textContent = 'Conectando...'; }
+    _vcMicOn = true; _vcCamOn = true;
 
-    // Reset overlay title
     var titleEl = document.getElementById('videocall-overlay-title');
-    if (titleEl) titleEl.textContent = 'Red Maria - Rosario en Vivo';
+    if (titleEl) titleEl.textContent = 'Videollamada';
 
-    // Handle cenáculo video call cleanup
     if (typeof _cenaculoVideoCallActive !== 'undefined' && _cenaculoVideoCallActive) {
         _cenaculoVideoCallActive = false;
         return;
     }
 
-    // If coordinator closed the Rosary call, clear the active room
     if (typeof isCurrentUserOrganizer === 'function' && isCurrentUserOrganizer()) {
         activeVideoCallRoom = null;
         if (currentRosaryData && currentRosaryData.id) {
@@ -5252,23 +5402,16 @@ function startCenaculoVideoCall() {
 
     var currentUser = (typeof auth !== 'undefined' && auth.getCurrentUser) ? auth.getCurrentUser() : null;
     var displayName = currentUser && currentUser.name ? currentUser.name : 'Peregrino';
-    var roomName = 'RedMaria-Cenaculo-' + currentCenaculoId;
 
-    // On mobile, open Jitsi directly in new tab (no overlay needed)
-    if (_isMobileDevice()) {
-        var mobileUrl = 'https://framatalk.org/' + roomName + '#config.prejoinPageEnabled=false&userInfo.displayName=' + encodeURIComponent(displayName);
-        window.open(mobileUrl, '_blank');
-        showMsgToast('Videollamada abierta en nueva pestaña');
-    } else {
-        _openCenaculoJitsi(roomName, c);
-    }
+    // Start WebRTC call as caller
+    _vcStartCall(currentCenaculoId, true);
+    var titleEl = document.getElementById('videocall-overlay-title');
+    if (titleEl) titleEl.textContent = 'Red Maria - ' + c.name;
 
-    // Send call signal + chat message via GC broadcast (already works!)
+    // Send call signal + chat message via GC broadcast
     var callTime2 = new Date().getHours().toString().padStart(2,'0') + ':' + new Date().getMinutes().toString().padStart(2,'0');
-    // Signal message for other devices to detect
-    var signalMsg = { from: displayName, text: '__VIDEOCALL__|' + roomName + '|' + c.name + '|' + (c.color||'#6366f1') + '|' + (c.icon||'ri-team-fill'), time: callTime2, date: 'Hoy' };
+    var signalMsg = { from: displayName, text: '__VIDEOCALL__|' + currentCenaculoId + '|' + c.name + '|' + (c.color||'#6366f1') + '|' + (c.icon||'ri-team-fill'), time: callTime2, date: 'Hoy' };
     if (typeof broadcastGcMessage === 'function') broadcastGcMessage(currentCenaculoId, signalMsg);
-    // Also save a visible chat message
     var visibleMsg = { from: displayName, text: '📹 ' + displayName + ' inicio una videollamada. ¡Unite!', time: callTime2, date: 'Hoy' };
     var gcMsgs2 = getGcMessages(currentCenaculoId);
     gcMsgs2.push(visibleMsg);
@@ -5277,20 +5420,22 @@ function startCenaculoVideoCall() {
     if (currentCenaculoId) renderGcMessages();
 }
 
-function _openCenaculoJitsi(roomName, cenaculo) {
-    var overlay = document.getElementById('videocall-overlay');
-    var container = document.getElementById('jitsi-container');
-    if (!overlay || !container) return;
-    var titleEl = document.getElementById('videocall-overlay-title');
-    if (titleEl) titleEl.textContent = 'Red Maria - ' + cenaculo.name;
-    _cenaculoVideoCallActive = true;
-    overlay.style.display = 'flex';
-    container.innerHTML = '';
-    _startJitsi(roomName, container);
-}
-
 // (Call detection now handled in GC message receiver below)
 
+function acceptCenaculoCall() {
+    _stopIncomingRingtone();
+    var cenaculoId = _incomingCallState.cenaculoId;
+    var ov = document.getElementById('incoming-call-overlay');
+    if (ov) { ov.classList.add('call-fade-out'); setTimeout(function(){ov.remove();},300); }
+
+    // Start WebRTC call as callee (will receive offer via broadcast)
+    setTimeout(function(){
+        _vcStartCall(cenaculoId, false);
+        var c = getSavedCenaculos()[cenaculoId];
+        var titleEl = document.getElementById('videocall-overlay-title');
+        if (titleEl && c) titleEl.textContent = 'Red Maria - ' + c.name;
+    }, 350);
+}
 function showIncomingCenaculoCall(data) {
     var existing = document.getElementById('incoming-call-overlay');
     if (existing) existing.remove();
@@ -5344,24 +5489,8 @@ function _stopIncomingRingtone() {
     if (_incomingCallState.timeout) { clearTimeout(_incomingCallState.timeout); _incomingCallState.timeout = null; }
 }
 
-function acceptCenaculoCall() {
-    _stopIncomingRingtone();
-    var roomName = _incomingCallState.roomName, cenaculoId = _incomingCallState.cenaculoId;
-    var ov = document.getElementById('incoming-call-overlay');
-    if (ov) { ov.classList.add('call-fade-out'); setTimeout(function(){ov.remove();},300); }
 
-    // On mobile, open Jitsi in new tab directly
-    if (_isMobileDevice()) {
-        var user = (typeof auth !== 'undefined' && auth.getCurrentUser) ? auth.getCurrentUser() : null;
-        var dn = user && user.name ? user.name : 'Peregrino';
-        var url = 'https://framatalk.org/' + roomName + '#config.prejoinPageEnabled=false&userInfo.displayName=' + encodeURIComponent(dn);
-        setTimeout(function(){ window.open(url, '_blank'); }, 350);
-    } else {
-        var c = getSavedCenaculos()[cenaculoId];
-        var cd = c || { name:'Cenaculo', color:'#6366f1', icon:'ri-team-fill' };
-        setTimeout(function(){ _openCenaculoJitsi(roomName, cd); }, 350);
-    }
-}
+
 
 function declineCenaculoCall() {
     _stopIncomingRingtone();
@@ -5628,6 +5757,19 @@ function joinGcChannel(cenaculoId) {
                 });
             }
             return; // Don't save signal messages to chat
+        }
+
+        // === DETECT WEBRTC SIGNALING ===
+        if (msg.text && msg.text.indexOf('__WEBRTC__') === 0) {
+            var wParts = msg.text.split('|');
+            if (wParts.length >= 3) {
+                var sigType = wParts[1];
+                try {
+                    var sigData = JSON.parse(wParts.slice(2).join('|'));
+                    _vcHandleSignal(sigType, sigData, cenaculoId);
+                } catch(e) { console.warn('[VC] Signal parse error:', e); }
+            }
+            return; // Don't save signal messages
         }
 
         // Normal chat message - save and render
