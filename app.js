@@ -488,13 +488,39 @@ var app = {
     },
 
     // Auto-select the best rosary for the Rezar screen
-    getAutoRosary() {
+    async getAutoRosary() {
         var user = auth.isAuthenticated() ? auth.getCurrentUser() : null;
         if (!user) return null;
         
         var userName = (user.name || '').toLowerCase().trim();
         var now = new Date();
-        var allActive = this.getActiveRosaries();
+        
+        // Merge local + Supabase rosaries for full coverage
+        var localRosaries = this.getActiveRosaries();
+        var allActive = [].concat(localRosaries);
+        
+        // Fetch from Supabase to include rosaries created on other devices
+        if (typeof db !== 'undefined' && db.getRosaries) {
+            try {
+                var remote = await db.getRosaries();
+                if (remote && remote.length > 0) {
+                    var localIds = {};
+                    allActive.forEach(function(r) { localIds[r.id] = true; });
+                    remote.forEach(function(r) {
+                        if (!localIds[r.id]) {
+                            // Convert Supabase format to local format
+                            allActive.push({
+                                id: r.id, place: r.place, date: r.date, time: r.time,
+                                mystery: r.mystery, intention: r.intention,
+                                creatorId: r.creator_id, creatorName: r.creator_name,
+                                participants: r.participants || 1, address: r.address,
+                                lat: r.lat, lng: r.lng
+                            });
+                        }
+                    });
+                }
+            } catch(e) { console.warn('[Auto] Supabase fetch failed:', e.message); }
+        }
         
         // Helper: calculate time distance from now (in minutes)
         function timeDistance(r) {
@@ -526,7 +552,6 @@ var app = {
         });
         
         if (joined.length > 0) {
-            // Convert joined format to rosary format
             var j = joined[0];
             console.log('[Auto] Selected joined rosary:', j.name);
             return { id: j.id, place: j.name, time: j.time, mystery: j.mystery, intention: j.intention, date: j.date, participants: j.participants || 1 };
@@ -794,12 +819,19 @@ var app = {
         if (screenId === 'screen-rosary-detail' && this.detailMap) setTimeout(() => this.detailMap.invalidateSize(), 350);
         if (screenId === 'screen-rezo') {
             if (!this._counterStarted) { this._counterStarted = true; this.startOnlineCounter(); }
-            // Auto-select rosary if none selected
+            // Auto-select rosary if none selected (async to check Supabase too)
+            var self = this;
             if (!this._currentRosary) {
-                this._currentRosary = this.getAutoRosary();
-            }
-            if (typeof updateRezoPage === 'function') {
-                updateRezoPage(this._currentRosary || null);
+                this.getAutoRosary().then(function(auto) {
+                    self._currentRosary = auto;
+                    if (typeof updateRezoPage === 'function') {
+                        updateRezoPage(self._currentRosary || null);
+                    }
+                });
+            } else {
+                if (typeof updateRezoPage === 'function') {
+                    updateRezoPage(this._currentRosary || null);
+                }
             }
         }
         if (screenId === 'screen-live') this.renderContinuo();
