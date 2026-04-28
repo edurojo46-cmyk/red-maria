@@ -251,11 +251,25 @@ const app = {
         var supabaseUserId = null;
         var sbSession = localStorage.getItem('sb-spplofkotgvumfkeltsr-auth-token');
         if (sbSession) { try { var p = JSON.parse(sbSession); supabaseUserId = p.user ? p.user.id : null; } catch(e) {} }
-        console.log('[Profile] Filtering rosaries. user.id:', user.id, '| supabaseUserId:', supabaseUserId);
+        console.log('[Profile] Filtering rosaries. user.id:', user.id, '| supabaseUserId:', supabaseUserId, '| user.name:', user.name);
+
+        // Auto-repair: fix old rosaries with null creator_id that match by name
+        if (supabaseUserId && user.name) {
+            allRosaries.forEach(function(r) {
+                if (!r.creatorId && r.creatorName && r.creatorName.toLowerCase() === user.name.toLowerCase()) {
+                    console.log('[Profile] Auto-repairing rosary', r.id, '— setting creator_id to', supabaseUserId);
+                    r.creatorId = supabaseUserId;
+                    // Update in Supabase
+                    if (sbClient) {
+                        sbClient.from('rosaries').update({ creator_id: supabaseUserId }).eq('id', r.id)
+                            .then(function(res) { console.log('[Profile] Repaired rosary in Supabase:', r.id); });
+                    }
+                }
+            });
+        }
+
         const myRosaries = allRosaries.filter(function(r) {
-            // Skip rosaries without a creator
             if (!r.creatorId) return false;
-            // Match by Supabase UUID (primary) or local auth ID
             if (supabaseUserId && r.creatorId === supabaseUserId) return true;
             if (r.creatorId === user.id) return true;
             return false;
