@@ -903,7 +903,9 @@ var app = {
             const card = document.createElement('div');
             const hour = h.toString().padStart(2, '0') + ':00';
             const nextHour = ((h + 1) % 24).toString().padStart(2, '0') + ':00';
-            const people = slots[h] || [];
+            let people = slots[h] || [];
+            if (typeof people === 'string') people = [people];
+            if (!Array.isArray(people)) people = [];
             const count = people.length;
             const isMine = user && people.includes(user);
             totalPeople += count;
@@ -930,7 +932,9 @@ var app = {
         myList.innerHTML = '';
         let hasSlots = false;
         for (let h = 0; h < 24; h++) {
-            const people = slots[h] || [];
+            let people = slots[h] || [];
+            if (typeof people === 'string') people = [people];
+            if (!Array.isArray(people)) people = [];
             if (user && people.includes(user)) {
                 hasSlots = true;
                 const hour = h.toString().padStart(2, '0') + ':00';
