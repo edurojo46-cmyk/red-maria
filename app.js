@@ -471,11 +471,27 @@ var app = {
     addRosaryCard(rosary) {
         const list = document.getElementById('rosary-list'); if (!list) return;
         const ds = this.formatDate(rosary.date);
+        const joined = this.getJoinedRosaries();
+        const isJoined = joined.some(j => j.id === rosary.id);
         const card = document.createElement('div');
         card.className = 'rosary-card glass card';
         card.onclick = () => { app._currentRosary = rosary; app.navigate('screen-rezo'); };
         var addrHtml = rosary.address ? '<div class="rosary-card-detail"><i class="ri-road-map-fill"></i> ' + rosary.address + '</div>' : '';
-        card.innerHTML = '<div class="rosary-card-header"><div class="rosary-card-icon"><i class="ri-map-pin-fill"></i></div><div class="rosary-card-info"><h3>' + rosary.place + '</h3><p>' + ds + ' ' + rosary.time + ' hs · Misterios ' + rosary.mystery + '</p></div></div><div class="rosary-card-details">' + addrHtml + '<div class="rosary-card-detail"><i class="ri-candle-fill"></i> ' + rosary.intention + '</div><div class="rosary-card-detail"><i class="ri-group-fill"></i> ' + (rosary.participants || 1) + ' Participantes</div></div><button class="btn btn-primary btn-join" onclick="app.navigate(\'screen-rezo\')">Unirme</button>';
+        var btnLabel = isJoined ? '<i class="ri-check-line"></i> Unido' : '<i class="ri-add-circle-line"></i> Unirme';
+        var btnClass = isJoined ? 'btn btn-secondary-outline btn-join' : 'btn btn-primary btn-join';
+        card.innerHTML = '<div class="rosary-card-header"><div class="rosary-card-icon"><i class="ri-map-pin-fill"></i></div><div class="rosary-card-info"><h3>' + rosary.place + '</h3><p>' + ds + ' ' + rosary.time + ' hs · Misterios ' + rosary.mystery + '</p></div></div><div class="rosary-card-details">' + addrHtml + '<div class="rosary-card-detail"><i class="ri-candle-fill"></i> ' + rosary.intention + '</div><div class="rosary-card-detail"><i class="ri-group-fill"></i> ' + (rosary.participants || 1) + ' Participantes</div></div><button class="' + btnClass + '" data-rosary-id="' + rosary.id + '">' + btnLabel + '</button>';
+        // Attach join handler to button (stopPropagation to not trigger card click)
+        var btn = card.querySelector('.btn-join');
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            app._currentRosary = rosary;
+            if (!isJoined) {
+                app.joinRosary(rosary.id, rosary.place || 'Rosario', rosary.time || '', rosary.mystery || '', rosary.intention || '', rosary.participants || 1, rosary.date || '');
+                btn.innerHTML = '<i class="ri-check-line"></i> Unido';
+                btn.className = 'btn btn-secondary-outline btn-join';
+            }
+            app.navigate('screen-rezo');
+        });
         list.appendChild(card);
     },
 
