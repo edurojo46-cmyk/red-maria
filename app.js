@@ -251,7 +251,15 @@ const app = {
         var supabaseUserId = null;
         var sbSession = localStorage.getItem('sb-spplofkotgvumfkeltsr-auth-token');
         if (sbSession) { try { var p = JSON.parse(sbSession); supabaseUserId = p.user ? p.user.id : null; } catch(e) {} }
-        const myRosaries = allRosaries.filter(r => r.creatorId === user.id || r.creatorId === supabaseUserId);
+        console.log('[Profile] Filtering rosaries. user.id:', user.id, '| supabaseUserId:', supabaseUserId);
+        const myRosaries = allRosaries.filter(function(r) {
+            // Skip rosaries without a creator
+            if (!r.creatorId) return false;
+            // Match by Supabase UUID (primary) or local auth ID
+            if (supabaseUserId && r.creatorId === supabaseUserId) return true;
+            if (r.creatorId === user.id) return true;
+            return false;
+        });
 
         if (myRosaries.length === 0) {
             container.innerHTML = '<div class="profile-no-slots glass card"><i class="ri-add-circle-line"></i><p>Aún no creaste ningún rosario</p><button class="btn btn-primary" onclick="app.navigate(\'screen-create-rosary\')"><i class="ri-add-line"></i> Crear Rosario</button></div>';
