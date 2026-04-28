@@ -3,7 +3,7 @@
 // Professional-grade security system
 // =============================================
 
-const auth = {
+var auth = {
     STORAGE_KEY: 'redmaria_users',
     SESSION_KEY: 'redmaria_session',
     ATTEMPTS_KEY: 'redmaria_login_attempts',
@@ -473,7 +473,7 @@ const auth = {
 // Handles form interactions and visual feedback
 // =============================================
 
-const authUI = {
+var authUI = {
     currentForm: 'register',
 
     init() {
@@ -814,3 +814,7 @@ const authUI = {
         this.currentForm = 'login';
     }
 };
+
+// Ensure global access for inline onclick handlers
+window.auth = auth;
+window.authUI = authUI;

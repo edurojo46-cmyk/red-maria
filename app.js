@@ -1,4 +1,4 @@
-const app = {
+var app = {
     currentScreen: 'screen-splash',
     screens: ['screen-splash','screen-register','screen-login','screen-forgot-password','screen-reset-password','screen-map','screen-intenciones','screen-create-rosary','screen-rosary-detail','screen-rezo','screen-event','screen-live','screen-como-rezar','screen-profile','screen-porque-rezar','screen-chat','screen-apariciones','screen-cenaculo','screen-iglesias'],
     pickerMap: null, pickerMarker: null, pickerLocation: null,
@@ -834,13 +834,14 @@ const app = {
     },
 
     async getContinuoSlots(dateKey) {
+        var all;
         // Try Supabase first
         if (typeof db !== 'undefined' && db.getContinuoSlots) {
             try {
                 var remote = await db.getContinuoSlots(dateKey);
                 if (remote && Object.keys(remote).length > 0) {
                     // Save to localStorage as cache
-                    var all = JSON.parse(localStorage.getItem(this.CONTINUO_KEY) || '{}');
+                    all = JSON.parse(localStorage.getItem(this.CONTINUO_KEY) || '{}');
                     all[dateKey] = remote;
                     localStorage.setItem(this.CONTINUO_KEY, JSON.stringify(all));
                     return remote;
@@ -848,13 +849,13 @@ const app = {
             } catch(e) { console.warn('[Continuo] Supabase failed:', e.message); }
         }
         // Fallback to localStorage
-        const all = JSON.parse(localStorage.getItem(this.CONTINUO_KEY) || '{}');
+        all = JSON.parse(localStorage.getItem(this.CONTINUO_KEY) || '{}');
         if (!all[dateKey]) {
             all[dateKey] = {};
             localStorage.setItem(this.CONTINUO_KEY, JSON.stringify(all));
         } else {
-            let migrated = false;
-            for (const h in all[dateKey]) {
+            var migrated = false;
+            for (var h in all[dateKey]) {
                 if (typeof all[dateKey][h] === 'string') {
                     all[dateKey][h] = [all[dateKey][h]];
                     migrated = true;
@@ -1037,3 +1038,6 @@ const app = {
 document.addEventListener('DOMContentLoaded', function() {
     app.init();
 });
+
+// Ensure global access for inline onclick handlers
+window.app = app;

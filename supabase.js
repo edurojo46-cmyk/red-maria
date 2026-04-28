@@ -1,12 +1,12 @@
 // === SUPABASE CONFIG ===
-const SUPABASE_URL = 'https://spplofkotgvumfkeltsr.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNwcGxvZmtvdGd2dW1ma2VsdHNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4MDg3NDUsImV4cCI6MjA5MjM4NDc0NX0.GsPBPi0RbZBansH-9hBWW4iufUJBnXj89d-31nOmHM4';
+var SUPABASE_URL = 'https://spplofkotgvumfkeltsr.supabase.co';
+var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNwcGxvZmtvdGd2dW1ma2VsdHNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4MDg3NDUsImV4cCI6MjA5MjM4NDc0NX0.GsPBPi0RbZBansH-9hBWW4iufUJBnXj89d-31nOmHM4';
 
 // Initialize Supabase client (named sbClient to avoid conflict with window.supabase CDN)
 var sbClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
 // === DATABASE SERVICE ===
-const db = {
+var db = {
 
     // ==================== AUTH ====================
     async signUp(email, password, name) {
@@ -496,3 +496,7 @@ async function checkSupabaseConnection() {
 document.addEventListener('DOMContentLoaded', function() {
     setTimeout(checkSupabaseConnection, 1000);
 });
+
+// Ensure global access for inline onclick handlers
+window.db = db;
+window.sbClient = sbClient;

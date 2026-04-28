@@ -7,6 +7,9 @@ RED.code-workspace
 # Archivos de test
 test_supabase.html
 test_iglesias.html
+test_camera.html
+test_videocall.html
 
-# Schema de base de datos
+# Schema y fixes de base de datos
 supabase_schema.sql
+fix_*.sql
