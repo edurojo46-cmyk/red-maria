@@ -293,14 +293,39 @@ const app = {
         container.innerHTML = html;
     },
 
-    renderProfileJoined() {
+    async renderProfileJoined() {
         const container = document.getElementById('profile-joined-rosaries'); if (!container) return;
         const user = auth.getCurrentUser();
         const joined = this.getActiveJoinedRosaries();
-        // Filter out rosaries that user created (those go in "Rosarios que Coordino")
-        const allRosaries = this.getActiveRosaries();
-        const myCreatedIds = user ? allRosaries.filter(r => r.creatorId === user.id).map(r => r.id) : [];
-        const joinedOnly = joined.filter(r => !myCreatedIds.includes(r.id));
+
+        // Load full rosary data from Supabase to get creatorName
+        var fullRosaries = {};
+        if (typeof db !== 'undefined' && db.getRosaries) {
+            try {
+                var remote = await db.getRosaries();
+                if (remote) remote.forEach(function(r) {
+                    fullRosaries[r.id] = { creatorId: r.creator_id, creatorName: r.creator_name || 'Anónimo', place: r.place };
+                });
+            } catch(e) {}
+        }
+        // Also check local rosaries
+        this.getActiveRosaries().forEach(function(r) {
+            if (!fullRosaries[r.id]) fullRosaries[r.id] = { creatorId: r.creatorId, creatorName: r.creatorName || 'Anónimo', place: r.place };
+        });
+
+        // Filter out rosaries that user created
+        var supabaseUserId = null;
+        var sbSession = localStorage.getItem('sb-spplofkotgvumfkeltsr-auth-token');
+        if (sbSession) { try { var p = JSON.parse(sbSession); supabaseUserId = p.user ? p.user.id : null; } catch(e) {} }
+        var userName = user ? (user.name || '').toLowerCase().trim() : '';
+        const joinedOnly = joined.filter(function(r) {
+            var full = fullRosaries[r.id];
+            if (!full) return true;
+            if (full.creatorId && supabaseUserId && full.creatorId === supabaseUserId) return false;
+            if (full.creatorId && user && full.creatorId === user.id) return false;
+            if (!full.creatorId && full.creatorName && userName && full.creatorName.toLowerCase().trim() === userName) return false;
+            return true;
+        });
 
         if (joinedOnly.length === 0) {
             container.innerHTML = '<div class="profile-no-slots glass card"><i class="ri-map-pin-line"></i><p>Aún no te uniste a ningún rosario</p><button class="btn btn-primary" onclick="app.navigate(\'screen-map\')"><i class="ri-search-line"></i> Buscar Rosario</button></div>';
@@ -308,6 +333,9 @@ const app = {
         }
         let html = '';
         joinedOnly.forEach(r => {
+            var full = fullRosaries[r.id] || {};
+            var coordName = full.creatorName || 'Anónimo';
+            var coordId = full.creatorId || '';
             html += '<div class="profile-rosary-card glass card">' +
                 '<div class="profile-rosary-header">' +
                     '<div class="profile-rosary-icon joined-icon"><i class="ri-map-pin-fill"></i></div>' +
@@ -315,6 +343,7 @@ const app = {
                         '<h4>' + r.name + '</h4>' +
                         '<p><i class="ri-time-line"></i> Hoy ' + r.time + ' hs · Misterios ' + (r.mystery || '') + '</p>' +
                         '<span class="profile-rosary-intention"><i class="ri-candle-fill"></i> ' + r.intention + '</span>' +
+                        '<span style="font-size:0.7rem;color:var(--clr-text-muted)"><i class="ri-shield-star-line"></i> Coordina: ' + coordName + '</span>' +
                     '</div>' +
                 '</div>' +
                 '<div class="profile-rosary-footer">' +
@@ -322,7 +351,7 @@ const app = {
                         '<span class="profile-rosary-badge joined-badge"><i class="ri-check-line"></i> Unido</span>' +
                     '</div>' +
                     '<div class="profile-rosary-actions">' +
-                        '<button class="btn btn-primary profile-rosary-btn" onclick="app._currentRosary = {id:\'' + r.id + '\',place:\'' + (r.name || '').replace(/'/g, "\\'") + '\',time:\'' + r.time + '\',mystery:\'' + (r.mystery || '') + '\',intention:\'' + (r.intention || '').replace(/'/g, "\\'") + '\'}; app.navigate(\'screen-rezo\')"><i class="ri-play-circle-fill"></i> Unirme</button>' +
+                        '<button class="btn btn-primary profile-rosary-btn" onclick="app._currentRosary = {id:\'' + r.id + '\',place:\'' + (r.name || '').replace(/'/g, "\\'") + '\',time:\'' + r.time + '\',mystery:\'' + (r.mystery || '') + '\',intention:\'' + (r.intention || '').replace(/'/g, "\\'") + '\',creatorId:\'' + coordId + '\',creatorName:\'' + coordName.replace(/'/g, "\\'") + '\'}; app.navigate(\'screen-rezo\')"><i class="ri-play-circle-fill"></i> Rezar</button>' +
                         '<button class="profile-slot-cancel" onclick="app.leaveRosary(\'' + r.id + '\'); app.renderProfileJoined();" title="Salir"><i class="ri-close-circle-line"></i></button>' +
                     '</div>' +
                 '</div>' +
