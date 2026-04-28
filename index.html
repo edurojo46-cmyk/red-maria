@@ -4833,11 +4833,12 @@ var activeVideoCallRoom = null; // Stores room name when coordinator starts call
 function isCurrentUserOrganizer() {
     var user = (typeof auth !== 'undefined' && auth.getCurrentUser) ? auth.getCurrentUser() : null;
     if (!user) return false;
-    // Only the actual creator of the rosary is the coordinator
     if (currentRosaryOrganizer) {
-        return user.id === currentRosaryOrganizer;
+        // Check both local auth ID and Supabase UUID
+        if (user.id === currentRosaryOrganizer) return true;
+        var sbId = getSupabaseUserId();
+        if (sbId && sbId === currentRosaryOrganizer) return true;
     }
-    // If no organizer set (sample rosaries), no one is coordinator by default
     return false;
 }
 
@@ -4944,16 +4945,27 @@ async function renderConfirmedParticipants(rosaryData) {
     }
 }
 
+// Helper: get Supabase auth UUID (not local auth hash)
+function getSupabaseUserId() {
+    var sbSession = localStorage.getItem('sb-spplofkotgvumfkeltsr-auth-token');
+    if (sbSession) {
+        try { var p = JSON.parse(sbSession); return p.user ? p.user.id : null; } catch(e) {}
+    }
+    return null;
+}
+
 // Join/Leave current rosary from rezo page
 async function joinCurrentRosary() {
     if (!currentRosaryData) return;
     var r = currentRosaryData;
     app.joinRosary(r.id, r.place || 'Rosario', r.time || '', r.mystery || '', r.intention || '', r.participants || 1);
 
-    // Save to Supabase
-    var user = auth.getCurrentUser();
-    if (user && typeof db !== 'undefined' && db.joinRosary) {
-        try { await db.joinRosary(r.id, user.id); } catch(e) { console.error('Join sync error:', e); }
+    // Save to Supabase using correct UUIDs
+    var supabaseUserId = getSupabaseUserId();
+    if (supabaseUserId && typeof db !== 'undefined' && db.joinRosary) {
+        var rosaryId = r.supabaseId || r.id; // prefer Supabase UUID
+        console.log('[Join] rosaryId:', rosaryId, '| userId:', supabaseUserId);
+        try { await db.joinRosary(rosaryId, supabaseUserId); } catch(e) { console.error('Join sync error:', e); }
     }
 
     renderConfirmedParticipants(currentRosaryData);
@@ -4961,19 +4973,21 @@ async function joinCurrentRosary() {
 
 async function leaveCurrentRosary() {
     if (!currentRosaryData) return;
-    var user = auth.getCurrentUser();
 
-    // Remove from Supabase
-    if (user && typeof db !== 'undefined' && db.leaveRosary) {
-        try { await db.leaveRosary(currentRosaryData.id, user.id); } catch(e) { console.error('Leave sync error:', e); }
+    // Remove from Supabase using correct UUIDs
+    var supabaseUserId = getSupabaseUserId();
+    if (supabaseUserId && typeof db !== 'undefined' && db.leaveRosary) {
+        var rosaryId = currentRosaryData.supabaseId || currentRosaryData.id;
+        try { await db.leaveRosary(rosaryId, supabaseUserId); } catch(e) { console.error('Leave sync error:', e); }
     }
 
     // Also remove from local confirmed list
+    var user = auth.getCurrentUser();
     if (user) {
         var confirmedKey = 'redmaria_confirmed_' + currentRosaryData.id;
         var confirmed = [];
         try { confirmed = JSON.parse(localStorage.getItem(confirmedKey)) || []; } catch(e) {}
-        confirmed = confirmed.filter(function(c) { return c.id !== user.id; });
+        confirmed = confirmed.filter(function(c) { return c.id !== user.id && c.id !== supabaseUserId; });
         localStorage.setItem(confirmedKey, JSON.stringify(confirmed));
     }
     app.leaveRosary(currentRosaryData.id);
