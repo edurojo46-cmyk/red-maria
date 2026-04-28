@@ -2778,10 +2778,14 @@ app.navigate = function(screenId) {
 // Force login screen on page load if not authenticated
 document.addEventListener('DOMContentLoaded', function() {
     if (typeof auth !== 'undefined' && !auth.isAuthenticated()) {
-        // Hide all screens, show login
-        document.querySelectorAll('.screen').forEach(function(s) { s.style.display = 'none'; });
+        // Use the proper navigate system (class-based) instead of inline display:none
+        // which conflicts with CSS .screen.active rules
+        document.querySelectorAll('.screen').forEach(function(s) { 
+            s.classList.remove('active');
+            s.style.display = ''; // Clear any leftover inline display
+        });
         var loginScreen = document.getElementById('screen-login') || document.getElementById('screen-auth');
-        if (loginScreen) loginScreen.style.display = 'block';
+        if (loginScreen) loginScreen.classList.add('active');
     } else {
         setTimeout(initRezandoMap, 1000);
     }
