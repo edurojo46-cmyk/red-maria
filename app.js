@@ -833,13 +833,26 @@ const app = {
         this.renderContinuo();
     },
 
-    getContinuoSlots(dateKey) {
+    async getContinuoSlots(dateKey) {
+        // Try Supabase first
+        if (typeof db !== 'undefined' && db.getContinuoSlots) {
+            try {
+                var remote = await db.getContinuoSlots(dateKey);
+                if (remote && Object.keys(remote).length > 0) {
+                    // Save to localStorage as cache
+                    var all = JSON.parse(localStorage.getItem(this.CONTINUO_KEY) || '{}');
+                    all[dateKey] = remote;
+                    localStorage.setItem(this.CONTINUO_KEY, JSON.stringify(all));
+                    return remote;
+                }
+            } catch(e) { console.warn('[Continuo] Supabase failed:', e.message); }
+        }
+        // Fallback to localStorage
         const all = JSON.parse(localStorage.getItem(this.CONTINUO_KEY) || '{}');
         if (!all[dateKey]) {
             all[dateKey] = {};
             localStorage.setItem(this.CONTINUO_KEY, JSON.stringify(all));
         } else {
-            // Migrate legacy single-string format to array format
             let migrated = false;
             for (const h in all[dateKey]) {
                 if (typeof all[dateKey][h] === 'string') {
@@ -852,7 +865,7 @@ const app = {
         return all[dateKey];
     },
 
-    renderContinuo() {
+    async renderContinuo() {
         const d = this.continuoDate;
         const today = new Date();
         const isToday = d.toDateString() === today.toDateString();
@@ -861,13 +874,14 @@ const app = {
         const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
         const titleEl = document.getElementById('continuo-date-title');
         const subEl = document.getElementById('continuo-date-sub');
-        titleEl.textContent = isToday ? 'Hoy' : (isTomorrow ? 'Mañana' : days[d.getDay()]);
-        subEl.textContent = d.getDate() + ' de ' + months[d.getMonth()] + ', ' + d.getFullYear();
+        if (titleEl) titleEl.textContent = isToday ? 'Hoy' : (isTomorrow ? 'Mañana' : days[d.getDay()]);
+        if (subEl) subEl.textContent = d.getDate() + ' de ' + months[d.getMonth()] + ', ' + d.getFullYear();
 
         const dateKey = d.toISOString().split('T')[0];
-        const slots = this.getContinuoSlots(dateKey);
+        const slots = await this.getContinuoSlots(dateKey);
         const user = auth.isAuthenticated() ? JSON.parse(localStorage.getItem('redmaria_session')).name : null;
         const grid = document.getElementById('continuo-grid');
+        if (!grid) return;
         grid.innerHTML = '';
         let totalPeople = 0;
 
@@ -892,11 +906,13 @@ const app = {
             grid.appendChild(card);
         }
 
-        document.getElementById('continuo-taken').textContent = totalPeople;
+        var takenEl = document.getElementById('continuo-taken');
+        if (takenEl) takenEl.textContent = totalPeople;
 
         // Mis Turnos
         const mySection = document.getElementById('continuo-my-slots');
         const myList = document.getElementById('continuo-my-list');
+        if (!myList) return;
         myList.innerHTML = '';
         let hasSlots = false;
         for (let h = 0; h < 24; h++) {
@@ -907,17 +923,18 @@ const app = {
                 const nextHour = ((h + 1) % 24).toString().padStart(2, '0') + ':00';
                 const item = document.createElement('div');
                 item.className = 'my-slot-item';
-                item.innerHTML = '<div class="my-slot-info"><div class="my-slot-icon"><i class="ri-time-line"></i></div><div class="my-slot-text"><h4>' + hour + ' - ' + nextHour + '</h4><p>' + subEl.textContent + '</p></div></div><button class="my-slot-cancel" onclick="app.cancelSlot(\'' + dateKey + '\',' + h + ')">Cancelar</button>';
+                item.innerHTML = '<div class="my-slot-info"><div class="my-slot-icon"><i class="ri-time-line"></i></div><div class="my-slot-text"><h4>' + hour + ' - ' + nextHour + '</h4><p>' + (subEl ? subEl.textContent : '') + '</p></div></div><button class="my-slot-cancel" onclick="app.cancelSlot(\'' + dateKey + '\',' + h + ')">Cancelar</button>';
                 myList.appendChild(item);
             }
         }
-        mySection.style.display = hasSlots ? 'block' : 'none';
+        if (mySection) mySection.style.display = hasSlots ? 'block' : 'none';
     },
 
     showSlotSignup(dateKey, hour, hourStr, nextHourStr) {
         if (!auth.isAuthenticated()) { this.navigate('screen-login'); return; }
         const user = JSON.parse(localStorage.getItem('redmaria_session')).name;
-        const slots = this.getContinuoSlots(dateKey);
+        const all = JSON.parse(localStorage.getItem(this.CONTINUO_KEY) || '{}');
+        const slots = all[dateKey] || {};
         const people = slots[hour] || [];
         const alreadyIn = people.includes(user);
         const d = this.continuoDate;
@@ -937,25 +954,27 @@ const app = {
         modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
     },
 
-    confirmSlot(dateKey, hour) {
+    async confirmSlot(dateKey, hour) {
         const session = JSON.parse(localStorage.getItem('redmaria_session'));
         if (!session) return;
+        // Save locally
         const all = JSON.parse(localStorage.getItem(this.CONTINUO_KEY) || '{}');
         if (!all[dateKey]) all[dateKey] = {};
         if (!all[dateKey][hour]) all[dateKey][hour] = [];
         if (typeof all[dateKey][hour] === 'string') all[dateKey][hour] = [all[dateKey][hour]];
         if (!all[dateKey][hour].includes(session.name)) all[dateKey][hour].push(session.name);
         localStorage.setItem(this.CONTINUO_KEY, JSON.stringify(all));
-        this.renderContinuo();
         // Sync to Supabase
         if (typeof db !== 'undefined' && db.addContinuoSlot) {
-            db.addContinuoSlot(dateKey, hour, session.name);
+            await db.addContinuoSlot(dateKey, hour, session.name);
         }
+        this.renderContinuo();
     },
 
-    cancelSlot(dateKey, hour) {
+    async cancelSlot(dateKey, hour) {
         const session = JSON.parse(localStorage.getItem('redmaria_session'));
         if (!session) return;
+        // Remove locally
         const all = JSON.parse(localStorage.getItem(this.CONTINUO_KEY) || '{}');
         if (all[dateKey] && all[dateKey][hour]) {
             if (typeof all[dateKey][hour] === 'string') all[dateKey][hour] = [all[dateKey][hour]];
@@ -963,11 +982,11 @@ const app = {
             if (all[dateKey][hour].length === 0) delete all[dateKey][hour];
         }
         localStorage.setItem(this.CONTINUO_KEY, JSON.stringify(all));
-        this.renderContinuo();
         // Sync to Supabase
         if (typeof db !== 'undefined' && db.removeContinuoSlot) {
-            db.removeContinuoSlot(dateKey, hour, session.name);
+            await db.removeContinuoSlot(dateKey, hour, session.name);
         }
+        this.renderContinuo();
     },
 
     highlightTodayMystery() {

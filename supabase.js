@@ -171,6 +171,53 @@ const db = {
         });
     },
 
+    // ==================== ROSARIO CONTINUO ====================
+    async getContinuoSlots(dateKey) {
+        if (!sbClient) return {};
+        const { data, error } = await sbClient.from('continuo_slots')
+            .select('hour, user_name, user_id')
+            .eq('date_key', dateKey)
+            .order('hour', { ascending: true });
+        if (error) { console.error('[DB] Error loading continuo:', error.message); return {}; }
+        // Convert to { hour: [name1, name2, ...] }
+        var slots = {};
+        (data || []).forEach(function(row) {
+            if (!slots[row.hour]) slots[row.hour] = [];
+            slots[row.hour].push(row.user_name);
+        });
+        console.log('[DB] Continuo slots for', dateKey, ':', Object.keys(slots).length, 'hours');
+        return slots;
+    },
+
+    async addContinuoSlot(dateKey, hour, userName) {
+        if (!sbClient) return;
+        var userId = null;
+        var sbSession = localStorage.getItem('sb-spplofkotgvumfkeltsr-auth-token');
+        if (sbSession) { try { var p = JSON.parse(sbSession); userId = p.user ? p.user.id : null; } catch(e) {} }
+        const { error } = await sbClient.from('continuo_slots').upsert({
+            date_key: dateKey,
+            hour: hour,
+            user_id: userId,
+            user_name: userName,
+        }, { onConflict: 'date_key,hour,user_id' });
+        if (error) console.error('[DB] Error adding continuo slot:', error.message);
+        else console.log('[DB] Added continuo slot:', dateKey, hour, userName);
+    },
+
+    async removeContinuoSlot(dateKey, hour, userName) {
+        if (!sbClient) return;
+        var userId = null;
+        var sbSession = localStorage.getItem('sb-spplofkotgvumfkeltsr-auth-token');
+        if (sbSession) { try { var p = JSON.parse(sbSession); userId = p.user ? p.user.id : null; } catch(e) {} }
+        const { error } = await sbClient.from('continuo_slots')
+            .delete()
+            .eq('date_key', dateKey)
+            .eq('hour', hour)
+            .eq('user_id', userId);
+        if (error) console.error('[DB] Error removing continuo slot:', error.message);
+        else console.log('[DB] Removed continuo slot:', dateKey, hour);
+    },
+
     // ==================== CENACULOS ====================
     async createCenaculo(cenaculo) {
         if (!sbClient) { saveLocal('cenaculos', cenaculo); return cenaculo; }
