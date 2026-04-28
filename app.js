@@ -247,7 +247,11 @@ const app = {
             } catch(e) { console.warn('[Profile] Supabase rosaries failed:', e.message); }
         }
 
-        const myRosaries = allRosaries.filter(r => r.creatorId === user.id);
+        // Get Supabase user UUID for matching (local auth ID is different)
+        var supabaseUserId = null;
+        var sbSession = localStorage.getItem('sb-spplofkotgvumfkeltsr-auth-token');
+        if (sbSession) { try { var p = JSON.parse(sbSession); supabaseUserId = p.user ? p.user.id : null; } catch(e) {} }
+        const myRosaries = allRosaries.filter(r => r.creatorId === user.id || r.creatorId === supabaseUserId);
 
         if (myRosaries.length === 0) {
             container.innerHTML = '<div class="profile-no-slots glass card"><i class="ri-add-circle-line"></i><p>Aún no creaste ningún rosario</p><button class="btn btn-primary" onclick="app.navigate(\'screen-create-rosary\')"><i class="ri-add-line"></i> Crear Rosario</button></div>';
@@ -359,13 +363,34 @@ const app = {
         const a = this.getRosaries(); a.push(r); localStorage.setItem(this.ROSARY_STORAGE_KEY, JSON.stringify(a));
         // Sync to Supabase
         if (typeof db !== 'undefined' && db.createRosary) {
+            // Use Supabase auth UUID, not local auth hash
+            var supabaseCreatorId = null;
+            if (sbClient && sbClient.auth) {
+                var session = null;
+                try { session = sbClient.auth.getSession(); } catch(e) {}
+                // getSession returns a promise, but we also check the cached user
+            }
+            // Try to get the Supabase user ID from the session storage
+            var sbSession = localStorage.getItem('sb-spplofkotgvumfkeltsr-auth-token');
+            if (sbSession) {
+                try {
+                    var parsed = JSON.parse(sbSession);
+                    supabaseCreatorId = parsed.user ? parsed.user.id : null;
+                } catch(e) {}
+            }
+            console.log('[SaveRosary] Local creatorId:', r.creatorId, '| Supabase UUID:', supabaseCreatorId);
             db.createRosary({
-                id: r.id, place: r.place, address: r.address || '', date: r.date, time: r.time,
+                place: r.place, address: r.address || '', date: r.date, time: r.time,
                 mystery: r.mystery, intention: r.intention, lat: r.lat, lng: r.lng,
-                creator_id: r.creatorId || null,
+                creator_id: supabaseCreatorId,
                 creator_name: r.creatorName || 'Anónimo', participants: r.participants || 1
-            }).then(function() { console.log('✅ Rosario guardado en Supabase'); })
-              .catch(function(e) { console.error('❌ Error guardando rosario en Supabase:', e.message || e); });
+            }).then(function(result) {
+                console.log('✅ Rosario guardado en Supabase, id:', result.id);
+                // Update local rosary with Supabase ID
+                if (result.id && result.id !== r.id) {
+                    r.supabaseId = result.id;
+                }
+            }).catch(function(e) { console.error('❌ Error guardando rosario en Supabase:', e.message || e); });
         }
     },
 
