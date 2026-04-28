@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Red Maria - Reset</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; background: #0a0e1a; color: #e0e6f0; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        .card { background: rgba(255,255,255,0.08); border-radius: 16px; padding: 30px; max-width: 400px; text-align: center; }
+        h1 { font-size: 1.3rem; margin-bottom: 10px; }
+        p { font-size: 0.85rem; color: #8fa3b8; margin: 10px 0; }
+        .btn { display: block; width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 1rem; cursor: pointer; margin: 8px 0; font-weight: 600; }
+        .btn-red { background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; }
+        .btn-blue { background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; }
+        .btn-green { background: linear-gradient(135deg, #27ae60, #2ecc71); color: white; }
+        #log { text-align: left; font-size: 0.75rem; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px; margin-top: 15px; max-height: 200px; overflow-y: auto; }
+        .ok { color: #2ecc71; }
+        .err { color: #e74c3c; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>🔧 Red Maria - Reparación</h1>
+    <p>Si no podés acceder a la app, usá estos botones para limpiar el cache.</p>
+    
+    <button class="btn btn-red" onclick="fullReset()">🗑️ Limpiar Cache Completo</button>
+    <button class="btn btn-blue" onclick="unregisterSW()">⚙️ Solo Desregistrar Service Worker</button>
+    <button class="btn btn-green" onclick="window.location.href='./'">🏠 Ir a Red Maria</button>
+    
+    <div id="log"></div>
+</div>
+
+<script>
+function log(msg, type) {
+    var el = document.getElementById('log');
+    el.innerHTML += '<div class="' + (type || '') + '">• ' + msg + '</div>';
+    el.scrollTop = el.scrollHeight;
+}
+
+async function unregisterSW() {
+    log('Buscando Service Workers...');
+    try {
+        var regs = await navigator.serviceWorker.getRegistrations();
+        log('Encontrados: ' + regs.length);
+        for (var r of regs) {
+            await r.unregister();
+            log('SW desregistrado: ' + r.scope, 'ok');
+        }
+        if (regs.length === 0) log('No había Service Workers registrados');
+    } catch(e) {
+        log('Error: ' + e.message, 'err');
+    }
+}
+
+async function fullReset() {
+    log('=== LIMPIEZA COMPLETA ===');
+    
+    // 1. Unregister all service workers
+    await unregisterSW();
+    
+    // 2. Clear all caches
+    log('Limpiando caches...');
+    try {
+        var names = await caches.keys();
+        log('Caches encontrados: ' + names.length);
+        for (var name of names) {
+            await caches.delete(name);
+            log('Cache borrado: ' + name, 'ok');
+        }
+    } catch(e) {
+        log('Error limpiando caches: ' + e.message, 'err');
+    }
+    
+    // 3. Clear localStorage simulator data
+    log('Limpiando datos del simulador...');
+    try {
+        var keysToClean = ['redmaria_continuo'];
+        keysToClean.forEach(function(k) {
+            if (localStorage.getItem(k)) {
+                localStorage.removeItem(k);
+                log('Borrado: ' + k, 'ok');
+            }
+        });
+    } catch(e) {
+        log('Error: ' + e.message, 'err');
+    }
+    
+    log('');
+    log('✅ ¡Limpieza completa! Tocá "Ir a Red Maria" para volver.', 'ok');
+}
+</script>
+</body>
+</html>
