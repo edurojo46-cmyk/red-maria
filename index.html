@@ -4876,60 +4876,124 @@ function updateRezoPage(rosaryData) {
     if (typeof initRezoIntenciones === 'function') initRezoIntenciones();
 }
 
+// ---- REALTIME PARTICIPANT SYSTEM (Supabase Presence + localStorage) ----
+var _rosaryChannel = null;
+var _rosaryPresenceState = {};
+
+function _getPresenceUserInfo() {
+    var user = (typeof auth !== 'undefined' && auth.getCurrentUser) ? auth.getCurrentUser() : null;
+    var sbId = getSupabaseUserId();
+    return { id: sbId || (user ? user.id : null), name: user ? user.name : 'Anónimo' };
+}
+
+function subscribeRosaryPresence(rosaryId) {
+    if (!sbClient || !rosaryId) return;
+    unsubscribeRosaryPresence();
+    var userInfo = _getPresenceUserInfo();
+    if (!userInfo.id) return;
+    var ch = 'rosary-presence-' + rosaryId;
+    console.log('[Presence] Joining', ch, 'as', userInfo.name);
+    _rosaryChannel = sbClient.channel(ch, { config: { presence: { key: userInfo.id } } });
+    _rosaryChannel.on('presence', { event: 'sync' }, function() {
+        _rosaryPresenceState = _rosaryChannel.presenceState();
+        console.log('[Presence] Sync:', Object.keys(_rosaryPresenceState).length, 'online');
+        _renderPresenceList();
+    });
+    _rosaryChannel.on('presence', { event: 'join' }, function(payload) {
+        console.log('[Presence] User joined:', payload.newPresences);
+        if (payload.newPresences && currentRosaryData) {
+            payload.newPresences.forEach(function(p) {
+                var key = 'redmaria_confirmed_' + currentRosaryData.id;
+                var arr = []; try { arr = JSON.parse(localStorage.getItem(key)) || []; } catch(e) {}
+                if (!arr.some(function(c) { return c.id === p.user_id; })) {
+                    arr.push({ id: p.user_id, name: p.user_name, role: 'participante' });
+                    localStorage.setItem(key, JSON.stringify(arr));
+                }
+            });
+        }
+    });
+    _rosaryChannel.subscribe(function(status) {
+        console.log('[Presence] Status:', status);
+        if (status === 'SUBSCRIBED') {
+            _rosaryChannel.track({ user_id: userInfo.id, user_name: userInfo.name, joined_at: new Date().toISOString() });
+        }
+    });
+}
+
+function unsubscribeRosaryPresence() {
+    if (_rosaryChannel) { _rosaryChannel.unsubscribe(); _rosaryChannel = null; }
+    _rosaryPresenceState = {};
+}
+
+function _renderPresenceList() {
+    var list = document.getElementById('rezo-confirmed-list');
+    var countEl = document.getElementById('rezo-confirmed-count');
+    if (!list || !currentRosaryData) return;
+    var confirmed = [];
+    var addedIds = {};
+    var creatorId = currentRosaryData.creatorId || null;
+    var creatorName = currentRosaryData.creatorName || 'Anónimo';
+    if (creatorId) { confirmed.push({ id: creatorId, name: creatorName, role: 'coordinador', online: false }); addedIds[creatorId] = true; }
+    Object.keys(_rosaryPresenceState).forEach(function(key) {
+        var pp = _rosaryPresenceState[key];
+        if (pp && pp.length > 0) {
+            var p = pp[0];
+            if (!addedIds[p.user_id]) {
+                confirmed.push({ id: p.user_id, name: p.user_name || 'Anónimo', role: 'participante', online: true });
+                addedIds[p.user_id] = true;
+            } else { confirmed.forEach(function(c) { if (c.id === p.user_id) c.online = true; }); }
+        }
+    });
+    var localKey = 'redmaria_confirmed_' + currentRosaryData.id;
+    var localArr = []; try { localArr = JSON.parse(localStorage.getItem(localKey)) || []; } catch(e) {}
+    localArr.forEach(function(c) {
+        if (!addedIds[c.id]) { confirmed.push({ id: c.id, name: c.name, role: c.role || 'participante', online: false }); addedIds[c.id] = true; }
+    });
+    if (countEl) countEl.textContent = confirmed.length;
+    var colors = ['#A8C4DE','#F4D35E','#B5D6A7','#E8A0BF','#C4B5FD','#8FACC5','#FFB4A2','#89CFF0'];
+    var html = '';
+    confirmed.forEach(function(c, i) {
+        var isCoord = c.role === 'coordinador';
+        var badge = isCoord ? '<span class="confirmed-badge coord-badge"><i class="ri-shield-star-fill"></i> Coordinador</span>' : '<span class="confirmed-badge"><i class="ri-check-line"></i> Confirmado</span>';
+        var dot = c.online ? '<span style="position:absolute;bottom:0;right:0;width:10px;height:10px;background:#27ae60;border-radius:50%;border:2px solid var(--clr-bg)"></span>' : '';
+        html += '<div class="confirmed-item glass" style="animation-delay:' + (i*0.05) + 's">' +
+            '<div class="confirmed-avatar" style="background:' + colors[i%colors.length] + ';position:relative">' + c.name.charAt(0).toUpperCase() + dot + '</div>' +
+            '<div class="confirmed-info"><span class="confirmed-name">' + c.name + '</span>' + badge + '</div></div>';
+    });
+    list.innerHTML = html;
+}
+
 // Render confirmed participants list
 async function renderConfirmedParticipants(rosaryData) {
     var list = document.getElementById('rezo-confirmed-list');
     var countEl = document.getElementById('rezo-confirmed-count');
     var joinArea = document.getElementById('rezo-join-area');
     if (!list) return;
-
     var user = (typeof auth !== 'undefined' && auth.getCurrentUser) ? auth.getCurrentUser() : null;
     var rosaryId = rosaryData ? rosaryData.id : null;
     var joined = app.getJoinedRosaries();
     var isJoined = rosaryId && joined.some(function(j) { return j.id === rosaryId; });
     var isCoordinator = isCurrentUserOrganizer();
-
-    // Load confirmed from Supabase first, fallback to localStorage
+    if (rosaryId && sbClient) subscribeRosaryPresence(rosaryId);
     var confirmed = [];
-    if (rosaryId && typeof db !== 'undefined' && db.getParticipants) {
-        try {
-            confirmed = await db.getParticipants(rosaryId);
-            console.log('[Participants] Loaded', confirmed.length, 'from Supabase');
-        } catch(e) {
-            console.warn('[Participants] Supabase failed:', e.message);
-        }
-    }
-
-    // If Supabase returned nothing, try localStorage as fallback
-    if (confirmed.length === 0) {
-        var confirmedKey = 'redmaria_confirmed_' + (rosaryId || 'default');
-        try { confirmed = JSON.parse(localStorage.getItem(confirmedKey)) || []; } catch(e) { confirmed = []; }
-    }
-
-    // Always include the coordinator at the top
+    var confirmedKey = 'redmaria_confirmed_' + (rosaryId || 'default');
+    try { confirmed = JSON.parse(localStorage.getItem(confirmedKey)) || []; } catch(e) { confirmed = []; }
     var creatorName = rosaryData ? (rosaryData.creatorName || 'Anónimo') : 'Anónimo';
     var creatorId = rosaryData ? rosaryData.creatorId : null;
     if (creatorId && !confirmed.some(function(c) { return c.id === creatorId; })) {
         confirmed.unshift({ id: creatorId, name: creatorName, role: 'coordinador' });
+        localStorage.setItem(confirmedKey, JSON.stringify(confirmed));
     }
-    // Mark the coordinator role
     confirmed.forEach(function(c) { if (c.id === creatorId) c.role = 'coordinador'; });
-
     if (countEl) countEl.textContent = confirmed.length;
-
     var colors = ['#A8C4DE','#F4D35E','#B5D6A7','#E8A0BF','#C4B5FD','#8FACC5','#FFB4A2','#89CFF0'];
     var html = '';
     confirmed.forEach(function(c, i) {
         var isCoord = c.role === 'coordinador';
         var badge = isCoord ? '<span class="confirmed-badge coord-badge"><i class="ri-shield-star-fill"></i> Coordinador</span>' : '<span class="confirmed-badge"><i class="ri-check-line"></i> Confirmado</span>';
-        html += '<div class="confirmed-item glass" style="animation-delay:' + (i * 0.05) + 's">' +
-            '<div class="confirmed-avatar" style="background:' + colors[i % colors.length] + '">' + c.name.charAt(0).toUpperCase() + '</div>' +
-            '<div class="confirmed-info"><span class="confirmed-name">' + c.name + '</span>' + badge + '</div>' +
-            '</div>';
+        html += '<div class="confirmed-item glass" style="animation-delay:' + (i*0.05) + 's"><div class="confirmed-avatar" style="background:' + colors[i%colors.length] + '">' + c.name.charAt(0).toUpperCase() + '</div><div class="confirmed-info"><span class="confirmed-name">' + c.name + '</span>' + badge + '</div></div>';
     });
     list.innerHTML = html;
-
-    // Join/Leave button for non-coordinators
     if (joinArea) {
         if (user && !isCoordinator) {
             if (isJoined) {
@@ -4939,57 +5003,44 @@ async function renderConfirmedParticipants(rosaryData) {
             }
         } else if (isCoordinator) {
             joinArea.innerHTML = '<div style="text-align:center;font-size:0.8rem;color:var(--clr-text-muted);padding:6px"><i class="ri-shield-star-fill"></i> Eres el coordinador de este rosario</div>';
-        } else {
-            joinArea.innerHTML = '';
-        }
+        } else { joinArea.innerHTML = ''; }
     }
 }
 
-// Helper: get Supabase auth UUID (not local auth hash)
+// Helper: get Supabase auth UUID
 function getSupabaseUserId() {
     var sbSession = localStorage.getItem('sb-spplofkotgvumfkeltsr-auth-token');
-    if (sbSession) {
-        try { var p = JSON.parse(sbSession); return p.user ? p.user.id : null; } catch(e) {}
-    }
+    if (sbSession) { try { var p = JSON.parse(sbSession); return p.user ? p.user.id : null; } catch(e) {} }
     return null;
 }
 
-// Join/Leave current rosary from rezo page
+// Join current rosary
 async function joinCurrentRosary() {
     if (!currentRosaryData) return;
     var r = currentRosaryData;
     app.joinRosary(r.id, r.place || 'Rosario', r.time || '', r.mystery || '', r.intention || '', r.participants || 1);
-
-    // Save to Supabase using correct UUIDs
-    var supabaseUserId = getSupabaseUserId();
-    if (supabaseUserId && typeof db !== 'undefined' && db.joinRosary) {
-        var rosaryId = r.supabaseId || r.id; // prefer Supabase UUID
-        console.log('[Join] rosaryId:', rosaryId, '| userId:', supabaseUserId);
-        try { await db.joinRosary(rosaryId, supabaseUserId); } catch(e) { console.error('Join sync error:', e); }
+    var userInfo = _getPresenceUserInfo();
+    if (userInfo.id) {
+        var key = 'redmaria_confirmed_' + r.id;
+        var arr = []; try { arr = JSON.parse(localStorage.getItem(key)) || []; } catch(e) {}
+        if (!arr.some(function(c) { return c.id === userInfo.id; })) {
+            arr.push({ id: userInfo.id, name: userInfo.name, role: 'participante' });
+            localStorage.setItem(key, JSON.stringify(arr));
+        }
     }
-
+    subscribeRosaryPresence(r.id);
     renderConfirmedParticipants(currentRosaryData);
 }
 
+// Leave current rosary
 async function leaveCurrentRosary() {
     if (!currentRosaryData) return;
-
-    // Remove from Supabase using correct UUIDs
-    var supabaseUserId = getSupabaseUserId();
-    if (supabaseUserId && typeof db !== 'undefined' && db.leaveRosary) {
-        var rosaryId = currentRosaryData.supabaseId || currentRosaryData.id;
-        try { await db.leaveRosary(rosaryId, supabaseUserId); } catch(e) { console.error('Leave sync error:', e); }
-    }
-
-    // Also remove from local confirmed list
-    var user = auth.getCurrentUser();
-    if (user) {
-        var confirmedKey = 'redmaria_confirmed_' + currentRosaryData.id;
-        var confirmed = [];
-        try { confirmed = JSON.parse(localStorage.getItem(confirmedKey)) || []; } catch(e) {}
-        confirmed = confirmed.filter(function(c) { return c.id !== user.id && c.id !== supabaseUserId; });
-        localStorage.setItem(confirmedKey, JSON.stringify(confirmed));
-    }
+    var userInfo = _getPresenceUserInfo();
+    var key = 'redmaria_confirmed_' + currentRosaryData.id;
+    var arr = []; try { arr = JSON.parse(localStorage.getItem(key)) || []; } catch(e) {}
+    arr = arr.filter(function(c) { return c.id !== userInfo.id; });
+    localStorage.setItem(key, JSON.stringify(arr));
+    unsubscribeRosaryPresence();
     app.leaveRosary(currentRosaryData.id);
     renderConfirmedParticipants(currentRosaryData);
 }
