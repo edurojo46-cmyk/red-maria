@@ -770,9 +770,10 @@ var app = {
         // Restore saved city from geolocation
         const savedCity = localStorage.getItem('redmaria_user_city');
         if (savedCity && pc) pc.textContent = savedCity;
-        this.renderProfileSlots();
-        this.renderProfileJoined();
-        this.renderProfileMyRosaries();
+        // Render each section independently so one error doesn't block the rest
+        try { this.renderProfileSlots(); } catch(e) { console.error('[Profile] renderProfileSlots error:', e); }
+        try { this.renderProfileJoined(); } catch(e) { console.error('[Profile] renderProfileJoined error:', e); }
+        try { this.renderProfileMyRosaries(); } catch(e) { console.error('[Profile] renderProfileMyRosaries error:', e); }
     },
 
     renderProfileSlots() {
@@ -790,6 +791,7 @@ var app = {
             for (const h in slots) {
                 let people = slots[h];
                 if (typeof people === 'string') people = [people];
+                if (!Array.isArray(people)) continue; // skip corrupt data
                 if (people.includes(userName)) {
                     const d = new Date(dateKey + 'T00:00:00');
                     const today = new Date(); today.setHours(0,0,0,0);
