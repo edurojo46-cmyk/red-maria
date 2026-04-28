@@ -169,11 +169,14 @@ var app = {
         try { return JSON.parse(localStorage.getItem(this.JOINED_ROSARIES_KEY)) || []; } catch { return []; }
     },
 
-    joinRosary(id, name, time, mystery, intention, participants) {
+    joinRosary(id, name, time, mystery, intention, participants, date) {
         if (!auth.isAuthenticated()) { this.navigate('screen-login'); return; }
         const joined = this.getJoinedRosaries();
         if (joined.some(j => j.id === id)) return;
-        joined.push({ id, name, time, mystery, intention, participants, joinedAt: new Date().toISOString() });
+        // Get date from current rosary data if not passed as argument
+        var rosaryDate = date || '';
+        if (!rosaryDate && this._currentRosary) rosaryDate = this._currentRosary.date || '';
+        joined.push({ id, name, time, mystery, intention, participants, date: rosaryDate, joinedAt: new Date().toISOString() });
         localStorage.setItem(this.JOINED_ROSARIES_KEY, JSON.stringify(joined));
         // Sync with Supabase
         if (typeof db !== 'undefined' && db.joinRosary) {
@@ -303,24 +306,42 @@ var app = {
     async renderProfileJoined() {
         const container = document.getElementById('profile-joined-rosaries'); if (!container) return;
         const user = auth.getCurrentUser();
-        const joined = this.getActiveJoinedRosaries();
+        var joined = this.getActiveJoinedRosaries();
 
-        // Load full rosary data from Supabase to get creatorName
+        // Load full rosary data from Supabase to get creatorName and enrich joined data
         var fullRosaries = {};
         if (typeof db !== 'undefined' && db.getRosaries) {
             try {
                 var remote = await db.getRosaries();
                 if (remote) remote.forEach(function(r) {
-                    fullRosaries[r.id] = { creatorId: r.creator_id, creatorName: r.creator_name || 'Anónimo', place: r.place };
+                    fullRosaries[r.id] = { creatorId: r.creator_id, creatorName: r.creator_name || 'Anónimo', place: r.place, date: r.date, time: r.time, mystery: r.mystery, intention: r.intention, participants: r.participants || 1 };
                 });
             } catch(e) {}
         }
         // Also check local rosaries
         this.getActiveRosaries().forEach(function(r) {
-            if (!fullRosaries[r.id]) fullRosaries[r.id] = { creatorId: r.creatorId, creatorName: r.creatorName || 'Anónimo', place: r.place };
+            if (!fullRosaries[r.id]) fullRosaries[r.id] = { creatorId: r.creatorId, creatorName: r.creatorName || 'Anónimo', place: r.place, date: r.date, time: r.time, mystery: r.mystery, intention: r.intention, participants: r.participants || 1 };
         });
 
-        // Filter out rosaries that user created
+        // Enrich joined rosaries with full data (fill missing fields)
+        joined = joined.map(function(r) {
+            var full = fullRosaries[r.id];
+            if (full) {
+                return {
+                    id: r.id,
+                    name: r.name || full.place || 'Rosario',
+                    time: r.time || full.time || '',
+                    mystery: r.mystery || full.mystery || '',
+                    intention: r.intention || full.intention || '',
+                    participants: full.participants || r.participants || 1,
+                    date: r.date || full.date || '',
+                    joinedAt: r.joinedAt
+                };
+            }
+            return r;
+        });
+
+        // Filter out rosaries that user created (those go in 'Mis Rosarios')
         var supabaseUserId = null;
         var sbSession = localStorage.getItem('sb-spplofkotgvumfkeltsr-auth-token');
         if (sbSession) { try { var p = JSON.parse(sbSession); supabaseUserId = p.user ? p.user.id : null; } catch(e) {} }
@@ -328,9 +349,10 @@ var app = {
         const joinedOnly = joined.filter(function(r) {
             var full = fullRosaries[r.id];
             if (!full) return true;
+            // Exclude if user is the creator
             if (full.creatorId && supabaseUserId && full.creatorId === supabaseUserId) return false;
             if (full.creatorId && user && full.creatorId === user.id) return false;
-            if (!full.creatorId && full.creatorName && userName && full.creatorName.toLowerCase().trim() === userName) return false;
+            if (full.creatorName && userName && full.creatorName.toLowerCase().trim() === userName) return false;
             return true;
         });
 
@@ -733,8 +755,8 @@ var app = {
         }
     },
 
-    onAuthSuccess() { this.updateUserUI(); this.navigate('screen-profile'); this.requestGeolocation(); },
-    handleLogout() { auth.logoutUser(); this.navigate('screen-splash'); },
+    onAuthSuccess() { this.updateUserUI(); if (typeof loadAvatar === 'function') loadAvatar(); this.navigate('screen-profile'); this.requestGeolocation(); },
+    handleLogout() { auth.logoutUser(); if (typeof setAvatarEverywhere === 'function') setAvatarEverywhere(null); this.navigate('screen-splash'); },
 
     requestGeolocation() {
         if (!navigator.geolocation) return;
