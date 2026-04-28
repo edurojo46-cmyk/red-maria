@@ -486,6 +486,62 @@ var app = {
             return true; // Keep if we can't determine expiry
         });
     },
+
+    // Auto-select the best rosary for the Rezar screen
+    getAutoRosary() {
+        var user = auth.isAuthenticated() ? auth.getCurrentUser() : null;
+        if (!user) return null;
+        
+        var userName = (user.name || '').toLowerCase().trim();
+        var now = new Date();
+        var allActive = this.getActiveRosaries();
+        
+        // Helper: calculate time distance from now (in minutes)
+        function timeDistance(r) {
+            if (!r.date || !r.time) return 999999;
+            var dt = new Date(r.date + 'T' + r.time);
+            return Math.abs(dt.getTime() - now.getTime()) / 60000;
+        }
+        
+        // 1. Priority: Rosary the user COORDINATES (closest to now)
+        var supabaseUserId = null;
+        var sbSession = localStorage.getItem('sb-spplofkotgvumfkeltsr-auth-token');
+        if (sbSession) { try { var p = JSON.parse(sbSession); supabaseUserId = p.user ? p.user.id : null; } catch(e) {} }
+        
+        var coordinated = allActive.filter(function(r) {
+            if (r.creatorId && supabaseUserId && r.creatorId === supabaseUserId) return true;
+            if (r.creatorId && user && r.creatorId === user.id) return true;
+            if (r.creatorName && userName && r.creatorName.toLowerCase().trim() === userName) return true;
+            return false;
+        }).sort(function(a, b) { return timeDistance(a) - timeDistance(b); });
+        
+        if (coordinated.length > 0) {
+            console.log('[Auto] Selected coordinated rosary:', coordinated[0].place);
+            return coordinated[0];
+        }
+        
+        // 2. Fallback: Rosary the user JOINED (closest to now)
+        var joined = this.getActiveJoinedRosaries().sort(function(a, b) {
+            return timeDistance(a) - timeDistance(b);
+        });
+        
+        if (joined.length > 0) {
+            // Convert joined format to rosary format
+            var j = joined[0];
+            console.log('[Auto] Selected joined rosary:', j.name);
+            return { id: j.id, place: j.name, time: j.time, mystery: j.mystery, intention: j.intention, date: j.date, participants: j.participants || 1 };
+        }
+        
+        // 3. Last fallback: Any active rosary closest to now
+        var closest = allActive.sort(function(a, b) { return timeDistance(a) - timeDistance(b); });
+        if (closest.length > 0) {
+            console.log('[Auto] Selected closest rosary:', closest[0].place);
+            return closest[0];
+        }
+        
+        return null;
+    },
+
     saveRosary(r) {
         // Save locally
         const a = this.getRosaries(); a.push(r); localStorage.setItem(this.ROSARY_STORAGE_KEY, JSON.stringify(a));
@@ -738,6 +794,10 @@ var app = {
         if (screenId === 'screen-rosary-detail' && this.detailMap) setTimeout(() => this.detailMap.invalidateSize(), 350);
         if (screenId === 'screen-rezo') {
             if (!this._counterStarted) { this._counterStarted = true; this.startOnlineCounter(); }
+            // Auto-select rosary if none selected
+            if (!this._currentRosary) {
+                this._currentRosary = this.getAutoRosary();
+            }
             if (typeof updateRezoPage === 'function') {
                 updateRezoPage(this._currentRosary || null);
             }
