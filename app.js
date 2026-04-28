@@ -885,36 +885,39 @@ var app = {
     },
 
     async getContinuoSlots(dateKey) {
-        var all;
-        // Try Supabase first
+        // Start with localStorage (always available)
+        var all = JSON.parse(localStorage.getItem(this.CONTINUO_KEY) || '{}');
+        if (!all[dateKey]) all[dateKey] = {};
+        
+        // Migrate string values to arrays
+        for (var h in all[dateKey]) {
+            if (typeof all[dateKey][h] === 'string') all[dateKey][h] = [all[dateKey][h]];
+            if (!Array.isArray(all[dateKey][h])) all[dateKey][h] = [];
+        }
+        
+        var localSlots = all[dateKey];
+        
+        // Merge with Supabase data
         if (typeof db !== 'undefined' && db.getContinuoSlots) {
             try {
                 var remote = await db.getContinuoSlots(dateKey);
-                if (remote && Object.keys(remote).length > 0) {
-                    // Save to localStorage as cache
-                    all = JSON.parse(localStorage.getItem(this.CONTINUO_KEY) || '{}');
-                    all[dateKey] = remote;
-                    localStorage.setItem(this.CONTINUO_KEY, JSON.stringify(all));
-                    return remote;
+                if (remote && typeof remote === 'object') {
+                    // Merge: add any remote names not already in local
+                    for (var rh in remote) {
+                        if (!localSlots[rh]) localSlots[rh] = [];
+                        var remoteNames = Array.isArray(remote[rh]) ? remote[rh] : [remote[rh]];
+                        remoteNames.forEach(function(name) {
+                            if (!localSlots[rh].includes(name)) localSlots[rh].push(name);
+                        });
+                    }
                 }
             } catch(e) { console.warn('[Continuo] Supabase failed:', e.message); }
         }
-        // Fallback to localStorage
-        all = JSON.parse(localStorage.getItem(this.CONTINUO_KEY) || '{}');
-        if (!all[dateKey]) {
-            all[dateKey] = {};
-            localStorage.setItem(this.CONTINUO_KEY, JSON.stringify(all));
-        } else {
-            var migrated = false;
-            for (var h in all[dateKey]) {
-                if (typeof all[dateKey][h] === 'string') {
-                    all[dateKey][h] = [all[dateKey][h]];
-                    migrated = true;
-                }
-            }
-            if (migrated) localStorage.setItem(this.CONTINUO_KEY, JSON.stringify(all));
-        }
-        return all[dateKey];
+        
+        // Save merged result
+        all[dateKey] = localSlots;
+        localStorage.setItem(this.CONTINUO_KEY, JSON.stringify(all));
+        return localSlots;
     },
 
     async renderContinuo() {

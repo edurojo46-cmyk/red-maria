@@ -195,29 +195,36 @@ var db = {
 
     async addContinuoSlot(dateKey, hour, userName) {
         if (!sbClient) return;
+        // Check if already signed up (avoid duplicates)
+        var { data: existing } = await sbClient.from('continuo_slots')
+            .select('id')
+            .eq('date_key', dateKey)
+            .eq('hour', hour)
+            .eq('user_name', userName)
+            .limit(1);
+        if (existing && existing.length > 0) {
+            console.log('[DB] Already signed up for this slot');
+            return;
+        }
+        // Insert new slot
         var userId = null;
         var sbSession = localStorage.getItem('sb-spplofkotgvumfkeltsr-auth-token');
         if (sbSession) { try { var p = JSON.parse(sbSession); userId = p.user ? p.user.id : null; } catch(e) {} }
-        const { error } = await sbClient.from('continuo_slots').upsert({
-            date_key: dateKey,
-            hour: hour,
-            user_id: userId,
-            user_name: userName,
-        }, { onConflict: 'date_key,hour,user_id' });
+        var payload = { date_key: dateKey, hour: hour, user_name: userName };
+        if (userId) payload.user_id = userId;
+        const { error } = await sbClient.from('continuo_slots').insert(payload);
         if (error) console.error('[DB] Error adding continuo slot:', error.message);
         else console.log('[DB] Added continuo slot:', dateKey, hour, userName);
     },
 
     async removeContinuoSlot(dateKey, hour, userName) {
         if (!sbClient) return;
-        var userId = null;
-        var sbSession = localStorage.getItem('sb-spplofkotgvumfkeltsr-auth-token');
-        if (sbSession) { try { var p = JSON.parse(sbSession); userId = p.user ? p.user.id : null; } catch(e) {} }
+        // Delete by user_name (works for both local and Supabase auth)
         const { error } = await sbClient.from('continuo_slots')
             .delete()
             .eq('date_key', dateKey)
             .eq('hour', hour)
-            .eq('user_id', userId);
+            .eq('user_name', userName);
         if (error) console.error('[DB] Error removing continuo slot:', error.message);
         else console.log('[DB] Removed continuo slot:', dateKey, hour);
     },
@@ -419,46 +426,6 @@ var db = {
         return sbClient.channel('cenaculo-' + cenaculoId)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'cenaculo_members', filter: 'cenaculo_id=eq.' + cenaculoId }, callback)
             .subscribe();
-    },
-
-    // ==================== ROSARIO CONTINUO ====================
-    async addContinuoSlot(date, hour, userName) {
-        if (!sbClient) return;
-        const { data, error } = await sbClient.from('continuo_slots').upsert({
-            date: date,
-            hour: hour,
-            user_name: userName
-        }, { onConflict: 'date,hour,user_name' }).select();
-        if (error) {
-            console.error('❌ Error guardando turno:', error.message);
-        } else {
-            console.log('✅ Turno guardado en Supabase:', date, hour + ':00', userName);
-        }
-        return data;
-    },
-
-    async removeContinuoSlot(date, hour, userName) {
-        if (!sbClient) return;
-        const { error } = await sbClient.from('continuo_slots')
-            .delete()
-            .eq('date', date)
-            .eq('hour', hour)
-            .eq('user_name', userName);
-        if (error) {
-            console.error('❌ Error eliminando turno:', error.message);
-        } else {
-            console.log('✅ Turno eliminado de Supabase');
-        }
-    },
-
-    async getContinuoSlots(date) {
-        if (!sbClient) return [];
-        const { data, error } = await sbClient.from('continuo_slots')
-            .select('*')
-            .eq('date', date)
-            .order('hour', { ascending: true });
-        if (error) console.error('Error obteniendo turnos:', error);
-        return data || [];
     }
 };
 
