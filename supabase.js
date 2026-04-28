@@ -116,6 +116,17 @@ var db = {
         return data || [];
     },
 
+    async deleteRosary(rosaryId) {
+        if (!sbClient) return;
+        console.log('[DB] Deleting rosary:', rosaryId);
+        // First delete participants
+        await sbClient.from('rosary_participants').delete().eq('rosary_id', rosaryId);
+        // Then delete the rosary
+        const { error } = await sbClient.from('rosaries').delete().eq('id', rosaryId);
+        if (error) console.error('[DB] Error deleting rosary:', error.message);
+        else console.log('[DB] Rosary deleted:', rosaryId);
+    },
+
     async joinRosary(rosaryId, userId) {
         if (!sbClient) return;
         console.log('[DB] Joining rosary:', rosaryId, 'user:', userId);

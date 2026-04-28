@@ -1782,7 +1782,21 @@ body {
 .profile-rosary-confirmed { font-size:0.72rem; color:var(--clr-text-muted); display:flex; align-items:center; gap:4px; }
 .profile-rosary-confirmed i { font-size:0.78rem; color:var(--clr-primary); }
 .profile-rosary-btn { padding:8px 18px !important; font-size:0.82rem !important; border-radius:12px !important; white-space:nowrap; display:flex; align-items:center; gap:6px; }
-.profile-rosary-actions { display:flex; align-items:center; gap:6px; }
+.profile-rosary-actions { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.profile-rosary-cancel-btn { 
+    padding:8px 14px !important; font-size:0.78rem !important; border-radius:12px !important; 
+    white-space:nowrap; display:flex; align-items:center; gap:4px; cursor:pointer;
+    background:rgba(231,76,60,0.08) !important; color:#e74c3c !important; border:1px solid rgba(231,76,60,0.25) !important;
+    transition:all 0.2s ease;
+}
+.profile-rosary-cancel-btn:hover { background:rgba(231,76,60,0.18) !important; border-color:#e74c3c !important; }
+.profile-rosary-leave-btn {
+    padding:8px 14px !important; font-size:0.78rem !important; border-radius:12px !important;
+    white-space:nowrap; display:flex; align-items:center; gap:4px; cursor:pointer;
+    background:rgba(240,165,0,0.08) !important; color:#e09600 !important; border:1px solid rgba(240,165,0,0.25) !important;
+    transition:all 0.2s ease;
+}
+.profile-rosary-leave-btn:hover { background:rgba(240,165,0,0.18) !important; border-color:#e09600 !important; }
 
 /* Map Popup Styles */
 .rosary-map-popup .leaflet-popup-content-wrapper {

@@ -203,6 +203,61 @@ var app = {
         this.renderProfileMyRosaries();
     },
 
+    cancelRosary(id, placeName) {
+        // Show confirmation modal
+        var modal = document.createElement('div');
+        modal.className = 'slot-signup-modal';
+        modal.innerHTML = '<div class="slot-signup-card">' +
+            '<h3><i class="ri-error-warning-fill" style="color:#e74c3c"></i> Cancelar Rosario</h3>' +
+            '<p style="font-size:0.9rem;color:#5A7D9A;margin:12px 0">¿Estás seguro de cancelar el rosario <strong>' + (placeName || '') + '</strong>?</p>' +
+            '<p style="font-size:0.8rem;color:#e74c3c;margin-bottom:16px">Esta acción no se puede deshacer. Se eliminará para todos los participantes.</p>' +
+            '<div class="slot-signup-actions">' +
+                '<button class="btn btn-secondary-outline" id="cancel-rosary-no">Volver</button>' +
+                '<button class="btn btn-primary" id="cancel-rosary-yes" style="background:linear-gradient(135deg,#e74c3c,#c0392b)"><i class="ri-delete-bin-line"></i> Sí, Cancelar</button>' +
+            '</div>' +
+        '</div>';
+        document.body.appendChild(modal);
+        modal.onclick = function(e) { if (e.target === modal) modal.remove(); };
+        modal.querySelector('#cancel-rosary-no').onclick = function() { modal.remove(); };
+        var self = this;
+        modal.querySelector('#cancel-rosary-yes').onclick = function() {
+            // Remove from local storage
+            var rosaries = self.getRosaries().filter(function(r) { return r.id !== id; });
+            localStorage.setItem(self.ROSARY_STORAGE_KEY, JSON.stringify(rosaries));
+            // Also remove from joined
+            var joined = self.getJoinedRosaries().filter(function(j) { return j.id !== id; });
+            localStorage.setItem(self.JOINED_ROSARIES_KEY, JSON.stringify(joined));
+            // Sync delete to Supabase
+            if (typeof db !== 'undefined' && db.deleteRosary) {
+                db.deleteRosary(id).catch(function(e) { console.error('Delete sync error:', e); });
+            }
+            modal.remove();
+            self.renderProfileMyRosaries();
+            self.renderProfileJoined();
+        };
+    },
+
+    confirmLeaveRosary(id, placeName) {
+        var modal = document.createElement('div');
+        modal.className = 'slot-signup-modal';
+        modal.innerHTML = '<div class="slot-signup-card">' +
+            '<h3><i class="ri-logout-circle-r-line" style="color:#f0a500"></i> Desunirme</h3>' +
+            '<p style="font-size:0.9rem;color:#5A7D9A;margin:12px 0">¿Deseas salir del rosario <strong>' + (placeName || '') + '</strong>?</p>' +
+            '<div class="slot-signup-actions">' +
+                '<button class="btn btn-secondary-outline" id="leave-rosary-no">Volver</button>' +
+                '<button class="btn btn-primary" id="leave-rosary-yes" style="background:linear-gradient(135deg,#f0a500,#e09600)"><i class="ri-logout-circle-r-line"></i> Sí, Salir</button>' +
+            '</div>' +
+        '</div>';
+        document.body.appendChild(modal);
+        modal.onclick = function(e) { if (e.target === modal) modal.remove(); };
+        modal.querySelector('#leave-rosary-no').onclick = function() { modal.remove(); };
+        var self = this;
+        modal.querySelector('#leave-rosary-yes').onclick = function() {
+            self.leaveRosary(id);
+            modal.remove();
+        };
+    },
+
     // Buscar page: filter cards by search text
     filterBuscarCards(query) {
         const cards = document.querySelectorAll('#rosary-list .rosary-card');
@@ -282,6 +337,7 @@ var app = {
         myRosaries.forEach(r => {
             const ds = this.formatDate(r.date);
             const confirmCount = r.participants || 1;
+            var safePlaceName = (r.place||'').replace(/'/g, "\\'");
             html += '<div class="profile-rosary-card glass card">' +
                 '<div class="profile-rosary-header">' +
                     '<div class="profile-rosary-icon coord-icon"><i class="ri-shield-star-fill"></i></div>' +
@@ -296,7 +352,10 @@ var app = {
                         '<span class="profile-rosary-badge coord-badge"><i class="ri-shield-star-fill"></i> Coordinador</span>' +
                         '<span class="profile-rosary-confirmed"><i class="ri-check-double-fill"></i> ' + confirmCount + ' confirmados</span>' +
                     '</div>' +
-                    '<button class="btn btn-primary profile-rosary-btn" onclick="app._currentRosary = {id:\'' + r.id + '\',place:\'' + (r.place||'').replace(/'/g, "\\'") + '\',date:\'' + (r.date||'') + '\',time:\'' + (r.time||'') + '\',mystery:\'' + (r.mystery||'') + '\',intention:\'' + (r.intention||'').replace(/'/g, "\\'") + '\',creatorId:\'' + (r.creatorId||'') + '\',creatorName:\'' + (r.creatorName||'').replace(/'/g, "\\'") + '\',participants:' + (r.participants||1) + '}; app.navigate(\'screen-rezo\')"><i class="ri-play-circle-fill"></i> Rezar</button>' +
+                    '<div class="profile-rosary-actions">' +
+                        '<button class="btn btn-primary profile-rosary-btn" onclick="app._currentRosary = {id:\'' + r.id + '\',place:\'' + safePlaceName + '\',date:\'' + (r.date||'') + '\',time:\'' + (r.time||'') + '\',mystery:\'' + (r.mystery||'') + '\',intention:\'' + (r.intention||'').replace(/'/g, "\\'") + '\',creatorId:\'' + (r.creatorId||'') + '\',creatorName:\'' + (r.creatorName||'').replace(/'/g, "\\'") + '\',participants:' + (r.participants||1) + '}; app.navigate(\'screen-rezo\')"><i class="ri-play-circle-fill"></i> Rezar</button>' +
+                        '<button class="btn profile-rosary-cancel-btn" onclick="app.cancelRosary(\'' + r.id + '\',\'' + safePlaceName + '\')" title="Cancelar rosario"><i class="ri-delete-bin-line"></i> Cancelar</button>' +
+                    '</div>' +
                 '</div>' +
             '</div>';
         });
@@ -381,7 +440,7 @@ var app = {
                     '</div>' +
                     '<div class="profile-rosary-actions">' +
                         '<button class="btn btn-primary profile-rosary-btn" onclick="app._currentRosary = {id:\'' + r.id + '\',place:\'' + (r.name || '').replace(/'/g, "\\'") + '\',time:\'' + r.time + '\',mystery:\'' + (r.mystery || '') + '\',intention:\'' + (r.intention || '').replace(/'/g, "\\'") + '\',creatorId:\'' + coordId + '\',creatorName:\'' + coordName.replace(/'/g, "\\'") + '\'}; app.navigate(\'screen-rezo\')"><i class="ri-play-circle-fill"></i> Rezar</button>' +
-                        '<button class="profile-slot-cancel" onclick="app.leaveRosary(\'' + r.id + '\'); app.renderProfileJoined();" title="Salir"><i class="ri-close-circle-line"></i></button>' +
+                        '<button class="btn profile-rosary-leave-btn" onclick="app.confirmLeaveRosary(\'' + r.id + '\',\'' + (r.name || '').replace(/'/g, "\\'") + '\')" title="Desunirme"><i class="ri-logout-circle-r-line"></i> Salir</button>' +
                     '</div>' +
                 '</div>' +
             '</div>';
