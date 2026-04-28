@@ -1,11 +1,11 @@
-// === Red Maria Service Worker v3 ===
+// === Red Maria Service Worker v4 ===
 // Handles background notifications + cache busting
 
-const CACHE_NAME = 'redmaria-v3';
+const CACHE_NAME = 'redmaria-v4';
 
 // Install event - force immediate activation
 self.addEventListener('install', function(event) {
-    console.log('[SW] Installing v3...');
+    console.log('[SW] Installing v4...');
     self.skipWaiting();
 });
 

@@ -13,7 +13,7 @@ const app = {
 
     init() {
         this.generateSplashBeads();
-        this.renderContinuo();
+        this.renderContinuo().catch(function(e) { console.warn('[Init] Continuo render failed:', e); });
         this.generateParticipants();
         this.loadRosaryCards();
         authUI.init();
