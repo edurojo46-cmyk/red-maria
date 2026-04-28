@@ -4796,38 +4796,19 @@ function vcSwapVideos() {
     var localVid = document.getElementById('vc-local-video');
     var localWrapper = document.getElementById('vc-local-wrapper');
     if (!remoteVid || !localVid) return;
-
-    // Swap the srcObject between the two video elements
     var tempSrc = remoteVid.srcObject;
     remoteVid.srcObject = localVid.srcObject;
     localVid.srcObject = tempSrc;
-
-    // Toggle muted (big screen should have audio, small should be muted to avoid echo)
-    if (_vcSwapped) {
-        remoteVid.muted = true;
-        localVid.muted = false;
-    } else {
-        remoteVid.muted = false;
-        localVid.muted = true;
-    }
-
-    // Visual feedback — briefly highlight the swap icon
+    if (_vcSwapped) { remoteVid.muted = true; localVid.muted = false; }
+    else { remoteVid.muted = false; localVid.muted = true; }
     var swapIcon = document.getElementById('vc-swap-icon');
-    if (swapIcon) {
-        swapIcon.style.background = 'rgba(99,102,241,0.8)';
-        setTimeout(function() { swapIcon.style.background = 'rgba(0,0,0,0.55)'; }, 400);
-    }
-
-    // Animate the wrapper with a scale pulse
-    if (localWrapper) {
-        localWrapper.style.transform = 'scale(0.9)';
-        setTimeout(function() { localWrapper.style.transform = 'scale(1)'; }, 200);
-    }
+    if (swapIcon) { swapIcon.style.background = 'rgba(99,102,241,0.8)'; setTimeout(function() { swapIcon.style.background = 'rgba(0,0,0,0.55)'; }, 400); }
+    if (localWrapper) { localWrapper.style.transform = 'scale(0.9)'; setTimeout(function() { localWrapper.style.transform = 'scale(1)'; }, 200); }
 }
 
 var currentRosaryOrganizer = null;
 var currentRosaryData = null;
-var activeVideoCallRoom = null; // Stores room name when coordinator starts call
+var activeVideoCallRoom = null;
 
 // Check if current user is the coordinator (creator) of the rosary
 function isCurrentUserOrganizer() {
@@ -4843,21 +4824,28 @@ function isCurrentUserOrganizer() {
 }
 
 // Update the rezo page with rosary data and coordinator info
-function updateRezoPage(rosaryData) {
+async function updateRezoPage(rosaryData) {
     currentRosaryData = rosaryData;
     currentRosaryOrganizer = rosaryData ? rosaryData.creatorId : null;
-
-    // Update event card
+    // If creatorName is missing, look it up from Supabase
+    if (rosaryData && (!rosaryData.creatorName || rosaryData.creatorName === 'Anónimo') && rosaryData.id && typeof sbClient !== 'undefined' && sbClient) {
+        try {
+            var res = await sbClient.from('rosaries').select('creator_name, creator_id').eq('id', rosaryData.id).single();
+            if (res.data) {
+                if (res.data.creator_name) rosaryData.creatorName = res.data.creator_name;
+                if (res.data.creator_id) { rosaryData.creatorId = res.data.creator_id; currentRosaryOrganizer = res.data.creator_id; }
+                console.log('[Rezo] Coordinator from Supabase:', res.data.creator_name);
+            }
+        } catch(e) { console.warn('[Rezo] Could not fetch coordinator:', e.message); }
+    }
     var placeName = document.getElementById('rezo-place-name');
     var placeTime = document.getElementById('rezo-place-time');
     var intention = document.getElementById('rezo-intention');
     if (rosaryData) {
         if (placeName) placeName.textContent = rosaryData.place || 'Rosario';
-        if (placeTime) placeTime.textContent = (rosaryData.date ? app.formatDate(rosaryData.date) : 'Hoy') + ' ' + (rosaryData.time || '') + ' hs Â· Misterios ' + (rosaryData.mystery || 'Gozosos');
+        if (placeTime) placeTime.textContent = (rosaryData.date ? app.formatDate(rosaryData.date) : 'Hoy') + ' ' + (rosaryData.time || '') + ' hs · Misterios ' + (rosaryData.mystery || 'Gozosos');
         if (intention) intention.innerHTML = '<i class="ri-candle-fill"></i> ' + (rosaryData.intention || 'Por la Paz del Mundo');
     }
-
-    // Update coordinator card
     var coordName = document.getElementById('rezo-coord-name');
     var coordAvatar = document.getElementById('rezo-coord-avatar');
     var coordLabel = document.getElementById('rezo-coord-label');
@@ -4865,14 +4853,8 @@ function updateRezoPage(rosaryData) {
     if (coordName) coordName.textContent = creatorName;
     if (coordAvatar) coordAvatar.textContent = creatorName.charAt(0).toUpperCase();
     if (coordLabel) coordLabel.textContent = 'Coordinador/a';
-
-    // Update confirmed participants
     renderConfirmedParticipants(rosaryData);
-
-    // Update videocall button
     updateVideoCallButton();
-
-    // Init intenciones system
     if (typeof initRezoIntenciones === 'function') initRezoIntenciones();
 }
 
