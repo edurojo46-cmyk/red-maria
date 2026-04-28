@@ -91,11 +91,13 @@ const db = {
     },
 
     async getRosaries() {
-        if (!sbClient) return getLocal('rosaries');
-        const { data } = await sbClient.from('rosaries')
+        if (!sbClient) { console.warn('[DB] No sbClient, using local'); return getLocal('rosaries'); }
+        const { data, error } = await sbClient.from('rosaries')
             .select('*')
             .gte('date', new Date().toISOString().split('T')[0])
             .order('date', { ascending: true });
+        if (error) { console.error('[DB] Error loading rosaries:', error.message, error); return getLocal('rosaries'); }
+        console.log('[DB] Rosaries from Supabase:', data ? data.length : 0);
         return data || [];
     },
 

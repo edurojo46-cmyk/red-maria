@@ -73,13 +73,27 @@ const app = {
     },
 
     async initBuscarMap() {
-        if (this.buscarMap) { this.buscarMap.invalidateSize(); return; }
-        this.buscarMap = L.map('buscar-map', { zoomControl: false, attributionControl: false }).setView([-34.5955, -58.3739], 13);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(this.buscarMap);
-        L.control.zoom({ position: 'topright' }).addTo(this.buscarMap);
+        if (!this.buscarMap) {
+            this.buscarMap = L.map('buscar-map', { zoomControl: false, attributionControl: false }).setView([-34.5955, -58.3739], 13);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(this.buscarMap);
+            L.control.zoom({ position: 'topright' }).addTo(this.buscarMap);
+            this._buscarMarkers = [];
+        } else {
+            this.buscarMap.invalidateSize();
+        }
+        // Always reload rosaries
+        await this._loadBuscarRosaries();
+    },
 
-        // Load rosaries from Supabase then localStorage
-        var activeRosaries = this.getActiveRosaries();
+    async _loadBuscarRosaries() {
+        // Clear old markers
+        if (this._buscarMarkers) {
+            this._buscarMarkers.forEach(m => this.buscarMap.removeLayer(m));
+            this._buscarMarkers = [];
+        }
+
+        // Load from Supabase first
+        var activeRosaries = [];
         if (typeof db !== 'undefined' && db.getRosaries) {
             try {
                 var remote = await db.getRosaries();
@@ -93,9 +107,18 @@ const app = {
                         };
                     });
                     localStorage.setItem('redmaria_rosaries', JSON.stringify(activeRosaries));
+                    console.log('[Map] Loaded', activeRosaries.length, 'rosaries from Supabase');
                 }
             } catch(e) { console.warn('[Map] Supabase failed:', e.message); }
         }
+
+        // Fallback to localStorage
+        if (activeRosaries.length === 0) {
+            activeRosaries = this.getActiveRosaries();
+            console.log('[Map] Using', activeRosaries.length, 'rosaries from localStorage');
+        }
+
+        // Add markers
         let totalPeople = 0;
         activeRosaries.forEach(r => {
             if (r.lat && r.lng) {
@@ -104,6 +127,7 @@ const app = {
                 const icon = L.divIcon({ className: 'custom-marker-wrapper', html: '<div class="custom-map-marker user-marker"><i class="ri-map-pin-fill" style="font-size:1rem;color:white"></i><span class="marker-count">' + pCount + '</span></div>', iconSize: [36, 44], iconAnchor: [18, 44] });
                 const marker = L.marker([r.lat, r.lng], { icon }).addTo(this.buscarMap);
                 marker.bindPopup(() => this._buildMapPopup(r.id, r.place, r.time, r.mystery, r.intention, r.participants || 1), { className: 'rosary-map-popup', maxWidth: 260 });
+                this._buscarMarkers.push(marker);
             }
         });
 
@@ -117,7 +141,7 @@ const app = {
         if (countEl) countEl.textContent = activeRosaries.length + ' encontrados';
         if (emptyEl) emptyEl.style.display = activeRosaries.length === 0 ? '' : 'none';
 
-        // Render cards for real rosaries
+        // Render cards
         const list = document.getElementById('rosary-list');
         if (list) list.innerHTML = '';
         activeRosaries.forEach(r => this.addRosaryCard(r));
