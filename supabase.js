@@ -85,8 +85,19 @@ const db = {
     // ==================== ROSARIOS ====================
     async createRosary(rosary) {
         if (!sbClient) { saveLocal('rosaries', rosary); return rosary; }
-        const { data, error } = await sbClient.from('rosaries').insert(rosary).select().single();
-        if (error) { console.error('Error creating rosary:', error); saveLocal('rosaries', rosary); return rosary; }
+        // Don't send 'id' if it's not a valid UUID — let Supabase generate it
+        var payload = Object.assign({}, rosary);
+        if (payload.id && !/^[0-9a-f]{8}-/.test(payload.id)) {
+            delete payload.id; // Remove non-UUID id, let DB auto-generate
+        }
+        console.log('[DB] Creating rosary with payload:', JSON.stringify(payload));
+        const { data, error } = await sbClient.from('rosaries').insert(payload).select().single();
+        if (error) {
+            console.error('[DB] Error creating rosary:', error.message, '| Details:', error.details, '| Hint:', error.hint, '| Code:', error.code);
+            saveLocal('rosaries', rosary);
+            return rosary;
+        }
+        console.log('[DB] Rosary created successfully:', data.id);
         return data;
     },
 
