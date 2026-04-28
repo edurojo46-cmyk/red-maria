@@ -90,6 +90,10 @@ var db = {
         if (payload.id && !/^[0-9a-f]{8}-/.test(payload.id)) {
             delete payload.id; // Remove non-UUID id, let DB auto-generate
         }
+        // Remove creator_id if null/undefined to avoid FK constraint issues
+        if (!payload.creator_id) {
+            delete payload.creator_id;
+        }
         console.log('[DB] Creating rosary with payload:', JSON.stringify(payload));
         const { data, error } = await sbClient.from('rosaries').insert(payload).select().single();
         if (error) {
