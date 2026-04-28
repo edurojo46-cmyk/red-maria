@@ -114,36 +114,60 @@ const db = {
 
     async joinRosary(rosaryId, userId) {
         if (!sbClient) return;
-        var user = (typeof auth !== 'undefined' && auth.getCurrentUser) ? auth.getCurrentUser() : null;
-        var userName = user ? user.name : 'Anónimo';
-        await sbClient.from('rosary_participants').upsert({
+        console.log('[DB] Joining rosary:', rosaryId, 'user:', userId);
+        const { error } = await sbClient.from('rosary_participants').upsert({
             rosary_id: rosaryId,
             user_id: userId,
-            user_name: userName,
             joined_at: new Date().toISOString()
-        });
+        }, { onConflict: 'rosary_id,user_id' });
+        if (error) {
+            console.error('[DB] Error joining rosary:', error.message, '| Code:', error.code, '| Details:', error.details);
+        } else {
+            console.log('[DB] Successfully joined rosary');
+        }
         // Increment participant count
         try { await sbClient.rpc('increment_participants', { row_id: rosaryId }); } catch(e) {}
     },
 
     async leaveRosary(rosaryId, userId) {
         if (!sbClient) return;
-        await sbClient.from('rosary_participants')
+        const { error } = await sbClient.from('rosary_participants')
             .delete()
             .eq('rosary_id', rosaryId)
             .eq('user_id', userId);
+        if (error) console.error('[DB] Error leaving rosary:', error.message);
         try { await sbClient.rpc('decrement_participants', { row_id: rosaryId }); } catch(e) {}
     },
 
     async getParticipants(rosaryId) {
         if (!sbClient) return [];
+        console.log('[DB] Fetching participants for rosary:', rosaryId);
+        // Get participant user_ids
         const { data, error } = await sbClient.from('rosary_participants')
-            .select('user_id, user_name, joined_at')
+            .select('user_id, joined_at')
             .eq('rosary_id', rosaryId)
             .order('joined_at', { ascending: true });
-        if (error) { console.error('Error fetching participants:', error); return []; }
-        return (data || []).map(function(p) {
-            return { id: p.user_id, name: p.user_name || 'Anónimo', role: 'participante' };
+        if (error) {
+            console.error('[DB] Error fetching participants:', error.message, '| Code:', error.code);
+            return [];
+        }
+        if (!data || data.length === 0) return [];
+        console.log('[DB] Found', data.length, 'participants');
+
+        // Fetch names from profiles
+        var userIds = data.map(function(p) { return p.user_id; });
+        var profiles = {};
+        try {
+            const { data: profileData } = await sbClient.from('profiles')
+                .select('id, name')
+                .in('id', userIds);
+            if (profileData) {
+                profileData.forEach(function(pr) { profiles[pr.id] = pr.name; });
+            }
+        } catch(e) { console.warn('[DB] Could not fetch profile names:', e.message); }
+
+        return data.map(function(p) {
+            return { id: p.user_id, name: profiles[p.user_id] || 'Anónimo', role: 'participante' };
         });
     },
 
