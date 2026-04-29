@@ -6566,14 +6566,16 @@ function broadcastGcMessage(cenaculoId, msg) {
     }
 }
 
-// DEBUG: visual toast for mobile debugging (temporary)
-function _dbgToast(msg, color) {
-    var t = document.createElement('div');
-    t.style.cssText = 'position:fixed;top:' + (10 + (document.querySelectorAll('.dbg-toast').length * 40)) + 'px;left:10px;right:10px;background:' + (color || 'rgba(0,0,0,0.85)') + ';color:white;padding:8px 14px;border-radius:10px;font-size:0.75rem;z-index:999999;font-family:monospace;pointer-events:none;word-break:break-all';
-    t.className = 'dbg-toast';
-    t.textContent = msg;
-    document.body.appendChild(t);
-    setTimeout(function() { t.remove(); }, 6000);
+// Fullscreen image viewer (works on mobile, unlike window.open with base64)
+function _gcViewImage(src) {
+    var ov = document.createElement('div');
+    ov.id = 'gc-img-viewer';
+    ov.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.95);z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;animation:fadeIn 0.2s';
+    ov.innerHTML = '<img src="' + src + '" style="max-width:95%;max-height:85vh;object-fit:contain;border-radius:8px;box-shadow:0 0 40px rgba(0,0,0,0.5)">' +
+        '<button onclick="this.parentElement.remove()" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.15);border:none;color:white;width:44px;height:44px;border-radius:50%;font-size:1.4rem;cursor:pointer;backdrop-filter:blur(8px)"><i class="ri-close-line"></i></button>' +
+        '<div style="color:rgba(255,255,255,0.5);font-size:0.75rem;margin-top:12px">Toca la X para cerrar</div>';
+    ov.addEventListener('click', function(ev) { if (ev.target === ov) ov.remove(); });
+    document.body.appendChild(ov);
 }
 
 function handleGcFileUpload(input) {
@@ -6583,8 +6585,6 @@ function handleGcFileUpload(input) {
     var userName = 'Yo';
     try { userName = auth.getCurrentUser().name || 'Yo'; } catch(e) {}
     var cId = currentCenaculoId;
-
-    _dbgToast('📎 Archivo seleccionado: ' + input.files[0].name + ' (' + Math.round(input.files[0].size/1024) + 'KB) user=' + userName, '#2563eb');
 
     Array.from(input.files).forEach(function(file) {
         var isVideo = file.type.startsWith('video/');
@@ -6603,7 +6603,6 @@ function handleGcFileUpload(input) {
                 var media = '<video src="' + e.target.result + '" controls style="max-width:100%;border-radius:12px;margin-bottom:4px"></video>';
                 var msgText = media + '<div style="font-size:0.75rem;opacity:0.7">' + file.name + '</div>';
                 _gcFinishMsg(cId, loadingIdx, msgText, time);
-                _dbgToast('🎥 Video guardado local (no broadcast)', '#f59e0b');
             };
             reader.readAsDataURL(file);
         } else {
@@ -6618,8 +6617,6 @@ function handleGcFileUpload(input) {
 function _gcCompressAndSend(file, cenaculoId, time, userName, loadingIdx) {
     var reader = new FileReader();
     reader.onload = function(e) {
-        _dbgToast('📖 FileReader OK, size=' + Math.round(e.target.result.length/1024) + 'KB', '#059669');
-
         var img = new Image();
         img.onload = function() {
             try {
@@ -6637,45 +6634,35 @@ function _gcCompressAndSend(file, cenaculoId, time, userName, loadingIdx) {
                 var ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, w, h);
                 var dataUrl = canvas.toDataURL('image/jpeg', 0.5);
-                var compressedSizeKB = Math.round(dataUrl.length * 0.75 / 1024);
 
-                _dbgToast('🗜️ Comprimida: ' + Math.round(file.size/1024) + 'KB → ' + compressedSizeKB + 'KB (' + w + 'x' + h + ')', '#7c3aed');
+                console.log('[GC] Compressed: ' + Math.round(file.size/1024) + 'KB -> ~' + Math.round(dataUrl.length * 0.75 / 1024) + 'KB (' + w + 'x' + h + ')');
 
-                var media = '<img src="' + dataUrl + '" style="max-width:100%;border-radius:12px;margin-bottom:4px" onclick="window.open(this.src)">';
+                var media = '<img src="' + dataUrl + '" style="max-width:100%;border-radius:12px;margin-bottom:4px" onclick="_gcViewImage(this.src)">';
                 var msgText = media + '<div style="font-size:0.75rem;opacity:0.7">' + file.name + '</div>';
 
                 // Save locally
                 _gcFinishMsg(cenaculoId, loadingIdx, msgText, time);
 
-                // BROADCAST immediately
+                // BROADCAST immediately (primary cross-device mechanism)
                 var broadcastMsg = { from: userName, text: msgText, time: time, date: 'Hoy', isMedia: true };
-                try {
-                    broadcastGcMessage(cenaculoId, broadcastMsg);
-                    _dbgToast('✅ Broadcast enviado! cId=' + cenaculoId + ' ch=' + (gcChannelId || 'null'), '#059669');
-                } catch(bErr) {
-                    _dbgToast('❌ Broadcast ERROR: ' + bErr.message, '#dc2626');
-                }
+                broadcastGcMessage(cenaculoId, broadcastMsg);
+                console.log('[GC] Image broadcast sent to group');
             } catch(compErr) {
-                _dbgToast('❌ Compress ERROR: ' + compErr.message, '#dc2626');
-                _gcFinishMsg(cenaculoId, loadingIdx, '<div style="color:#e74c3c;padding:8px">Error al comprimir</div>', time);
+                console.error('[GC] Compression error:', compErr);
+                _gcFinishMsg(cenaculoId, loadingIdx, '<div style="color:#e74c3c;padding:8px">Error al comprimir imagen</div>', time);
             }
         };
         img.onerror = function() {
-            _dbgToast('⚠️ img.onerror - intentando raw', '#f59e0b');
-            var media = '<img src="' + e.target.result + '" style="max-width:100%;border-radius:12px;margin-bottom:4px" onclick="window.open(this.src)">';
+            console.warn('[GC] Image load failed, sending raw');
+            var media = '<img src="' + e.target.result + '" style="max-width:100%;border-radius:12px;margin-bottom:4px" onclick="_gcViewImage(this.src)">';
             var msgText = media + '<div style="font-size:0.75rem;opacity:0.7">' + file.name + '</div>';
             _gcFinishMsg(cenaculoId, loadingIdx, msgText, time);
-            try {
-                broadcastGcMessage(cenaculoId, { from: userName, text: msgText, time: time, date: 'Hoy', isMedia: true });
-                _dbgToast('✅ Raw broadcast enviado', '#059669');
-            } catch(bErr) {
-                _dbgToast('❌ Raw broadcast ERROR: ' + bErr.message, '#dc2626');
-            }
+            broadcastGcMessage(cenaculoId, { from: userName, text: msgText, time: time, date: 'Hoy', isMedia: true });
         };
         img.src = e.target.result;
     };
-    reader.onerror = function(err) {
-        _dbgToast('❌ FileReader ERROR: ' + (err.message || 'unknown'), '#dc2626');
+    reader.onerror = function() {
+        console.error('[GC] FileReader error');
         _gcFinishMsg(cenaculoId, loadingIdx, '<div style="color:#e74c3c;padding:8px">Error al leer imagen</div>', time);
     };
     reader.readAsDataURL(file);
