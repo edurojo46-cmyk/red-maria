@@ -6061,7 +6061,40 @@ function saveGcMessages(cenaculoId, messages) {
     var all = {};
     try { all = JSON.parse(localStorage.getItem(GC_STORAGE_KEY)) || {}; } catch(e) {}
     all[cenaculoId] = messages;
-    localStorage.setItem(GC_STORAGE_KEY, JSON.stringify(all));
+    try {
+        localStorage.setItem(GC_STORAGE_KEY, JSON.stringify(all));
+    } catch(e) {
+        // localStorage full - remove oldest media messages to free space
+        console.warn('[GC] localStorage full, cleaning old media...');
+        var cleaned = false;
+        Object.keys(all).forEach(function(cid) {
+            if (!all[cid]) return;
+            var before = all[cid].length;
+            all[cid] = all[cid].filter(function(m, i) {
+                // Keep last 5 media, remove old ones; keep all text
+                if (!m.isMedia) return true;
+                var mediaAfter = all[cid].slice(i).filter(function(x) { return x.isMedia; });
+                return mediaAfter.length <= 5;
+            });
+            if (all[cid].length < before) cleaned = true;
+        });
+        if (cleaned) {
+            try {
+                localStorage.setItem(GC_STORAGE_KEY, JSON.stringify(all));
+                console.log('[GC] Storage cleaned, saved successfully');
+            } catch(e2) {
+                // Still full - keep only last 20 messages per chat
+                Object.keys(all).forEach(function(cid) {
+                    if (all[cid] && all[cid].length > 20) {
+                        all[cid] = all[cid].slice(-20);
+                    }
+                });
+                try { localStorage.setItem(GC_STORAGE_KEY, JSON.stringify(all)); } catch(e3) {
+                    console.error('[GC] Cannot save even after cleanup');
+                }
+            }
+        }
+    }
 }
 
 async function openCenaculoGroupChat() {
@@ -6620,8 +6653,8 @@ function _gcCompressAndSend(file, cenaculoId, time, userName, loadingIdx) {
         var img = new Image();
         img.onload = function() {
             try {
-                // Compress: max 800px, JPEG quality 0.5 (~30-80KB result)
-                var maxW = 800, maxH = 800;
+                // Compress: max 600px, JPEG quality 0.4 (~20-50KB result)
+                var maxW = 600, maxH = 600;
                 var w = img.width, h = img.height;
                 if (w > maxW || h > maxH) {
                     var ratio = Math.min(maxW / w, maxH / h);
@@ -6633,7 +6666,7 @@ function _gcCompressAndSend(file, cenaculoId, time, userName, loadingIdx) {
                 canvas.height = h;
                 var ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, w, h);
-                var dataUrl = canvas.toDataURL('image/jpeg', 0.5);
+                var dataUrl = canvas.toDataURL('image/jpeg', 0.4);
 
                 console.log('[GC] Compressed: ' + Math.round(file.size/1024) + 'KB -> ~' + Math.round(dataUrl.length * 0.75 / 1024) + 'KB (' + w + 'x' + h + ')');
 
