@@ -563,7 +563,11 @@ var app = {
         if (joined.length > 0) {
             var j = joined[0];
             console.log('[Auto] Selected joined rosary:', j.name);
-            return { id: j.id, place: j.name, time: j.time, mystery: j.mystery, intention: j.intention, date: j.date, participants: j.participants || 1 };
+            // Try to enrich with creator info from allActive list
+            var enriched = allActive.find(function(r) { return r.id === j.id; });
+            var creatorId = (enriched && enriched.creatorId) ? enriched.creatorId : (j.creatorId || null);
+            var creatorName = (enriched && enriched.creatorName) ? enriched.creatorName : (j.creatorName || 'Anónimo');
+            return { id: j.id, place: j.name, time: j.time, mystery: j.mystery, intention: j.intention, date: j.date, participants: j.participants || 1, creatorId: creatorId, creatorName: creatorName };
         }
         
         // 3. Last fallback: Any active rosary closest to now
@@ -846,6 +850,7 @@ var app = {
         if (screenId === 'screen-live') this.renderContinuo();
         if (screenId === 'screen-como-rezar') this.highlightTodayMystery();
         if (screenId === 'screen-cenaculo') setTimeout(function() { if (typeof initCenaculoMap === 'function') initCenaculoMap(); }, 400);
+        if (screenId === 'screen-intenciones') { if (typeof loadCommunityIntenciones === 'function') loadCommunityIntenciones(); }
         if (screenId === 'screen-profile' || isDash) this.updateUserUI();
     },
 
@@ -1258,29 +1263,53 @@ var app = {
         const text = ta?.value.trim();
         if (!text) { ta?.focus(); return; }
         const user = auth.isAuthenticated() ? auth.getCurrentUser() : null;
-        const name = user ? user.name : 'Anónimo';
+        if (!user) { this.navigate('screen-login'); return; }
+        const name = user.name || 'Anónimo';
         const initial = name.charAt(0).toUpperCase();
-        const colors = ['#A8C4DE','#F4D35E','#B5D6A7','#E8A0BF','#C4B5FD','#8FACC5','#FFB4A2','#89CFF0'];
+        const colors = ['#A8C4DE','#F4D35E','#B5D6A7','#E8A0BF','#C4B5FD','#8FACC5','#FFB4A2','#89CFF0','#FFC6FF','#CAFFBF'];
         const color = colors[Math.floor(Math.random() * colors.length)];
-        const list = document.getElementById('community-intentions-list');
-        if (!list) return;
-        const item = document.createElement('div');
-        item.className = 'community-intention glass';
-        item.style.animation = 'fadeInUp 0.4s ease-out';
-        item.innerHTML = '<div class="ci-avatar" style="background:' + color + '">' + initial + '</div><div class="ci-content"><span class="ci-name">' + auth.sanitize(name) + '</span><p>' + auth.sanitize(text) + '</p></div><div class="ci-heart-area"><button class="ci-heart-btn" onclick="toggleHeart(this)"><i class="ri-heart-line"></i></button><span class="ci-heart-count">0</span></div>';
-        list.insertBefore(item, list.firstChild);
+        const color2 = colors[(Math.floor(Math.random() * colors.length) + 3) % colors.length];
+
+        // Build intention object (same format as rezo intenciones for unification)
+        var intencion = {
+            id: Date.now().toString(36),
+            name: name,
+            initial: initial,
+            text: text,
+            color: color,
+            color2: color2,
+            time: new Date().toISOString()
+        };
+
+        // Save to shared localStorage (used by both Rezar and Intenciones screens)
+        if (typeof getRezoIntenciones === 'function') {
+            var list = getRezoIntenciones();
+            list.push(intencion);
+            saveRezoIntenciones(list);
+        }
+
+        // Update the community intentions list visually (on Intenciones screen)
+        const communityList = document.getElementById('community-intentions-list');
+        if (communityList) {
+            const item = document.createElement('div');
+            item.className = 'community-intention glass';
+            item.style.animation = 'fadeInUp 0.4s ease-out';
+            item.innerHTML = '<div class="ci-avatar" style="background:' + color + '">' + initial + '</div><div class="ci-content"><span class="ci-name">' + auth.sanitize(name) + '</span><p>' + auth.sanitize(text) + '</p></div><div class="ci-heart-area"><button class="ci-heart-btn" onclick="toggleHeart(this)"><i class="ri-heart-line"></i></button><span class="ci-heart-count">0</span></div>';
+            communityList.insertBefore(item, communityList.firstChild);
+        }
+
+        // Also update the rezo intenciones list if it exists (on Rezar screen)
+        if (typeof renderRezoIntenciones === 'function') {
+            renderRezoIntenciones();
+        }
+
         ta.value = '';
 
-        // Sync intention to Supabase
-        console.log('🔄 Intentando guardar en Supabase...');
-        console.log('   db existe:', typeof db !== 'undefined');
-        console.log('   supabase existe:', typeof supabase !== 'undefined' && supabase !== null);
+        // Sync to Supabase with user name
         if (typeof db !== 'undefined' && db.createIntencion) {
-            db.createIntencion({ text: text })
-                .then(function(result) { console.log('✅ Intención guardada en Supabase:', result); })
-                .catch(function(e) { console.error('❌ Error guardando intención:', e.message || e); });
-        } else {
-            console.warn('⚠️ db.createIntencion no disponible');
+            db.createIntencion({ text: text, user_name: name })
+                .then(function(result) { console.log('[Intenciones] Saved to Supabase'); })
+                .catch(function(e) { console.error('[Intenciones] Sync error:', e); });
         }
     }
 };

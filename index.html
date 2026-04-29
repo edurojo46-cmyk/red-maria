@@ -450,12 +450,12 @@
 
             <!-- Actions -->
             <div class="rz-actions">
-                <button class="rz-videocall-btn" id="btn-videocall" onclick="tryOpenVideoCall()">
+                <button class="rz-videocall-btn" id="btn-videocall" onclick="tryOpenVideoCall()" disabled style="opacity:0.5;cursor:not-allowed;background:linear-gradient(135deg,#94a3b8,#64748b)">
                     <div class="rz-vc-icon"><i class="ri-vidicon-fill"></i></div>
-                    <span id="btn-videocall-text">Iniciar Videollamada</span>
+                    <span id="btn-videocall-text">Esperando al Coordinador...</span>
                     <i class="ri-arrow-right-line"></i>
                 </button>
-                <div id="videocall-organizer-msg" style="display:none" class="rz-vc-lock">
+                <div id="videocall-organizer-msg" style="display:block" class="rz-vc-lock">
                     <i class="ri-lock-fill"></i> Solo el coordinador puede iniciar la videollamada
                 </div>
             </div>
@@ -4851,12 +4851,34 @@ var activeVideoCallRoom = null;
 function isCurrentUserOrganizer() {
     var user = (typeof auth !== 'undefined' && auth.getCurrentUser) ? auth.getCurrentUser() : null;
     if (!user) return false;
+
+    // 1. Check by ID match (local auth ID or Supabase UUID)
     if (currentRosaryOrganizer) {
-        // Check both local auth ID and Supabase UUID
         if (user.id === currentRosaryOrganizer) return true;
         var sbId = getSupabaseUserId();
         if (sbId && sbId === currentRosaryOrganizer) return true;
     }
+
+    // 2. Fallback: check by creator name match
+    if (currentRosaryData && currentRosaryData.creatorName) {
+        var userName = (user.name || '').toLowerCase().trim();
+        var creatorName = (currentRosaryData.creatorName || '').toLowerCase().trim();
+        if (userName && creatorName && creatorName !== 'anónimo' && userName === creatorName) {
+            return true;
+        }
+    }
+
+    // 3. Fallback: check if local rosaries list has this rosary created by this user
+    if (currentRosaryData && currentRosaryData.id && typeof app !== 'undefined' && app.getRosaries) {
+        var localRosaries = app.getRosaries();
+        var match = localRosaries.find(function(r) { return r.id === currentRosaryData.id; });
+        if (match && match.creatorId) {
+            if (match.creatorId === user.id) return true;
+            var sbId2 = getSupabaseUserId();
+            if (sbId2 && sbId2 === match.creatorId) return true;
+        }
+    }
+
     return false;
 }
 
@@ -4864,17 +4886,36 @@ function isCurrentUserOrganizer() {
 async function updateRezoPage(rosaryData) {
     currentRosaryData = rosaryData;
     currentRosaryOrganizer = rosaryData ? rosaryData.creatorId : null;
-    // If creatorName is missing, look it up from Supabase
-    if (rosaryData && (!rosaryData.creatorName || rosaryData.creatorName === 'Anónimo') && rosaryData.id && typeof sbClient !== 'undefined' && sbClient) {
-        try {
-            var res = await sbClient.from('rosaries').select('creator_name, creator_id').eq('id', rosaryData.id).single();
-            if (res.data) {
-                if (res.data.creator_name) rosaryData.creatorName = res.data.creator_name;
-                if (res.data.creator_id) { rosaryData.creatorId = res.data.creator_id; currentRosaryOrganizer = res.data.creator_id; }
-                console.log('[Rezo] Coordinator from Supabase:', res.data.creator_name);
+
+    if (rosaryData) {
+        // Try to enrich missing creatorId/creatorName from local rosaries list
+        if ((!rosaryData.creatorId || !rosaryData.creatorName || rosaryData.creatorName === 'Anónimo') && rosaryData.id && typeof app !== 'undefined' && app.getRosaries) {
+            var localMatch = app.getRosaries().find(function(r) { return r.id === rosaryData.id; });
+            if (localMatch) {
+                if (!rosaryData.creatorId && localMatch.creatorId) {
+                    rosaryData.creatorId = localMatch.creatorId;
+                    currentRosaryOrganizer = localMatch.creatorId;
+                }
+                if ((!rosaryData.creatorName || rosaryData.creatorName === 'Anónimo') && localMatch.creatorName) {
+                    rosaryData.creatorName = localMatch.creatorName;
+                }
+                console.log('[Rezo] Coordinator enriched from local:', localMatch.creatorName, 'id:', localMatch.creatorId);
             }
-        } catch(e) { console.warn('[Rezo] Could not fetch coordinator:', e.message); }
+        }
+
+        // If still missing, look up from Supabase
+        if ((!rosaryData.creatorId || !rosaryData.creatorName || rosaryData.creatorName === 'Anónimo') && rosaryData.id && typeof sbClient !== 'undefined' && sbClient) {
+            try {
+                var res = await sbClient.from('rosaries').select('creator_name, creator_id').eq('id', rosaryData.id).single();
+                if (res.data) {
+                    if (res.data.creator_name) rosaryData.creatorName = res.data.creator_name;
+                    if (res.data.creator_id) { rosaryData.creatorId = res.data.creator_id; currentRosaryOrganizer = res.data.creator_id; }
+                    console.log('[Rezo] Coordinator from Supabase:', res.data.creator_name);
+                }
+            } catch(e) { console.warn('[Rezo] Could not fetch coordinator:', e.message); }
+        }
     }
+
     var placeName = document.getElementById('rezo-place-name');
     var placeTime = document.getElementById('rezo-place-time');
     var intention = document.getElementById('rezo-intention');
@@ -4892,6 +4933,7 @@ async function updateRezoPage(rosaryData) {
     if (coordLabel) coordLabel.textContent = 'Coordinador/a';
     renderConfirmedParticipants(rosaryData);
     updateVideoCallButton();
+    console.log('[Rezo] Coordinator check: isOrganizer=', isCurrentUserOrganizer(), '| organizerId=', currentRosaryOrganizer, '| creatorName=', rosaryData ? rosaryData.creatorName : 'N/A');
     if (typeof initRezoIntenciones === 'function') initRezoIntenciones();
 }
 
@@ -5108,8 +5150,9 @@ function addRezoIntencion() {
     input.value = '';
     input.focus();
 
+    // Sync to Supabase with user name
     if (typeof db !== 'undefined' && db.createIntencion) {
-        db.createIntencion({ text: text }).catch(function(e) { console.error(e); });
+        db.createIntencion({ text: text, user_name: name }).catch(function(e) { console.error(e); });
     }
 }
 
@@ -5284,6 +5327,90 @@ function initRezoIntenciones() {
 
 // initRezoIntenciones is called from updateRezoPage()
 
+// === COMMUNITY INTENCIONES (for screen-intenciones / Reza x Mi) ===
+// Loads from localStorage + Supabase and renders in community-intentions-list
+async function loadCommunityIntenciones() {
+    var list = document.getElementById('community-intentions-list');
+    if (!list) return;
+
+    // First render from localStorage (instant)
+    var localIntenciones = getRezoIntenciones();
+    renderCommunityList(list, localIntenciones);
+
+    // Then merge Supabase data (async, enriches with cross-device intenciones)
+    if (typeof db !== 'undefined' && db.getIntenciones) {
+        try {
+            var remote = await db.getIntenciones();
+            if (remote && remote.length > 0) {
+                // Convert Supabase format to local format and merge
+                var localIds = {};
+                localIntenciones.forEach(function(i) { localIds[i.text + '|' + (i.name || '')] = true; });
+                
+                var colors = ['#A8C4DE','#F4D35E','#B5D6A7','#E8A0BF','#C4B5FD','#8FACC5','#FFB4A2','#89CFF0','#FFC6FF','#CAFFBF'];
+                remote.forEach(function(r) {
+                    var userName = r.category || 'Anónimo';
+                    var key = r.text + '|' + userName;
+                    if (!localIds[key]) {
+                        var color = colors[Math.floor(Math.random() * colors.length)];
+                        var color2 = colors[(Math.floor(Math.random() * colors.length) + 3) % colors.length];
+                        localIntenciones.push({
+                            id: r.id,
+                            name: userName,
+                            initial: userName.charAt(0).toUpperCase(),
+                            text: r.text,
+                            color: color,
+                            color2: color2,
+                            time: r.created_at
+                        });
+                        localIds[key] = true;
+                    }
+                });
+
+                // Sort by time descending, keep last 20
+                localIntenciones.sort(function(a, b) {
+                    return new Date(b.time || 0) - new Date(a.time || 0);
+                });
+                localIntenciones = localIntenciones.slice(0, 20);
+
+                // Save merged data to localStorage
+                saveRezoIntenciones(localIntenciones);
+
+                // Re-render with merged data
+                renderCommunityList(list, localIntenciones);
+            }
+        } catch(e) { console.warn('[Intenciones] Supabase load error:', e.message); }
+    }
+}
+
+function renderCommunityList(listEl, intenciones) {
+    // Show last 20 sorted by newest first
+    var toShow = intenciones.slice().sort(function(a, b) {
+        return new Date(b.time || 0) - new Date(a.time || 0);
+    }).slice(0, 20);
+
+    if (toShow.length === 0) {
+        listEl.innerHTML = '<div style="text-align:center;padding:30px;color:var(--clr-text-muted)"><i class="ri-chat-heart-line" style="font-size:2rem;display:block;margin-bottom:8px"></i><p>Sé el primero en dejar una intención</p></div>';
+        return;
+    }
+
+    var html = '';
+    toShow.forEach(function(int, i) {
+        var timeAgo = typeof getTimeAgo === 'function' ? getTimeAgo(int.time) : '';
+        var name = int.name || 'Anónimo';
+        var initial = (int.initial || name.charAt(0)).toUpperCase();
+        var color = int.color || '#A8C4DE';
+        var escapedName = typeof escapeHtml === 'function' ? escapeHtml(name) : name;
+        var escapedText = typeof escapeHtml === 'function' ? escapeHtml(int.text) : int.text;
+        html += '<div class="community-intention glass" style="animation-delay:' + (i * 0.05) + 's">' +
+            '<div class="ci-avatar" style="background:' + color + '">' + initial + '</div>' +
+            '<div class="ci-content"><span class="ci-name">' + escapedName + '</span><p>' + escapedText + '</p>' +
+            '<span style="font-size:0.7rem;color:var(--clr-text-muted)">' + timeAgo + '</span></div>' +
+            '<div class="ci-heart-area"><button class="ci-heart-btn" onclick="toggleHeart(this)"><i class="ri-heart-line"></i></button><span class="ci-heart-count">0</span></div>' +
+            '</div>';
+    });
+    listEl.innerHTML = html;
+}
+
 // Update the videocall button state
 function updateVideoCallButton() {
     var btn = document.getElementById('btn-videocall');
@@ -5319,23 +5446,34 @@ function updateVideoCallButton() {
 }
 
 function tryOpenVideoCall() {
+    // SECURITY: Only the coordinator can START a videocall
     if (isCurrentUserOrganizer()) {
         // Coordinator starts the call
         openVideoCall();
     } else if (activeVideoCallRoom) {
-        // Non-coordinator joins existing call
+        // Non-coordinator can only JOIN an existing call started by coordinator
         joinVideoCall(activeVideoCallRoom);
     } else {
+        // Non-coordinator and no active call: block with feedback
+        console.warn('[VideoCall] Solo el coordinador puede iniciar la videollamada');
         var msg = document.getElementById('videocall-organizer-msg');
         if (msg) {
             msg.style.display = 'block';
             msg.style.animation = 'shake 0.4s ease';
             setTimeout(function() { msg.style.animation = ''; }, 500);
         }
+        // Re-ensure button stays disabled
+        updateVideoCallButton();
     }
 }
 
 function openVideoCall() {
+    // SECURITY: Only coordinator can open/start a videocall
+    if (!isCurrentUserOrganizer()) {
+        console.warn('[VideoCall] Blocked: non-coordinator tried to start videocall');
+        updateVideoCallButton();
+        return;
+    }
     var overlay = document.getElementById('videocall-overlay');
     if (!overlay) return;
 
@@ -6428,28 +6566,131 @@ function broadcastGcMessage(cenaculoId, msg) {
     }
 }
 
+// DEBUG: visual toast for mobile debugging (temporary)
+function _dbgToast(msg, color) {
+    var t = document.createElement('div');
+    t.style.cssText = 'position:fixed;top:' + (10 + (document.querySelectorAll('.dbg-toast').length * 40)) + 'px;left:10px;right:10px;background:' + (color || 'rgba(0,0,0,0.85)') + ';color:white;padding:8px 14px;border-radius:10px;font-size:0.75rem;z-index:999999;font-family:monospace;pointer-events:none;word-break:break-all';
+    t.className = 'dbg-toast';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(function() { t.remove(); }, 6000);
+}
+
 function handleGcFileUpload(input) {
     if (!input.files || !input.files.length || !currentCenaculoId) return;
     var now = new Date();
     var time = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+    var userName = 'Yo';
+    try { userName = auth.getCurrentUser().name || 'Yo'; } catch(e) {}
+    var cId = currentCenaculoId;
+
+    _dbgToast('📎 Archivo seleccionado: ' + input.files[0].name + ' (' + Math.round(input.files[0].size/1024) + 'KB) user=' + userName, '#2563eb');
+
     Array.from(input.files).forEach(function(file) {
-        var reader = new FileReader();
-        reader.onload = function(e) {
-            var isVideo = file.type.startsWith('video/');
-            var media;
-            if (isVideo) {
-                media = '<video src="' + e.target.result + '" controls style="max-width:100%;border-radius:12px;margin-bottom:4px"></video>';
-            } else {
-                media = '<img src="' + e.target.result + '" style="max-width:100%;border-radius:12px;margin-bottom:4px" onclick="window.open(this.src)">';
-            }
-            var messages = getGcMessages(currentCenaculoId);
-            messages.push({ from: 'me', text: media + '<div style="font-size:0.75rem;opacity:0.7">' + file.name + '</div>', time: time, date: 'Hoy', isMedia: true });
-            saveGcMessages(currentCenaculoId, messages);
-            renderGcMessages();
-        };
-        reader.readAsDataURL(file);
+        var isVideo = file.type.startsWith('video/');
+
+        // Show loading indicator
+        var messages = getGcMessages(cId);
+        var loadingIdx = messages.length;
+        messages.push({ from: 'me', text: '<div style="text-align:center;padding:20px;color:var(--clr-text-muted)"><i class="ri-loader-4-line ri-spin" style="font-size:1.5rem"></i><div style="font-size:0.75rem;margin-top:6px">Enviando ' + file.name + '...</div></div>', time: time, date: 'Hoy', isMedia: true, _loading: true });
+        saveGcMessages(cId, messages);
+        renderGcMessages();
+
+        if (isVideo) {
+            // Videos: read as base64 locally only (too large to broadcast)
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var media = '<video src="' + e.target.result + '" controls style="max-width:100%;border-radius:12px;margin-bottom:4px"></video>';
+                var msgText = media + '<div style="font-size:0.75rem;opacity:0.7">' + file.name + '</div>';
+                _gcFinishMsg(cId, loadingIdx, msgText, time);
+                _dbgToast('🎥 Video guardado local (no broadcast)', '#f59e0b');
+            };
+            reader.readAsDataURL(file);
+        } else {
+            // Images: compress then broadcast
+            _gcCompressAndSend(file, cId, time, userName, loadingIdx);
+        }
     });
     input.value = '';
+}
+
+// Compress image and send via broadcast (primary cross-device mechanism)
+function _gcCompressAndSend(file, cenaculoId, time, userName, loadingIdx) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        _dbgToast('📖 FileReader OK, size=' + Math.round(e.target.result.length/1024) + 'KB', '#059669');
+
+        var img = new Image();
+        img.onload = function() {
+            try {
+                // Compress: max 800px, JPEG quality 0.5 (~30-80KB result)
+                var maxW = 800, maxH = 800;
+                var w = img.width, h = img.height;
+                if (w > maxW || h > maxH) {
+                    var ratio = Math.min(maxW / w, maxH / h);
+                    w = Math.round(w * ratio);
+                    h = Math.round(h * ratio);
+                }
+                var canvas = document.createElement('canvas');
+                canvas.width = w;
+                canvas.height = h;
+                var ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h);
+                var dataUrl = canvas.toDataURL('image/jpeg', 0.5);
+                var compressedSizeKB = Math.round(dataUrl.length * 0.75 / 1024);
+
+                _dbgToast('🗜️ Comprimida: ' + Math.round(file.size/1024) + 'KB → ' + compressedSizeKB + 'KB (' + w + 'x' + h + ')', '#7c3aed');
+
+                var media = '<img src="' + dataUrl + '" style="max-width:100%;border-radius:12px;margin-bottom:4px" onclick="window.open(this.src)">';
+                var msgText = media + '<div style="font-size:0.75rem;opacity:0.7">' + file.name + '</div>';
+
+                // Save locally
+                _gcFinishMsg(cenaculoId, loadingIdx, msgText, time);
+
+                // BROADCAST immediately
+                var broadcastMsg = { from: userName, text: msgText, time: time, date: 'Hoy', isMedia: true };
+                try {
+                    broadcastGcMessage(cenaculoId, broadcastMsg);
+                    _dbgToast('✅ Broadcast enviado! cId=' + cenaculoId + ' ch=' + (gcChannelId || 'null'), '#059669');
+                } catch(bErr) {
+                    _dbgToast('❌ Broadcast ERROR: ' + bErr.message, '#dc2626');
+                }
+            } catch(compErr) {
+                _dbgToast('❌ Compress ERROR: ' + compErr.message, '#dc2626');
+                _gcFinishMsg(cenaculoId, loadingIdx, '<div style="color:#e74c3c;padding:8px">Error al comprimir</div>', time);
+            }
+        };
+        img.onerror = function() {
+            _dbgToast('⚠️ img.onerror - intentando raw', '#f59e0b');
+            var media = '<img src="' + e.target.result + '" style="max-width:100%;border-radius:12px;margin-bottom:4px" onclick="window.open(this.src)">';
+            var msgText = media + '<div style="font-size:0.75rem;opacity:0.7">' + file.name + '</div>';
+            _gcFinishMsg(cenaculoId, loadingIdx, msgText, time);
+            try {
+                broadcastGcMessage(cenaculoId, { from: userName, text: msgText, time: time, date: 'Hoy', isMedia: true });
+                _dbgToast('✅ Raw broadcast enviado', '#059669');
+            } catch(bErr) {
+                _dbgToast('❌ Raw broadcast ERROR: ' + bErr.message, '#dc2626');
+            }
+        };
+        img.src = e.target.result;
+    };
+    reader.onerror = function(err) {
+        _dbgToast('❌ FileReader ERROR: ' + (err.message || 'unknown'), '#dc2626');
+        _gcFinishMsg(cenaculoId, loadingIdx, '<div style="color:#e74c3c;padding:8px">Error al leer imagen</div>', time);
+    };
+    reader.readAsDataURL(file);
+}
+
+// Replace loading message with final content
+function _gcFinishMsg(cenaculoId, loadingIdx, msgText, time) {
+    var msgs = getGcMessages(cenaculoId);
+    if (loadingIdx >= 0 && msgs[loadingIdx] && msgs[loadingIdx]._loading) {
+        msgs[loadingIdx] = { from: 'me', text: msgText, time: time, date: 'Hoy', isMedia: true };
+    } else {
+        msgs.push({ from: 'me', text: msgText, time: time, date: 'Hoy', isMedia: true });
+    }
+    saveGcMessages(cenaculoId, msgs);
+    renderGcMessages();
 }
 
 function gcCopyMsg(btn, idx) {

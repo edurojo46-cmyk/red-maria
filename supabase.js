@@ -329,13 +329,22 @@ var db = {
 
     // ==================== INTENCIONES ====================
     async createIntencion(intencion) {
-        if (!sbClient) { console.warn('Supabase no disponible'); return; }
-        const { data, error } = await sbClient.from('intenciones').insert(intencion).select();
-        if (error) {
-            console.error('❌ Supabase insert error:', error.message, error.details, error.hint);
-            throw error;
+        if (!sbClient) { console.warn('Supabase no disponible'); return null; }
+        // Store user_name in 'category' field (since table doesn't have a user_name column)
+        var payload = {
+            text: intencion.text,
+            category: intencion.user_name || 'Anónimo'
+        };
+        // Only include user_id if it's a valid UUID
+        if (intencion.user_id && /^[0-9a-f]{8}-/.test(intencion.user_id)) {
+            payload.user_id = intencion.user_id;
         }
-        console.log('✅ Intención insertada:', data);
+        const { data, error } = await sbClient.from('intenciones').insert(payload).select();
+        if (error) {
+            console.error('[DB] Error inserting intencion:', error.message, error.details);
+            return null;
+        }
+        console.log('[DB] Intencion saved:', data);
         return data;
     },
 
@@ -344,9 +353,16 @@ var db = {
         const { data, error } = await sbClient.from('intenciones')
             .select('*')
             .order('created_at', { ascending: false })
-            .limit(50);
-        if (error) console.error('Error fetching intenciones:', error);
+            .limit(20);
+        if (error) { console.error('[DB] Error fetching intenciones:', error); return []; }
         return data || [];
+    },
+
+    async deleteAllIntenciones() {
+        if (!sbClient) return;
+        const { error } = await sbClient.from('intenciones').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        if (error) console.error('[DB] Error deleting intenciones:', error);
+        else console.log('[DB] All intenciones deleted');
     },
 
     // ==================== MENSAJES (REAL) ====================
