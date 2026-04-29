@@ -8,11 +8,20 @@ var app = {
     JOINED_ROSARIES_KEY: 'redmaria_joined',
     CONTINUO_KEY: 'redmaria_continuo',
     continuoDate: new Date(),
+    // Helper: get YYYY-MM-DD from a Date in LOCAL timezone (not UTC)
+    localDateKey: function(d) {
+        var y = d.getFullYear();
+        var m = (d.getMonth() + 1).toString().padStart(2, '0');
+        var day = d.getDate().toString().padStart(2, '0');
+        return y + '-' + m + '-' + day;
+    },
     recoveryEmail: null,
     recoveryCode: null,
 
     init() {
         this.generateSplashBeads();
+        // Clear stale continuo data on load - Supabase is the source of truth
+        try { localStorage.removeItem(this.CONTINUO_KEY); } catch(e) {}
         this.renderContinuo().catch(function(e) { console.warn('[Init] Continuo render failed:', e); });
         this.generateParticipants();
         this.loadRosaryCards();
@@ -1105,7 +1114,7 @@ var app = {
         if (titleEl) titleEl.textContent = isToday ? 'Hoy' : (isTomorrow ? 'Mañana' : days[d.getDay()]);
         if (subEl) subEl.textContent = d.getDate() + ' de ' + months[d.getMonth()] + ', ' + d.getFullYear();
 
-        const dateKey = d.toISOString().split('T')[0];
+        const dateKey = this.localDateKey(d);
         const slots = await this.getContinuoSlots(dateKey);
         const user = auth.isAuthenticated() ? JSON.parse(localStorage.getItem('redmaria_session')).name : null;
         const grid = document.getElementById('continuo-grid');
@@ -1172,9 +1181,11 @@ var app = {
         if (typeof people === 'string') people = [people];
         if (!Array.isArray(people)) people = [];
         const alreadyIn = people.includes(user);
-        const d = this.continuoDate;
+        // Parse date from dateKey to avoid timezone drift from continuoDate
+        const dateParts = dateKey.split('-');
+        const modalDate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
         const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-        const dateStr = d.getDate() + ' de ' + months[d.getMonth()];
+        const dateStr = modalDate.getDate() + ' de ' + months[modalDate.getMonth()] + ', ' + modalDate.getFullYear();
         const modal = document.createElement('div');
         modal.className = 'slot-signup-modal';
         if (alreadyIn) {
