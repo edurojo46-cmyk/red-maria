@@ -6630,14 +6630,8 @@ function handleGcFileUpload(input) {
         renderGcMessages();
 
         if (isVideo) {
-            // Videos: read as base64 locally only (too large to broadcast)
-            var reader = new FileReader();
-            reader.onload = function(e) {
-                var media = '<video src="' + e.target.result + '" controls style="max-width:100%;border-radius:12px;margin-bottom:4px"></video>';
-                var msgText = media + '<div style="font-size:0.75rem;opacity:0.7">' + file.name + '</div>';
-                _gcFinishMsg(cId, loadingIdx, msgText, time);
-            };
-            reader.readAsDataURL(file);
+            // Videos: upload to Supabase Storage and broadcast URL
+            _gcUploadVideo(file, cId, time, userName, loadingIdx);
         } else {
             // Images: compress then broadcast
             _gcCompressAndSend(file, cId, time, userName, loadingIdx);
@@ -6699,6 +6693,68 @@ function _gcCompressAndSend(file, cenaculoId, time, userName, loadingIdx) {
         _gcFinishMsg(cenaculoId, loadingIdx, '<div style="color:#e74c3c;padding:8px">Error al leer imagen</div>', time);
     };
     reader.readAsDataURL(file);
+}
+
+// Upload video to Supabase Storage and broadcast URL
+function _gcUploadVideo(file, cenaculoId, time, userName, loadingIdx) {
+    if (typeof sbClient === 'undefined' || !sbClient) {
+        // No Supabase: save locally only
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var media = '<video src="' + e.target.result + '" controls style="max-width:100%;border-radius:12px;margin-bottom:4px"></video>';
+            _gcFinishMsg(cenaculoId, loadingIdx, media + '<div style="font-size:0.75rem;opacity:0.7">' + file.name + '</div>', time);
+        };
+        reader.readAsDataURL(file);
+        return;
+    }
+
+    var ext = file.name.split('.').pop() || 'mp4';
+    var fileName = 'gc/' + cenaculoId + '/' + Date.now() + '_' + Math.random().toString(36).substr(2, 6) + '.' + ext;
+
+    sbClient.storage.from('chat-images').upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false,
+        contentType: file.type || 'video/mp4'
+    }).then(function(result) {
+        if (result.error) {
+            console.error('[GC] Video upload error:', result.error.message);
+            // Fallback: save locally
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var media = '<video src="' + e.target.result + '" controls style="max-width:100%;border-radius:12px;margin-bottom:4px"></video>';
+                _gcFinishMsg(cenaculoId, loadingIdx, media + '<div style="font-size:0.75rem;opacity:0.7">' + file.name + '</div>', time);
+            };
+            reader.readAsDataURL(file);
+            return;
+        }
+
+        var publicUrl = sbClient.storage.from('chat-images').getPublicUrl(fileName);
+        var videoUrl = publicUrl.data ? publicUrl.data.publicUrl : null;
+        if (!videoUrl) {
+            console.error('[GC] Could not get video public URL');
+            return;
+        }
+        console.log('[GC] Video uploaded:', videoUrl);
+
+        var media = '<video src="' + videoUrl + '" controls style="max-width:100%;border-radius:12px;margin-bottom:4px"></video>';
+        var msgText = media + '<div style="font-size:0.75rem;opacity:0.7">' + file.name + '</div>';
+
+        _gcFinishMsg(cenaculoId, loadingIdx, msgText, time);
+
+        // Broadcast URL to other users (small payload, just the URL)
+        var broadcastMsg = { from: userName, text: msgText, time: time, date: 'Hoy', isMedia: true };
+        broadcastGcMessage(cenaculoId, broadcastMsg);
+        console.log('[GC] Video broadcast sent to group');
+    }).catch(function(err) {
+        console.error('[GC] Video upload exception:', err);
+        // Fallback: save locally
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var media = '<video src="' + e.target.result + '" controls style="max-width:100%;border-radius:12px;margin-bottom:4px"></video>';
+            _gcFinishMsg(cenaculoId, loadingIdx, media + '<div style="font-size:0.75rem;opacity:0.7">' + file.name + '</div>', time);
+        };
+        reader.readAsDataURL(file);
+    });
 }
 
 // Replace loading message with final content
