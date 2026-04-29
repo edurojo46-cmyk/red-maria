@@ -78,8 +78,9 @@ var db = {
         const { data } = await sbClient.from('profiles')
             .select('id, name, username, email')
             .eq('email', email)
-            .single();
-        return data;
+            .order('updated_at', { ascending: false })
+            .limit(1);
+        return (data && data.length > 0) ? data[0] : null;
     },
 
     // ==================== ROSARIOS ====================
@@ -238,28 +239,42 @@ var db = {
     // ==================== CENACULOS ====================
     async createCenaculo(cenaculo) {
         if (!sbClient) { saveLocal('cenaculos', cenaculo); return cenaculo; }
-        const { data, error } = await sbClient.from('cenaculos').insert({
-            id: cenaculo.id,
+        // Build payload - don't send non-UUID ids (let Supabase generate)
+        var payload = {
             name: cenaculo.name,
             access: cenaculo.access,
             color: cenaculo.color,
             icon: cenaculo.icon,
-            creator_id: cenaculo.creatorId,
             lat: cenaculo.lat || null,
             lng: cenaculo.lng || null
-        }).select().single();
-        if (error) { console.error('Error creating cenaculo:', error); saveLocal('cenaculos', cenaculo); return cenaculo; }
+        };
+        // Only include id if it's a valid UUID
+        if (cenaculo.id && /^[0-9a-f]{8}-/.test(cenaculo.id)) {
+            payload.id = cenaculo.id;
+        }
+        // Only include creator_id if it's a valid UUID (avoid FK constraint)
+        if (cenaculo.creatorId && /^[0-9a-f]{8}-/.test(cenaculo.creatorId)) {
+            payload.creator_id = cenaculo.creatorId;
+        }
+        console.log('[DB] Creating cenaculo:', payload.name, 'creator:', payload.creator_id || 'auto');
+        const { data, error } = await sbClient.from('cenaculos').insert(payload).select().single();
+        if (error) { console.error('[DB] Error creating cenaculo:', error.message, error.details, error.hint); saveLocal('cenaculos', cenaculo); return cenaculo; }
+        console.log('[DB] Cenaculo created:', data.id, data.name);
 
         // Add members
         if (cenaculo.members) {
             for (const m of cenaculo.members) {
-                await sbClient.from('cenaculo_members').insert({
+                var memberPayload = {
                     cenaculo_id: data.id,
-                    user_id: m.profileId || null,
-                    username: m.username || null,
                     name: m.name,
                     role: m.role
-                });
+                };
+                // Only include user_id if it's a valid UUID
+                if (m.profileId && /^[0-9a-f]{8}-/.test(m.profileId)) {
+                    memberPayload.user_id = m.profileId;
+                }
+                if (m.username) memberPayload.username = m.username;
+                await sbClient.from('cenaculo_members').insert(memberPayload);
             }
         }
         return data;
@@ -268,16 +283,21 @@ var db = {
     async getCenaculos(userId) {
         if (!sbClient) return getLocal('cenaculos');
         try {
-            // Try join query first
+            // Try join query first — fetch ALL cenaculos, frontend filters by membership
             const { data, error } = await sbClient.from('cenaculos')
                 .select('*, cenaculo_members(*)')
                 .order('created_at', { ascending: false });
-            if (!error && data) return data;
-        } catch(e) {}
+            if (!error && data) {
+                console.log('[DB] Cenaculos from Supabase:', data.length);
+                return data;
+            }
+            console.warn('[DB] Join query failed:', error?.message);
+        } catch(e) { console.warn('[DB] Join query exception:', e.message); }
         // Fallback: separate queries
-        const { data: cenaculos } = await sbClient.from('cenaculos')
+        const { data: cenaculos, error: listErr } = await sbClient.from('cenaculos')
             .select('*')
             .order('created_at', { ascending: false });
+        if (listErr) { console.error('[DB] Error listing cenaculos:', listErr.message); return []; }
         if (!cenaculos) return [];
         for (const c of cenaculos) {
             const { data: members } = await sbClient.from('cenaculo_members')
@@ -285,6 +305,7 @@ var db = {
                 .eq('cenaculo_id', c.id);
             c.cenaculo_members = members || [];
         }
+        console.log('[DB] Cenaculos (fallback):', cenaculos.length);
         return cenaculos;
     },
 

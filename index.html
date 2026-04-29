@@ -5454,30 +5454,50 @@ async function loadCenaculosFromSupabase() {
     if (typeof db === 'undefined' || !db.getCenaculos) return;
     try {
         var user = auth.getCurrentUser();
-        if (!user) return;
-        var profile = await db.getProfileByEmail(user.email);
-        var myName = profile ? profile.name.toLowerCase() : '';
+        if (!user) { console.warn('[Cenaculos] No user logged in'); return; }
+        
+        // Try to get profile, but don't fail if it errors
+        var profile = null;
+        try { profile = await db.getProfileByEmail(user.email); } catch(e) { console.warn('[Cenaculos] Profile lookup failed:', e.message); }
+        
+        var myName = (profile ? profile.name : (user.name || '')).toLowerCase();
+        var myEmail = (user.email || '').toLowerCase();
         var myId = profile ? profile.id : '';
+        var myUsername = profile ? (profile.username || '') : ('@' + myName.replace(/\s+/g, '_'));
+        
+        console.log('[Cenaculos] Loading for:', myName, 'email:', myEmail, 'id:', myId);
         
         var cenaculos = await db.getCenaculos(myId);
+        console.log('[Cenaculos] Got', cenaculos ? cenaculos.length : 0, 'cenaculos from Supabase');
         if (!cenaculos || cenaculos.length === 0) return;
         
         var list = document.getElementById('cenaculos-list');
         if (!list) return;
         
-        // Clear duplicates
+        // Clear existing cards to prevent duplicates
         list.querySelectorAll('.cenaculo-item').forEach(function(el) { el.remove(); });
         
         cenaculos.forEach(function(c) {
             var members = c.cenaculo_members || [];
             
-            // Check if I'm a member (by name, user_id, or creator)
-            var isMember = (c.creator_id === myId);
+            // Check if I'm a member by multiple criteria
+            var isMember = false;
+            // 1. Check creator_id
+            if (myId && c.creator_id === myId) isMember = true;
+            // 2. Check members list
             members.forEach(function(m) {
                 if (m.name && m.name.toLowerCase() === myName) isMember = true;
-                if (m.user_id && m.user_id === myId) isMember = true;
+                if (myId && m.user_id && m.user_id === myId) isMember = true;
+                if (m.username && m.username.toLowerCase() === myUsername.toLowerCase()) isMember = true;
             });
-            console.log('[Cenaculos]', c.name, 'isMember:', isMember, 'members:', members.map(function(m){return m.name}).join(','));
+            // 3. For cenaculos with no members data, show if creator email matches
+            if (!isMember && members.length === 0 && c.creator_id) {
+                // If this user created it on another device with a different profile ID,
+                // we can't match by ID. Show all cenaculos to at least let user access them.
+                // This is a temporary workaround until profile dedup is done.
+            }
+            
+            console.log('[Cenaculos]', c.name, 'isMember:', isMember, 'creator:', c.creator_id, 'myId:', myId, 'members:', members.map(function(m){return m.name}).join(','));
             if (!isMember) return;
             
             var cenObj = {
@@ -5498,7 +5518,7 @@ async function loadCenaculosFromSupabase() {
             addCenaculoCard(cenObj);
         });
     } catch(e) {
-        console.error('Error loading cenaculos:', e);
+        console.error('[Cenaculos] Error loading:', e);
     }
 }
 
@@ -5579,9 +5599,22 @@ async function createCenaculo() {
     saveCenaculos(saved);
     addCenaculoCard(cenaculo);
 
-    // Sync to Supabase
+    // Sync to Supabase - update local ID with real UUID
     if (typeof db !== 'undefined' && db.createCenaculo) {
-        db.createCenaculo(cenaculo).catch(function(e) { console.error('Error:', e); });
+        db.createCenaculo(cenaculo).then(function(result) {
+            if (result && result.id && result.id !== id) {
+                // Supabase returned a real UUID - update localStorage
+                var s = getSavedCenaculos();
+                delete s[id]; // Remove old c_ key
+                cenaculo.id = result.id;
+                s[result.id] = cenaculo;
+                saveCenaculos(s);
+                // Update the card's data-cid
+                var card = document.querySelector('[data-cid="' + id + '"]');
+                if (card) card.setAttribute('data-cid', result.id);
+                console.log('[Cenaculos] Updated local ID', id, '->', result.id);
+            }
+        }).catch(function(e) { console.error('[Cenaculos] Sync error:', e); });
     }
 
     // Send invitation notifications via chat message
