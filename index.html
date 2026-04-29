@@ -2013,6 +2013,10 @@ if (document.readyState !== 'loading') renderIglesiasGrid();
                 <div class="gc-input-bar">
                     <button class="gc-attach-btn" onclick="document.getElementById('gc-file-upload').click()" title="Adjuntar archivo"><i class="ri-attachment-2"></i></button>
                     <input type="file" id="gc-file-upload" accept="image/*,video/*" style="display:none" onchange="handleGcFileUpload(this)" multiple>
+                    <button class="gc-attach-btn" onclick="_toggleEmojiPicker()" title="Emojis" id="gc-emoji-btn"><i class="ri-emotion-happy-line"></i></button>
+                    <div id="gc-emoji-picker" style="display:none;position:absolute;bottom:60px;left:8px;right:8px;background:var(--clr-surface,#1e1e2e);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:12px;max-height:220px;overflow-y:auto;z-index:999;box-shadow:0 8px 32px rgba(0,0,0,0.4);backdrop-filter:blur(12px)">
+                        <div style="display:grid;grid-template-columns:repeat(8,1fr);gap:4px;text-align:center;font-size:1.5rem;cursor:pointer" id="gc-emoji-grid"></div>
+                    </div>
                     <input type="text" id="gc-input" placeholder="Escribe al grupo..." onkeydown="if(event.key==='Enter')sendGcMessage()">
                     <button class="gc-send-btn" onclick="sendGcMessage()"><i class="ri-send-plane-2-fill"></i></button>
                 </div>
@@ -6148,6 +6152,42 @@ function getMemberColor(name) {
     var hash = 0;
     for (var i = 0; i < name.length; i++) { hash = name.charCodeAt(i) + ((hash << 5) - hash); }
     return gcMemberColors[Math.abs(hash) % gcMemberColors.length];
+}
+
+// Emoji picker
+var _gcEmojis = [
+    '😀','😂','🥲','😍','🥰','😘','😊','🤗','😇','🙏','❤️','🔥','✨','💯','👍','👏',
+    '🎉','🙌','💪','🤝','😢','😭','🥺','💔','☀️','🌙','⭐','🕊️','✝️','📿','⛪','🙏🏻',
+    '💐','🌹','🌻','🌺','💒','👼','🕯️','📖','💝','💖','💗','💞','🤍','💜','💙','💚',
+    '🫶','🫂','😌','🥹','😇','🤲','👐','🙏🏽','❣️','💕','🌈','☁️','🎶','🎵','💫','🌟'
+];
+
+function _toggleEmojiPicker() {
+    var picker = document.getElementById('gc-emoji-picker');
+    if (!picker) return;
+    if (picker.style.display === 'none') {
+        // Populate grid if empty
+        var grid = document.getElementById('gc-emoji-grid');
+        if (grid && !grid.children.length) {
+            grid.innerHTML = _gcEmojis.map(function(e) {
+                return '<span onclick="_insertEmoji(\'' + e + '\')" style="padding:6px;border-radius:8px;cursor:pointer;transition:background 0.15s;user-select:none" onmouseover="this.style.background=\'rgba(255,255,255,0.1)\'" onmouseout="this.style.background=\'none\'">' + e + '</span>';
+            }).join('');
+        }
+        picker.style.display = 'block';
+    } else {
+        picker.style.display = 'none';
+    }
+}
+
+function _insertEmoji(emoji) {
+    var input = document.getElementById('gc-input');
+    if (!input) return;
+    var pos = input.selectionStart || input.value.length;
+    input.value = input.value.substring(0, pos) + emoji + input.value.substring(pos);
+    input.focus();
+    // Close picker
+    var picker = document.getElementById('gc-emoji-picker');
+    if (picker) picker.style.display = 'none';
 }
 
 function renderGcMessages() {
