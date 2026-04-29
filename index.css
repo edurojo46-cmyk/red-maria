@@ -3230,6 +3230,10 @@ body {
 /* ========================================= */
 #screen-como-rezar {
     padding-top: 50px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
 }
 
 .rezar-scrollarea {
@@ -3239,7 +3243,10 @@ body {
     padding: 20px;
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 16px;
+    max-width: 800px;
+    margin: 0 auto;
+    width: 100%;
 }
 
 /* Hero */
@@ -8545,4 +8552,45 @@ body {
 }
 .rzr-fruit i {
     font-size: 0.75rem;
+}
+
+/* Desktop fixes for como-rezar */
+@media (min-width: 1024px) {
+    #screen-como-rezar {
+        padding-top: 80px;
+        overflow-y: auto;
+    }
+    #screen-como-rezar .top-bar {
+        display: none;
+    }
+    .rezar-scrollarea {
+        padding: 30px 40px;
+        max-width: 860px;
+    }
+    .rzr-accordion {
+        background: rgba(255,255,255,0.55);
+    }
+    .rzr-accordion-header {
+        padding: 18px 24px;
+        font-size: 1.1rem;
+    }
+    .rzr-mystery img {
+        width: 90px;
+        height: 90px;
+    }
+}
+
+/* Mobile image constraints */
+@media (max-width: 1023px) {
+    .rzr-mystery img {
+        width: 60px;
+        height: 60px;
+        min-width: 60px;
+    }
+    .rzr-accordion-body {
+        padding: 0 14px;
+    }
+    .rzr-accordion.open .rzr-accordion-body {
+        padding: 0 14px 16px;
+    }
 }
