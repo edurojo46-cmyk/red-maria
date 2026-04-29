@@ -1036,39 +1036,61 @@ var app = {
     },
 
     async getContinuoSlots(dateKey) {
-        // Start with localStorage (always available)
         var all = JSON.parse(localStorage.getItem(this.CONTINUO_KEY) || '{}');
         if (!all[dateKey]) all[dateKey] = {};
         
-        // Migrate string values to arrays
+        // Migrate string values to arrays in local
         for (var h in all[dateKey]) {
             if (typeof all[dateKey][h] === 'string') all[dateKey][h] = [all[dateKey][h]];
             if (!Array.isArray(all[dateKey][h])) all[dateKey][h] = [];
         }
         
-        var localSlots = all[dateKey];
-        
-        // Merge with Supabase data
+        // Supabase is the SOURCE OF TRUTH when available
         if (typeof db !== 'undefined' && db.getContinuoSlots) {
             try {
                 var remote = await db.getContinuoSlots(dateKey);
                 if (remote && typeof remote === 'object') {
-                    // Merge: add any remote names not already in local
+                    // Replace local with Supabase data entirely for this date
+                    var supabaseSlots = {};
                     for (var rh in remote) {
-                        if (!localSlots[rh]) localSlots[rh] = [];
-                        var remoteNames = Array.isArray(remote[rh]) ? remote[rh] : [remote[rh]];
-                        remoteNames.forEach(function(name) {
-                            if (!localSlots[rh].includes(name)) localSlots[rh].push(name);
-                        });
+                        supabaseSlots[rh] = Array.isArray(remote[rh]) ? remote[rh] : [remote[rh]];
                     }
+                    // Also include any LOCAL-ONLY entries added in the last 10 seconds
+                    // (to handle the gap between local save and Supabase propagation)
+                    var localSlots = all[dateKey] || {};
+                    var recentKey = '_continuo_recent_' + dateKey;
+                    var recentRaw = localStorage.getItem(recentKey);
+                    if (recentRaw) {
+                        try {
+                            var recent = JSON.parse(recentRaw);
+                            var now = Date.now();
+                            // Add recent local entries not yet in Supabase (within 10s)
+                            recent.forEach(function(entry) {
+                                if (now - entry.ts < 10000) {
+                                    var hr = entry.hour;
+                                    if (!supabaseSlots[hr]) supabaseSlots[hr] = [];
+                                    if (!supabaseSlots[hr].includes(entry.name)) {
+                                        supabaseSlots[hr].push(entry.name);
+                                    }
+                                }
+                            });
+                            // Clean old entries
+                            var fresh = recent.filter(function(e) { return now - e.ts < 10000; });
+                            if (fresh.length > 0) localStorage.setItem(recentKey, JSON.stringify(fresh));
+                            else localStorage.removeItem(recentKey);
+                        } catch(e) { localStorage.removeItem(recentKey); }
+                    }
+                    all[dateKey] = supabaseSlots;
+                    localStorage.setItem(this.CONTINUO_KEY, JSON.stringify(all));
+                    console.log('[Continuo] Using Supabase as source of truth for', dateKey);
+                    return supabaseSlots;
                 }
-            } catch(e) { console.warn('[Continuo] Supabase failed:', e.message); }
+            } catch(e) { console.warn('[Continuo] Supabase failed, using local:', e.message); }
         }
         
-        // Save merged result
-        all[dateKey] = localSlots;
-        localStorage.setItem(this.CONTINUO_KEY, JSON.stringify(all));
-        return localSlots;
+        // Fallback: use localStorage only (offline mode)
+        console.log('[Continuo] Using localStorage fallback for', dateKey);
+        return all[dateKey] || {};
     },
 
     async renderContinuo() {
@@ -1143,9 +1165,12 @@ var app = {
     showSlotSignup(dateKey, hour, hourStr, nextHourStr) {
         if (!auth.isAuthenticated()) { this.navigate('screen-login'); return; }
         const user = JSON.parse(localStorage.getItem('redmaria_session')).name;
+        // Use the last rendered data (already synced from Supabase) instead of stale localStorage
         const all = JSON.parse(localStorage.getItem(this.CONTINUO_KEY) || '{}');
         const slots = all[dateKey] || {};
-        const people = slots[hour] || [];
+        let people = slots[hour] || [];
+        if (typeof people === 'string') people = [people];
+        if (!Array.isArray(people)) people = [];
         const alreadyIn = people.includes(user);
         const d = this.continuoDate;
         const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -1167,14 +1192,20 @@ var app = {
     async confirmSlot(dateKey, hour) {
         const session = JSON.parse(localStorage.getItem('redmaria_session'));
         if (!session) return;
-        // Save locally
+        // Save locally for immediate feedback
         const all = JSON.parse(localStorage.getItem(this.CONTINUO_KEY) || '{}');
         if (!all[dateKey]) all[dateKey] = {};
         if (!all[dateKey][hour]) all[dateKey][hour] = [];
         if (typeof all[dateKey][hour] === 'string') all[dateKey][hour] = [all[dateKey][hour]];
         if (!all[dateKey][hour].includes(session.name)) all[dateKey][hour].push(session.name);
         localStorage.setItem(this.CONTINUO_KEY, JSON.stringify(all));
-        // Sync to Supabase
+        // Track as recent entry (for instant feedback before Supabase propagates)
+        var recentKey = '_continuo_recent_' + dateKey;
+        var recent = [];
+        try { recent = JSON.parse(localStorage.getItem(recentKey) || '[]'); } catch(e) { recent = []; }
+        recent.push({ hour: hour, name: session.name, ts: Date.now() });
+        localStorage.setItem(recentKey, JSON.stringify(recent));
+        // Sync to Supabase (await so renderContinuo reads fresh data)
         if (typeof db !== 'undefined' && db.addContinuoSlot) {
             await db.addContinuoSlot(dateKey, hour, session.name);
         }
