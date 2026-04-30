@@ -8435,6 +8435,28 @@ body {
     margin-top: 4px;
 }
 
+.rezar-scrollarea {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 20px;
+    display: block;
+    max-width: 800px;
+    margin: 0 auto;
+    width: 100%;
+}
+.rezar-scrollarea > * {
+    margin-bottom: 16px;
+    flex-shrink: 0;
+}
+.rezar-scrollarea > *:last-child {
+    margin-bottom: 0;
+}
+
+.rezar-scrollarea > * {
+    flex-shrink: 0;
+}
+
 /* Days grid */
 .rzr-days-grid {
     display: flex;
@@ -8561,7 +8583,6 @@ body {
 @media (min-width: 1024px) {
     #screen-como-rezar {
         padding-top: 80px;
-        overflow-y: auto;
     }
     #screen-como-rezar .top-bar {
         display: none;

@@ -15,7 +15,26 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link rel="stylesheet" href="index.css?v=28">
+    <link rel="stylesheet" href="index.css?v=29">
+    <style>
+        /* FORCE FIX FOR COMO REZAR - BYPASS CACHE */
+        #screen-como-rezar .rezar-scrollarea {
+            display: block !important;
+        }
+        #screen-como-rezar .rezar-scrollarea > * {
+            flex-shrink: 0 !important;
+            margin-bottom: 16px !important;
+        }
+        #screen-como-rezar .rzr-accordion {
+            min-height: 60px !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+        #screen-como-rezar .rzr-accordion-header span {
+            color: #1a3a5c !important;
+            font-weight: bold !important;
+        }
+    </style>
 </head>
 <body>
 <div id="app-container">
