@@ -6106,107 +6106,254 @@ body {
     align-items: center;
     font-size: 0.9rem;
     flex-shrink: 0;
+/* ===== APARICIONES GALLERY (NEW) ===== */
+.apar-gallery-scroll {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 16px;
 }
-
-.aparicion-note p {
-    font-size: 0.82rem;
-    color: var(--clr-text-body);
-    line-height: 1.5;
+.apar-gallery {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    max-width: 900px;
+    margin: 0 auto;
 }
-
-/* Apariciones - Era Headers */
-.aparicion-era-header {
-    text-align: center;
-    padding: 20px 18px !important;
-    margin-top: 8px;
-    border-left: none !important;
-    background: linear-gradient(135deg, rgba(61, 163, 212, 0.08), rgba(46, 139, 192, 0.15)) !important;
-    border: 1px solid rgba(46, 139, 192, 0.2) !important;
+.apar-tile {
     position: relative;
+    border-radius: 16px;
     overflow: hidden;
+    cursor: pointer;
+    aspect-ratio: 3/4;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
-
-.aparicion-era-header::before {
-    content: '';
+.apar-tile:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 8px 32px rgba(46,139,192,0.25);
+}
+.apar-tile:active {
+    transform: scale(0.97);
+}
+.apar-tile img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.4s ease;
+}
+.apar-tile:hover img {
+    transform: scale(1.08);
+}
+.apar-tile-overlay {
     position: absolute;
-    top: 0;
+    bottom: 0;
     left: 0;
     right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, transparent, #3DA3D4, #2E8BC0, transparent);
+    padding: 40px 12px 12px;
+    background: linear-gradient(0deg, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.3) 60%, transparent 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    pointer-events: none;
 }
-
-.aparicion-era-emoji {
-    font-size: 2rem;
-    display: block;
-    margin-bottom: 6px;
-    line-height: 1;
-}
-
-.aparicion-era-header h3 {
-    font-size: 1.15rem;
-    font-weight: 700;
-    color: var(--clr-text-title);
-    font-family: 'Crimson Text', serif;
-    margin-bottom: 6px;
-}
-
-.aparicion-era-period {
+.apar-tile-year {
     display: inline-block;
-    background: linear-gradient(135deg, rgba(61, 163, 212, 0.15), rgba(46, 139, 192, 0.2));
-    color: var(--clr-primary-dark);
+    background: linear-gradient(135deg, #3DA3D4, #2E8BC0);
+    color: white;
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 8px;
+    margin-bottom: 4px;
+    width: fit-content;
+    letter-spacing: 0.3px;
+}
+.apar-tile-overlay h3 {
+    font-family: 'Crimson Text', serif;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: white;
+    line-height: 1.2;
+    margin: 0;
+    text-shadow: 0 1px 6px rgba(0,0,0,0.5);
+}
+.apar-tile-loc {
+    font-size: 0.65rem;
+    color: rgba(255,255,255,0.8);
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+.apar-tile-loc i { font-size: 0.6rem; }
+
+/* Gallery footer */
+.apar-gallery-footer {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 14px 16px;
+    margin: 16px auto 40px;
+    max-width: 900px;
+    background: rgba(46, 139, 192, 0.06);
+    border-radius: 14px;
+    border: 1px solid rgba(46, 139, 192, 0.15);
+}
+.apar-gallery-footer > i {
+    font-size: 1.1rem;
+    color: #3DA3D4;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+.apar-gallery-footer p {
+    font-size: 0.8rem;
+    color: var(--clr-text-body);
+    line-height: 1.5;
+    margin: 0;
+}
+
+/* ===== APARICIONES MODAL ===== */
+.apar-modal {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 1000;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.35s ease;
+}
+.apar-modal.open {
+    opacity: 1;
+    pointer-events: all;
+}
+.apar-modal-card {
+    background: white;
+    border-radius: 24px 24px 0 0;
+    width: 100%;
+    max-width: 600px;
+    max-height: 92vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    transform: translateY(100%);
+    transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    position: relative;
+}
+.apar-modal.open .apar-modal-card {
+    transform: translateY(0);
+}
+.apar-modal-close {
+    position: sticky;
+    top: 12px;
+    float: right;
+    margin: 12px 12px 0 0;
+    z-index: 10;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(0,0,0,0.4);
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+    backdrop-filter: blur(4px);
+}
+.apar-modal-close:hover { background: rgba(0,0,0,0.6); }
+.apar-modal-img-wrap {
+    width: 100%;
+    aspect-ratio: 4/3;
+    overflow: hidden;
+    margin-top: -48px;
+}
+.apar-modal-img-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.apar-modal-body {
+    padding: 20px 20px 32px;
+}
+.apar-modal-year {
+    display: inline-block;
+    background: linear-gradient(135deg, #3DA3D4, #2E8BC0);
+    color: white;
     font-size: 0.72rem;
     font-weight: 700;
-    padding: 3px 14px;
-    border-radius: 12px;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
+    padding: 3px 12px;
+    border-radius: 10px;
+    margin-bottom: 8px;
 }
-
-/* Apariciones - Detail Blocks (Historia / Legado) */
-.aparicion-detail {
-    margin-top: 12px;
-    padding: 12px 14px;
+.apar-modal-body h2 {
+    font-family: 'Crimson Text', serif;
+    font-size: 1.5rem;
+    color: var(--clr-text-title);
+    margin-bottom: 4px;
+    line-height: 1.2;
+}
+.apar-modal-loc {
+    font-size: 0.8rem;
+    color: var(--clr-primary);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 16px;
+}
+.apar-modal-section {
+    margin-top: 14px;
+    padding: 14px 16px;
     background: rgba(46, 139, 192, 0.04);
-    border-radius: 12px;
+    border-radius: 14px;
     border-left: 3px solid var(--clr-primary-light);
 }
-
-.aparicion-detail h4 {
-    font-size: 0.8rem;
+    align-items: center;
+    gap: 6px;
+    text-transform: uppercase;
+.apar-modal-section h4 {
+    font-size: 0.78rem;
     font-weight: 700;
     color: var(--clr-primary-dark);
-    margin-bottom: 6px;
+    margin-bottom: 8px;
     display: flex;
     align-items: center;
     gap: 6px;
     text-transform: uppercase;
     letter-spacing: 0.3px;
 }
-
-.aparicion-detail h4 i {
-    font-size: 0.9rem;
-    color: var(--clr-primary);
-}
-
-.aparicion-detail p {
-    font-size: 0.84rem !important;
+.apar-modal-section h4 i { font-size: 0.9rem; color: var(--clr-primary); }
+.apar-modal-section p {
+    font-size: 0.84rem;
     color: var(--clr-text-body);
-    line-height: 1.6;
+    line-height: 1.65;
     margin: 0;
 }
-
-.aparicion-legacy {
+.apar-modal-legacy {
     background: rgba(39, 174, 96, 0.04);
     border-left-color: #56d992;
 }
+.apar-modal-legacy h4 { color: #1e8a50; }
+.apar-modal-legacy h4 i { color: #27ae60; }
 
-.aparicion-legacy h4 {
-    color: #1e8a50;
+/* Desktop: 3 columns, modal centered */
+@media (min-width: 768px) {
+    .apar-gallery { grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .apar-tile-overlay h3 { font-size: 1rem; }
+    .apar-modal-card { border-radius: 24px; max-height: 85vh; margin-bottom: 4vh; }
+    .apar-modal { align-items: center; }
 }
-
-.aparicion-legacy h4 i {
-    color: #27ae60;
+@media (min-width: 1200px) {
+    .apar-gallery { grid-template-columns: repeat(4, 1fr); gap: 18px; }
 }
 
 /* Evangelio del DÃ­a */

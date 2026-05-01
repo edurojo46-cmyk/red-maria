@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link rel="stylesheet" href="index.css?v=29">
+    <link rel="stylesheet" href="index.css?v=30">
     <style>
         /* FORCE FIX FOR COMO REZAR - BYPASS CACHE */
         #screen-como-rezar .rezar-scrollarea {
@@ -1785,185 +1785,34 @@ if (document.readyState !== 'loading') renderIglesiasGrid();
     </section>
 
     <section id="screen-apariciones" class="screen gradient-bg">
-        <div class="top-bar glass"><button class="icon-btn" onclick="app.navigate('screen-splash')"><i class="ri-arrow-left-line"></i></button><h2>Apariciones</h2><div style="width:24px"></div></div>
-        <div class="rezar-scrollarea">
-            <!-- ERA 1: Siglo I - XVI -->
-            <div class="aparicion-era-header glass card">
-                <span class="aparicion-era-emoji">ï¿½Â½Yï¿½Â½>ï¿½Â</span>
-                <h3>Las Raíces de la Tradición</h3>
-                <span class="aparicion-era-period">Siglo I - XVI</span>
+        <div class="top-bar glass"><button class="icon-btn" onclick="app.navigate('screen-splash')"><i class="ri-arrow-left-line"></i></button><h2>Apariciones Marianas</h2><div style="width:24px"></div></div>
+        <div class="apar-gallery-scroll">
+            <div class="apar-gallery">
+                <div class="apar-tile" onclick="openAparicion(0)"><img src="assets/aparicion_pilar_1776720011641.png" alt="Nuestra SeÃ±ora del Pilar"/><div class="apar-tile-overlay"><span class="apar-tile-year">40 d.C.</span><h3>Nuestra SeÃ±ora del Pilar</h3><span class="apar-tile-loc"><i class="ri-map-pin-fill"></i> Zaragoza, EspaÃ±a</span></div></div>
+                <div class="apar-tile" onclick="openAparicion(1)"><img src="assets/aparicion_guadalupe_1776720027612.png" alt="Guadalupe"/><div class="apar-tile-overlay"><span class="apar-tile-year">1531</span><h3>Nuestra SeÃ±ora de Guadalupe</h3><span class="apar-tile-loc"><i class="ri-map-pin-fill"></i> Ciudad de MÃ©xico</span></div></div>
+                <div class="apar-tile" onclick="openAparicion(2)"><img src="assets/aparicion_medalla_1776720079152.png" alt="Medalla Milagrosa"/><div class="apar-tile-overlay"><span class="apar-tile-year">1830</span><h3>La Medalla Milagrosa</h3><span class="apar-tile-loc"><i class="ri-map-pin-fill"></i> ParÃ­s, Francia</span></div></div>
+                <div class="apar-tile" onclick="openAparicion(3)"><img src="assets/aparicion_salette_1776720093479.png" alt="La Salette"/><div class="apar-tile-overlay"><span class="apar-tile-year">1846</span><h3>Nuestra SeÃ±ora de La Salette</h3><span class="apar-tile-loc"><i class="ri-map-pin-fill"></i> La Salette, Francia</span></div></div>
+                <div class="apar-tile" onclick="openAparicion(4)"><img src="assets/aparicion_lourdes_1776720042178.png" alt="Lourdes"/><div class="apar-tile-overlay"><span class="apar-tile-year">1858</span><h3>Nuestra SeÃ±ora de Lourdes</h3><span class="apar-tile-loc"><i class="ri-map-pin-fill"></i> Lourdes, Francia</span></div></div>
+                <div class="apar-tile" onclick="openAparicion(5)"><img src="assets/aparicion_fatima_1776720064636.png" alt="FÃ¡tima"/><div class="apar-tile-overlay"><span class="apar-tile-year">1917</span><h3>Nuestra SeÃ±ora de FÃ¡tima</h3><span class="apar-tile-loc"><i class="ri-map-pin-fill"></i> FÃ¡tima, Portugal</span></div></div>
+                <div class="apar-tile" onclick="openAparicion(6)"><img src="assets/aparicion_beauraing_1776720147345.png" alt="Beauraing"/><div class="apar-tile-overlay"><span class="apar-tile-year">1932</span><h3>Beauraing y Banneux</h3><span class="apar-tile-loc"><i class="ri-map-pin-fill"></i> BÃ©lgica</span></div></div>
+                <div class="apar-tile" onclick="openAparicion(7)"><img src="assets/aparicion_akita_1776720190674.png" alt="Akita"/><div class="apar-tile-overlay"><span class="apar-tile-year">1973</span><h3>Nuestra SeÃ±ora de Akita</h3><span class="apar-tile-loc"><i class="ri-map-pin-fill"></i> Akita, JapÃ³n</span></div></div>
+                <div class="apar-tile" onclick="openAparicion(8)"><img src="assets/aparicion_kibeho_1776720206452.png" alt="Kibeho"/><div class="apar-tile-overlay"><span class="apar-tile-year">1981</span><h3>Nuestra SeÃ±ora de Kibeho</h3><span class="apar-tile-loc"><i class="ri-map-pin-fill"></i> Kibeho, Ruanda</span></div></div>
+                <div class="apar-tile" onclick="openAparicion(9)"><img src="assets/aparicion_sannicolas_1776720226848.png" alt="San NicolÃ¡s"/><div class="apar-tile-overlay"><span class="apar-tile-year">1983</span><h3>Virgen del Rosario de San NicolÃ¡s</h3><span class="apar-tile-loc"><i class="ri-map-pin-fill"></i> San NicolÃ¡s, Argentina</span></div></div>
             </div>
-
-            <div class="aparicion-card glass card">
-                <div class="aparicion-year">40 d.C.</div>
-                <h3>1. Nuestra Señora del Pilar</h3>
-                <div class="aparicion-loc"><i class="ri-map-pin-fill"></i> Zaragoza, España</div>
-                <img class="aparicion-img" src="assets/aparicion_pilar_1776720011641.png" alt="Nuestra Señora del Pilar">
-                <div class="aparicion-detail">
-                    <h4><i class="ri-book-open-line"></i> La Historia</h4>
-                    <p>Se considera la aparición mariana más antigua de la historia y la única ocurrida antes de la Asunción de María al cielo. Según la tradición, el apóstol Santiago el Mayor había viajado a Hispania (la actual España) para predicar el Evangelio, pero se encontraba profundamente desanimado ante la resistencia de los paganos a orillas del río Ebro. En la noche del 2 de enero del año 40 d.C., la Virgen María, que aún vivía en Jerusalén, se le apareció "en carne mortal" ï¿½Â½?"es decir, en su cuerpo terrenalï¿½Â½?" transportada por ángeles. María estaba de pie sobre un pilar de jaspe y le pidió a Santiago que construyera una capilla en ese lugar, prometiéndole que la fe nunca se apagaría en esas tierras. Le dejó el pilar como señal de su presencia, convirtiéndolo en el primer templo mariano de la cristiandad.</p>
-                </div>
-                <div class="aparicion-detail aparicion-legacy">
-                    <h4><i class="ri-ancient-gate-line"></i> El Legado</h4>
-                    <p>El pilar original se conserva en la Basílica de Nuestra Señora del Pilar en Zaragoza, uno de los santuarios marianos más visitados de Europa, recibiendo más de 10 millones de peregrinos al año. La devoción al Pilar se extendió a toda Hispanoamérica durante la colonización y el 12 de octubre, festividad de la Virgen del Pilar, coincide con el Día de la Hispanidad. Es patrona de la Guardia Civil española y símbolo de la firmeza de la fe en todo el mundo hispano. A lo largo de los siglos, el pilar ha sido besado por millones de fieles, desgastando visiblemente la piedra de jaspe.</p>
-                </div>
-            </div>
-
-            <div class="aparicion-card glass card">
-                <div class="aparicion-year">1531</div>
-                <h3>2. Nuestra Señora de Guadalupe</h3>
-                <div class="aparicion-loc"><i class="ri-map-pin-fill"></i> Ciudad de México, México</div>
-                <img class="aparicion-img" src="assets/aparicion_guadalupe_1776720027612.png" alt="Nuestra Señora de Guadalupe">
-                <div class="aparicion-detail">
-                    <h4><i class="ri-book-open-line"></i> La Historia</h4>
-                    <p>Entre el 9 y el 12 de diciembre de 1531, la Virgen María se apareció cuatro veces al indígena Juan Diego Cuauhtlatoatzin en el cerro del Tepeyac, a las afueras de la Ciudad de México. Se presentó como una mujer mestiza, hablándole en náhuatl, y le pidió que transmitiera al obispo Juan de Zumárraga su deseo de que se construyera un templo en ese lugar. Tras la incredulidad del obispo, la Virgen hizo brotar rosas de Castilla en pleno invierno sobre el cerro árido. Cuando Juan Diego desplegó su tilma (manto de fibra de maguey) ante el obispo para mostrarle las flores, en el tejido había quedado impresa milagrosamente la imagen de la Virgen tal como él la había visto: morena, con manto estrellado, sobre una media luna y rodeada de rayos de sol.</p>
-                </div>
-                <div class="aparicion-detail aparicion-legacy">
-                    <h4><i class="ri-ancient-gate-line"></i> El Legado</h4>
-                    <p>La aparición de Guadalupe desencadenó la conversión masiva de los pueblos indígenas: en apenas siete años, nueve millones de nativos se bautizaron. La tilma de Juan Diego, hecha de fibra de maguey que normalmente se desintegra en 20 años, se conserva intacta tras casi 500 años en la Basílica de Guadalupe, el santuario mariano más visitado del mundo con más de 20 millones de peregrinos anuales. Estudios científicos modernos no han podido explicar el origen de los pigmentos de la imagen ni la conservación del tejido. En los ojos de la Virgen, ampliados miles de veces, se han detectado reflejos de figuras humanas consistentes con la escena de la aparición. Juan Diego fue canonizado por Juan Pablo II en 2002.</p>
+            <div class="apar-gallery-footer"><i class="ri-lightbulb-flash-fill"></i><p><strong>Dato curioso:</strong> De las miles de supuestas apariciones reportadas, solo unas 28 cuentan con reconocimiento oficial de la Iglesia.</p></div>
+        </div>
+        <div class="apar-modal" id="apar-modal" onclick="if(event.target===this)closeAparicion()">
+            <div class="apar-modal-card" id="apar-modal-card">
+                <button class="apar-modal-close" onclick="closeAparicion()"><i class="ri-close-line"></i></button>
+                <div class="apar-modal-img-wrap"><img id="apar-modal-img" src="" alt=""/></div>
+                <div class="apar-modal-body">
+                    <span class="apar-modal-year" id="apar-modal-year"></span>
+                    <h2 id="apar-modal-title"></h2>
+                    <span class="apar-modal-loc" id="apar-modal-loc"></span>
+                    <div class="apar-modal-section"><h4><i class="ri-book-open-line"></i> La Historia</h4><p id="apar-modal-historia"></p></div>
+                    <div class="apar-modal-section apar-modal-legacy"><h4><i class="ri-ancient-gate-line"></i> El Legado</h4><p id="apar-modal-legado"></p></div>
                 </div>
             </div>
-
-            <!-- ERA 2: Siglo XIX -->
-            <div class="aparicion-era-header glass card">
-                <span class="aparicion-era-emoji">ï¿½Â½Y?ï¿½Â½ï¿½Â½Y?ï¿½Â½</span>
-                <h3>El Gran Siglo de las Apariciones</h3>
-                <span class="aparicion-era-period">Siglo XIX</span>
-            </div>
-
-            <div class="aparicion-card glass card">
-                <div class="aparicion-year">1830</div>
-                <h3>3. La Medalla Milagrosa</h3>
-                <div class="aparicion-loc"><i class="ri-map-pin-fill"></i> París, Francia</div>
-                <img class="aparicion-img" src="assets/aparicion_medalla_1776720079152.png" alt="La Medalla Milagrosa">
-                <div class="aparicion-detail">
-                    <h4><i class="ri-book-open-line"></i> La Historia</h4>
-                    <p>En la noche del 18 de julio de 1830, Santa Catalina Labouré, una humilde novicia de 24 años de las Hijas de la Caridad, fue despertada por un niño resplandeciente que la condujo a la capilla del convento en la Rue du Bac de París. Allí encontró a la Virgen María sentada en un sillón junto al altar. María habló con ella durante dos horas, revelándole que Francia y el mundo sufrirían grandes desgracias. El 27 de noviembre del mismo año, la Virgen se le apareció nuevamente, esta vez de pie sobre un globo terráqueo, aplastando a una serpiente con sus pies. De sus manos brotaban rayos de luz ï¿½Â½?"las gracias que derramaba sobre quienes las pidieranï¿½Â½?" y alrededor se leía la inscripción: "Oh María, sin pecado concebida, rogad por nosotros que recurrimos a Vos". La Virgen le pidió que mandara acuñar una medalla con esa imagen, prometiendo abundantes gracias a quienes la llevaran con devoción.</p>
-                </div>
-                <div class="aparicion-detail aparicion-legacy">
-                    <h4><i class="ri-ancient-gate-line"></i> El Legado</h4>
-                    <p>Las primeras 1,500 medallas se acuñaron en 1832. En pocos meses, los testimonios de curaciones milagrosas y conversiones se multiplicaron a tal velocidad que el pueblo la bautizó espontáneamente como "La Medalla Milagrosa". Para 1836, ya se habían distribuido más de 10 millones de medallas en toda Europa. Catalina Labouré guardó el secreto de las apariciones durante 46 años, revelando su identidad solo en su lecho de muerte. Fue canonizada en 1947. Hoy, la capilla de la Rue du Bac es uno de los lugares de peregrinación más visitados de París, y se estima que se han distribuido más de mil millones de medallas en todo el mundo.</p>
-                </div>
-            </div>
-
-            <div class="aparicion-card glass card">
-                <div class="aparicion-year">1846</div>
-                <h3>4. Nuestra Señora de La Salette</h3>
-                <div class="aparicion-loc"><i class="ri-map-pin-fill"></i> La Salette, Francia</div>
-                <img class="aparicion-img" src="assets/aparicion_salette_1776720093479.png" alt="Nuestra Señora de La Salette">
-                <div class="aparicion-detail">
-                    <h4><i class="ri-book-open-line"></i> La Historia</h4>
-                    <p>El 19 de septiembre de 1846, dos niños pastores, Mélanie Calvat (15 años) y Maximin Giraud (11 años), cuidaban el ganado en los Alpes franceses, cerca del pueblo de La Salette. Al mediodía, vieron una gran esfera de luz que se abrió para revelar a una mujer sentada, con los codos sobre las rodillas y el rostro entre las manos, llorando amargamente. Llevaba un crucifijo resplandeciente sobre el pecho, rodeado de un martillo y unas tenazas. La "Bella Señora", como la llamaron los niños, se levantó y les habló primero en francés y luego en su dialecto local. Entre lágrimas, les dijo que el pueblo había abandonado la oración, que ya no respetaba el día de descanso dominical, que blasfemaba usando el nombre de su Hijo, y que si no se convertían vendrían hambrunas y epidemias. Confió un secreto particular a cada niño, que solo debían revelar en el momento indicado.</p>
-                </div>
-                <div class="aparicion-detail aparicion-legacy">
-                    <h4><i class="ri-ancient-gate-line"></i> El Legado</h4>
-                    <p>La aparición fue aprobada oficialmente por el obispo de Grenoble en 1851. El santuario de Nuestra Señora de La Salette, construido a 1,800 metros de altitud en los Alpes, se convirtió en lugar de peregrinación. El mensaje de La Salette marcó un precedente histórico en las apariciones marianas modernas: fue la primera vez que la Virgen transmitió un mensaje público de advertencia profética y un llamado urgente al arrepentimiento. Este patrón de "mensajes de advertencia" se repetiría en apariciones posteriores como Lourdes, Fátima y Akita. Los dos secretos revelados por los niños, publicados en 1858, contenían profecías sobre crisis en la Iglesia y el mundo que generaron amplio debate teológico.</p>
-                </div>
-            </div>
-
-            <div class="aparicion-card glass card">
-                <div class="aparicion-year">1858</div>
-                <h3>5. Nuestra Señora de Lourdes</h3>
-                <div class="aparicion-loc"><i class="ri-map-pin-fill"></i> Lourdes, Francia</div>
-                <img class="aparicion-img" src="assets/aparicion_lourdes_1776720042178.png" alt="Nuestra Señora de Lourdes">
-                <div class="aparicion-detail">
-                    <h4><i class="ri-book-open-line"></i> La Historia</h4>
-                    <p>Entre el 11 de febrero y el 16 de julio de 1858, Bernadette Soubirous, una niña de 14 años extremadamente pobre, analfabeta y asmática, presenció 18 apariciones de la Virgen María en la gruta de Massabielle, junto al río Gave. La "Señora" se le presentaba vestida de blanco con un cinto azul, un rosario en la mano y rosas doradas a sus pies. En la novena aparición, la Virgen le indicó que cavara en el suelo de la gruta; Bernadette obedeció y de la tierra brotó un manantial de agua cristalina que no existía antes. En posteriores apariciones, María le pidió que se construyera una capilla y que la gente viniera en procesión. Cuando Bernadette le preguntó su nombre, la Señora respondió en dialecto gascón: "Que soy era Immaculada Concepciou" (Yo soy la Inmaculada Concepción), un dogma que había sido proclamado por el Papa Pío IX apenas cuatro años antes, en 1854, y que la niña desconocía por completo.</p>
-                </div>
-                <div class="aparicion-detail aparicion-legacy">
-                    <h4><i class="ri-ancient-gate-line"></i> El Legado</h4>
-                    <p>El manantial que brotó de la gruta no ha dejado de fluir desde 1858, produciendo unos 122,400 litros de agua al día. Lourdes se convirtió en el centro mundial de oración y peregrinación para los enfermos. A lo largo de su historia, la Iglesia ha reconocido oficialmente 70 curaciones milagrosas tras exhaustivas investigaciones médicas, aunque se han documentado más de 7,000 curaciones inexplicables. Cada año, más de 6 millones de peregrinos visitan el santuario. Bernadette se retiró a un convento en Nevers, donde murió a los 35 años. Su cuerpo se encontró incorrupto en tres exhumaciones sucesivas y permanece expuesto en una urna de cristal. Fue canonizada en 1933.</p>
-                </div>
-            </div>
-
-            <!-- ERA 3: Siglo XX -->
-            <div class="aparicion-era-header glass card">
-                <span class="aparicion-era-emoji">ï¿½Â½Y.Sï¿½Â</span>
-                <h3>El Siglo XX y las Profecías Modernas</h3>
-                <span class="aparicion-era-period">Siglo XX</span>
-            </div>
-
-            <div class="aparicion-card glass card">
-                <div class="aparicion-year">1917</div>
-                <h3>6. Nuestra Señora de Fátima</h3>
-                <div class="aparicion-loc"><i class="ri-map-pin-fill"></i> Fátima, Portugal</div>
-                <img class="aparicion-img" src="assets/aparicion_fatima_1776720064636.png" alt="Nuestra Señora de Fátima">
-                <div class="aparicion-detail">
-                    <h4><i class="ri-book-open-line"></i> La Historia</h4>
-                    <p>Entre mayo y octubre de 1917, en plena Primera Guerra Mundial, tres niños pastores ï¿½Â½?"Lucía dos Santos (10 años), Francisco Marto (9 años) y Jacinta Marto (7 años)ï¿½Â½?" recibieron seis visitas mensuales de la Virgen María en la Cova da Iria, un campo de pastoreo cerca de Fátima, Portugal. Un año antes, un ángel se les había aparecido tres veces para prepararlos, enseñándoles oraciones y dándoles la comunión. La Virgen les pidió que rezaran el Rosario todos los días por la paz del mundo y les confió tres secretos: el primero era una visión aterradora del infierno; el segundo, una profecía sobre el fin de la Primera Guerra Mundial, el inicio de otra peor si el mundo no se convertía, y la petición de consagrar Rusia a su Corazón Inmaculado; el tercero, revelado recién en el año 2000, describía la persecución a la Iglesia y un obispo vestido de blanco que caía abatido a tiros, interpretado como el atentado contra Juan Pablo II en 1981.</p>
-                </div>
-                <div class="aparicion-detail aparicion-legacy">
-                    <h4><i class="ri-ancient-gate-line"></i> El Legado</h4>
-                    <p>La última aparición, el 13 de octubre de 1917, culminó con el llamado "Milagro del Sol": ante aproximadamente 70,000 personas ï¿½Â½?"incluyendo periodistas, escépticos y ateosï¿½Â½?", el sol pareció "danzar" en el cielo, girar sobre sí mismo, cambiar de colores y precipitarse hacia la tierra antes de volver a su posición normal. Los testigos, que estaban empapados por la lluvia, se encontraron completamente secos después del fenómeno. Francisco y Jacinta murieron durante la pandemia de gripe española y fueron canonizados por el Papa Francisco en 2017. Lucía vivió hasta los 97 años como monja carmelita. El santuario de Fátima recibe más de 4 millones de peregrinos al año y su mensaje sobre el Rosario como arma de paz sigue siendo el más influyente de la era moderna.</p>
-                </div>
-            </div>
-
-            <div class="aparicion-card glass card">
-                <div class="aparicion-year">1932-1933</div>
-                <h3>7. Nuestra Señora de Beauraing y Banneux</h3>
-                <div class="aparicion-loc"><i class="ri-map-pin-fill"></i> Bélgica</div>
-                <img class="aparicion-img" src="assets/aparicion_beauraing_1776720147345.png" alt="Nuestra Señora de Beauraing">
-                <div class="aparicion-detail">
-                    <h4><i class="ri-book-open-line"></i> La Historia</h4>
-                    <p>En pleno periodo de entreguerras, cuando Europa se preparaba inconscientemente para la catástrofe del nazismo, la Virgen María eligió la pequeña nación de Bélgica para dos apariciones consecutivas. En Beauraing, entre el 29 de noviembre de 1932 y el 3 de enero de 1933, cinco niños ï¿½Â½?"Fernande, Gilberte y Albert Voisin, y Andrée y Gilberte Degeimbreï¿½Â½?" vieron a la Virgen 33 veces sobre un espino del jardín del convento de las Hermanas de la Doctrina Cristiana. La "Virgen del Corazón de Oro" se les mostró con un corazón dorado resplandeciente en el pecho y les pidió oración y sacrificio. Pocas semanas después, en Banneux, entre el 15 de enero y el 2 de marzo de 1933, Mariette Beco, una niña de 11 años de una familia muy pobre y alejada de la fe, vio a la Virgen ocho veces. María se presentó como "La Virgen de los Pobres" y la condujo a un manantial cuyas aguas tendrían propiedades curativas, declarando: "Vengo a aliviar el sufrimiento".</p>
-                </div>
-                <div class="aparicion-detail aparicion-legacy">
-                    <h4><i class="ri-ancient-gate-line"></i> El Legado</h4>
-                    <p>Ambas apariciones fueron aprobadas oficialmente por la Iglesia: Beauraing en 1949 y Banneux en 1949. Son conocidas como las "apariciones belgas" y su mensaje resulta profético considerando que Europa estaba a solo seis años de la Segunda Guerra Mundial. El manantial de Banneux, como el de Lourdes, sigue fluyendo y es centro de peregrinaciones para enfermos y pobres de toda Europa. Los santuarios de Beauraing y Banneux enfatizan un mensaje de humildad, compasión por los más necesitados y la urgencia de la oración en tiempos de crisis política y moral. Es notable que la Virgen eligiera manifestarse a niños de familias humildes, reforzando el mensaje evangélico de que Dios revela sus misterios a los pequeños.</p>
-                </div>
-            </div>
-
-            <div class="aparicion-card glass card">
-                <div class="aparicion-year">1973</div>
-                <h3>8. Nuestra Señora de Akita</h3>
-                <div class="aparicion-loc"><i class="ri-map-pin-fill"></i> Akita, Japón</div>
-                <img class="aparicion-img" src="assets/aparicion_akita_1776720190674.png" alt="Nuestra Señora de Akita">
-                <div class="aparicion-detail">
-                    <h4><i class="ri-book-open-line"></i> La Historia</h4>
-                    <p>El 6 de julio de 1973, la hermana Agnes Katsuko Sasagawa, una monja sorda del Instituto de las Siervas de la Eucaristía en Akita, Japón, comenzó a recibir mensajes sobrenaturales. Una herida en forma de cruz apareció en la palma de su mano izquierda, y una pequeña estatua de madera de la Virgen María en la capilla del convento comenzó a llorar. Los mensajes de María eran solemnes y graves: advirtió sobre un castigo peor que el diluvio si la humanidad no se arrepentía, habló de divisiones y conflictos dentro de la propia Iglesia, de cardenales contra cardenales y obispos contra obispos, y pidió que se rezara el Rosario cada día. La estatua lloró un total de 101 veces entre 1975 y 1981. Las lágrimas fueron recogidas y analizadas por laboratorios de la Universidad de Akita, que confirmaron que eran de origen humano: contenían los tres componentes del fluido lagrimal humano (albúmina, inmunoglobulina y lisozima), resultado que la ciencia no ha podido explicar.</p>
-                </div>
-                <div class="aparicion-detail aparicion-legacy">
-                    <h4><i class="ri-ancient-gate-line"></i> El Legado</h4>
-                    <p>Las apariciones de Akita fueron aprobadas oficialmente en 1984 por el obispo John Shojiro Ito, con la conformidad de la Congregación para la Doctrina de la Fe, entonces presidida por el cardenal Joseph Ratzinger (futuro Papa Benedicto XVI). El propio Ratzinger confirmó que el mensaje de Akita era esencialmente una continuación del tercer secreto de Fátima. Milagrosamente, la hermana Agnes recuperó completamente la audición, que había perdido por completo. El santuario de Akita es un caso único: es la primera y única aparición mariana aprobada en Asia, y representa un puente entre la tradición mariana occidental y la espiritualidad oriental. Su mensaje sobre la importancia del Rosario y la advertencia sobre divisiones eclesiásticas sigue resonando con fuerza.</p>
-                </div>
-            </div>
-
-            <div class="aparicion-card glass card">
-                <div class="aparicion-year">1981</div>
-                <h3>9. Nuestra Señora de Kibeho</h3>
-                <div class="aparicion-loc"><i class="ri-map-pin-fill"></i> Kibeho, Ruanda</div>
-                <img class="aparicion-img" src="assets/aparicion_kibeho_1776720206452.png" alt="Nuestra Señora de Kibeho">
-                <div class="aparicion-detail">
-                    <h4><i class="ri-book-open-line"></i> La Historia</h4>
-                    <p>A partir del 28 de noviembre de 1981, la Virgen María se apareció a tres jóvenes estudiantes africanas del colegio de Kibeho, en las montañas de Ruanda: Alphonsine Mumureke (17 años), Nathalie Mukamazimpaka (17 años) y Marie Claire Mukangango (21 años). María se presentó como "Nyina wa Jambo" (Madre del Verbo) y les pidió oración, ayuno, conversión y el rezo del Rosario de los Siete Dolores. Las visiones más impactantes vinieron el 19 de agosto de 1982, cuando las tres videntes experimentaron simultáneamente terribles visiones: vieron ríos de sangre, cuerpos decapitados, cadáveres abandonados y una tierra devastada por la violencia. Las niñas lloraban y gritaban de horror ante lo que veían. Estas visiones resultaron ser una premonición escalofriante del genocidio que azotaría Ruanda exactamente 12 años después, en 1994, cuando en apenas 100 días fueron masacradas entre 800,000 y un millón de personas.</p>
-                </div>
-                <div class="aparicion-detail aparicion-legacy">
-                    <h4><i class="ri-ancient-gate-line"></i> El Legado</h4>
-                    <p>Las apariciones de Kibeho fueron aprobadas oficialmente el 29 de junio de 2001 por el obispo Augustin Misago, convirtiéndose en la primera aparición mariana reconocida oficialmente en Ãfrica y la primera del siglo XXI. Trágicamente, Marie Claire Mukangango, una de las tres videntes, fue asesinada durante el genocidio de 1994 junto con su esposo. El santuario de Kibeho se erige hoy como un memorial de reconciliación en medio de una nación que busca sanar sus heridas. El mensaje de Kibeho tiene una relevancia universal: la Virgen advirtió exactamente lo que iba a ocurrir, y su llamado a la conversión y al rezo del Rosario de los Siete Dolores se difundió por toda Ãfrica y el mundo como camino hacia la paz y la reconciliación.</p>
-                </div>
-            </div>
-
-            <div class="aparicion-card glass card">
-                <div class="aparicion-year">1983</div>
-                <h3>10. Nuestra Señora de San Nicolás</h3>
-                <div class="aparicion-loc"><i class="ri-map-pin-fill"></i> San Nicolás, Argentina</div>
-                <img class="aparicion-img" src="assets/aparicion_sannicolas_1776720226848.png" alt="Nuestra Señora de San Nicolás">
-                <div class="aparicion-detail">
-                    <h4><i class="ri-book-open-line"></i> La Historia</h4>
-                    <p>El 25 de septiembre de 1983, Gladys Quiroga de Motta, una mujer sencilla de 46 años, madre de dos hijas y vecina de la ciudad industrial de San Nicolás de los Arroyos, provincia de Buenos Aires, vio por primera vez una luminosidad extraña en su habitación. Días después, la Virgen María se le apareció con el Niño Jesús en brazos y comenzó a transmitirle mensajes casi diarios que se extenderían hasta 1990. María se identificó como "María del Rosario de San Nicolás" y la imagen correspondía a una antigua pintura de la Virgen que se encontraba olvidada y deteriorada en la catedral de la ciudad. Los mensajes enfatizaban el regreso a las Sagradas Escrituras, la oración del Rosario, la conversión del corazón y la construcción de un santuario junto al río Paraná. Lo extraordinario fue que Gladys, una mujer con educación primaria incompleta, recibió más de 1,800 mensajes con profundidad teológica que expertos consideraron imposibles de elaborar por una persona sin formación.</p>
-                </div>
-                <div class="aparicion-detail aparicion-legacy">
-                    <h4><i class="ri-ancient-gate-line"></i> El Legado</h4>
-                    <p>El santuario de Nuestra Señora del Rosario de San Nicolás fue construido junto al río Paraná y se convirtió en uno de los centros de peregrinación más importantes de Argentina y del Cono Sur, recibiendo más de 3 millones de peregrinos al año.</p>
-                </div>
-            </div>
-
-            <div class="aparicion-note glass card">
-                <div class="aparicion-note-icon"><i class="ri-lightbulb-flash-fill"></i></div>
-                <p><strong>Un dato curioso:</strong> ¿Sabías que de las miles de supuestas apariciones reportadas en la historia, solo unas 28 cuentan con el reconocimiento oficial de la Iglesia a nivel diocesano o vaticano?</p>
-            </div>
-
-            <div style="height:40px"></div>
         </div>
     </section>
 
@@ -6607,6 +6456,57 @@ function populateGcInfoPanel(c) {
     });
 }
 
+// === APARICIONES GALLERY ===
+var aparicionesData = [
+{title:'Nuestra Señora del Pilar',year:'40 d.C.',loc:'Zaragoza, España',img:'assets/aparicion_pilar_1776720011641.png',
+historia:'Se considera la aparición mariana más antigua de la historia y la única ocurrida antes de la Asunción de María al cielo. El apóstol Santiago el Mayor había viajado a Hispania para predicar el Evangelio, pero se encontraba desanimado ante la resistencia de los paganos a orillas del río Ebro. En la noche del 2 de enero del año 40 d.C., la Virgen María, que aún vivía en Jerusalén, se le apareció "en carne mortal", transportada por ángeles. María estaba de pie sobre un pilar de jaspe y le pidió a Santiago que construyera una capilla en ese lugar, prometiéndole que la fe nunca se apagaría en esas tierras.',
+legado:'El pilar original se conserva en la Basílica de Nuestra Señora del Pilar en Zaragoza, uno de los santuarios marianos más visitados de Europa, recibiendo más de 10 millones de peregrinos al año. La devoción al Pilar se extendió a toda Hispanoamérica y el 12 de octubre, festividad de la Virgen del Pilar, coincide con el Día de la Hispanidad.'},
+{title:'Nuestra Señora de Guadalupe',year:'1531',loc:'Ciudad de México, México',img:'assets/aparicion_guadalupe_1776720027612.png',
+historia:'Entre el 9 y el 12 de diciembre de 1531, la Virgen María se apareció cuatro veces al indígena Juan Diego en el cerro del Tepeyac. Se presentó como una mujer mestiza, hablándole en náhuatl. Tras la incredulidad del obispo, la Virgen hizo brotar rosas de Castilla en pleno invierno. Cuando Juan Diego desplegó su tilma ante el obispo, en el tejido había quedado impresa milagrosamente la imagen de la Virgen.',
+legado:'La aparición desencadenó la conversión masiva de los pueblos indígenas: en siete años, nueve millones de nativos se bautizaron. La tilma, hecha de fibra de maguey que normalmente se desintegra en 20 años, se conserva intacta tras casi 500 años. La Basílica de Guadalupe es el santuario mariano más visitado del mundo con más de 20 millones de peregrinos anuales.'},
+{title:'La Medalla Milagrosa',year:'1830',loc:'París, Francia',img:'assets/aparicion_medalla_1776720079152.png',
+historia:'En la noche del 18 de julio de 1830, Santa Catalina Labouré, una humilde novicia de las Hijas de la Caridad, fue conducida a la capilla del convento en la Rue du Bac de París. La Virgen María le habló durante dos horas. El 27 de noviembre, la Virgen se le apareció nuevamente, de pie sobre un globo terráqueo, con rayos de luz brotando de sus manos, y le pidió acuñar una medalla con esa imagen.',
+legado:'Las primeras 1,500 medallas se acuñaron en 1832. Los testimonios de curaciones milagrosas se multiplicaron y el pueblo la bautizó como "La Medalla Milagrosa". Para 1836, se habían distribuido más de 10 millones. Catalina Labouré guardó el secreto 46 años. Se estima que se han distribuido más de mil millones de medallas en todo el mundo.'},
+{title:'Nuestra Señora de La Salette',year:'1846',loc:'La Salette, Francia',img:'assets/aparicion_salette_1776720093479.png',
+historia:'El 19 de septiembre de 1846, dos niños pastores, Mélanie Calvat y Maximin Giraud, vieron una gran esfera de luz que reveló a una mujer llorando amargamente. Llevaba un crucifijo resplandeciente y les habló sobre el abandono de la oración, la falta de respeto al día dominical y la necesidad de conversión.',
+legado:'La aparición fue aprobada oficialmente en 1851. El santuario, construido a 1,800 metros de altitud en los Alpes, se convirtió en lugar de peregrinación. El mensaje de La Salette marcó un precedente histórico: fue la primera vez que la Virgen transmitió un mensaje público de advertencia profética.'},
+{title:'Nuestra Señora de Lourdes',year:'1858',loc:'Lourdes, Francia',img:'assets/aparicion_lourdes_1776720042178.png',
+historia:'Entre el 11 de febrero y el 16 de julio de 1858, Bernadette Soubirous, una niña de 14 años, presenció 18 apariciones de la Virgen María en la gruta de Massabielle. La Señora le indicó que cavara en el suelo y brotó un manantial. Cuando Bernadette preguntó su nombre, respondió: "Yo soy la Inmaculada Concepción", un dogma proclamado apenas cuatro años antes que la niña desconocía.',
+legado:'El manantial produce unos 122,400 litros de agua al día. La Iglesia ha reconocido oficialmente 70 curaciones milagrosas, aunque se han documentado más de 7,000 curaciones inexplicables. Más de 6 millones de peregrinos visitan el santuario cada año. El cuerpo de Bernadette se encontró incorrupto y fue canonizada en 1933.'},
+{title:'Nuestra Señora de Fátima',year:'1917',loc:'Fátima, Portugal',img:'assets/aparicion_fatima_1776720064636.png',
+historia:'Entre mayo y octubre de 1917, tres niños pastores — Lucía, Francisco y Jacinta — recibieron seis visitas de la Virgen María en la Cova da Iria. Les pidió rezar el Rosario todos los días por la paz del mundo y les confió tres secretos: una visión del infierno, profecías sobre guerras mundiales, y la persecución a la Iglesia.',
+legado:'La última aparición culminó con el "Milagro del Sol" ante 70,000 personas. Francisco y Jacinta fueron canonizados en 2017. El santuario de Fátima recibe más de 4 millones de peregrinos al año y su mensaje sobre el Rosario como arma de paz sigue siendo el más influyente de la era moderna.'},
+{title:'Beauraing y Banneux',year:'1932-1933',loc:'Bélgica',img:'assets/aparicion_beauraing_1776720147345.png',
+historia:'En pleno periodo de entreguerras, la Virgen María eligió Bélgica para dos apariciones consecutivas. En Beauraing, cinco niños la vieron 33 veces. En Banneux, Mariette Beco vio a la Virgen ocho veces. María se presentó como "La Virgen de los Pobres" y la condujo a un manantial curativo, declarando: "Vengo a aliviar el sufrimiento".',
+legado:'Ambas apariciones fueron aprobadas oficialmente en 1949. Su mensaje resulta profético considerando que Europa estaba a solo seis años de la Segunda Guerra Mundial. Los santuarios enfatizan un mensaje de humildad, compasión por los más necesitados y la urgencia de la oración en tiempos de crisis.'},
+{title:'Nuestra Señora de Akita',year:'1973',loc:'Akita, Japón',img:'assets/aparicion_akita_1776720190674.png',
+historia:'El 6 de julio de 1973, la hermana Agnes Sasagawa, una monja sorda, comenzó a recibir mensajes sobrenaturales. Una estatua de la Virgen en la capilla lloró un total de 101 veces entre 1975 y 1981. Las lágrimas fueron analizadas y confirmadas como de origen humano, conteniendo los tres componentes del fluido lagrimal.',
+legado:'Las apariciones fueron aprobadas en 1984 con la conformidad del cardenal Ratzinger, quien confirmó que el mensaje era continuación del tercer secreto de Fátima. La hermana Agnes recuperó completamente la audición. Es la primera y única aparición mariana aprobada en Asia.'},
+{title:'Nuestra Señora de Kibeho',year:'1981',loc:'Kibeho, Ruanda',img:'assets/aparicion_kibeho_1776720206452.png',
+historia:'A partir del 28 de noviembre de 1981, la Virgen se apareció a tres jóvenes africanas en Kibeho, Ruanda. María se presentó como "Madre del Verbo". El 19 de agosto de 1982, las videntes experimentaron terribles visiones: ríos de sangre, cuerpos decapitados — una premonición del genocidio que azotaría Ruanda 12 años después.',
+legado:'Las apariciones fueron aprobadas en 2001, convirtiéndose en la primera aparición mariana reconocida oficialmente en África. Trágicamente, Marie Claire, una de las videntes, fue asesinada durante el genocidio de 1994. El santuario de Kibeho se erige hoy como un memorial de reconciliación.'},
+{title:'Virgen del Rosario de San Nicolás',year:'1983',loc:'San Nicolás, Argentina',img:'assets/aparicion_sannicolas_1776720226848.png',
+historia:'El 25 de septiembre de 1983, Gladys Quiroga de Motta, una mujer sencilla de San Nicolás de los Arroyos, Buenos Aires, comenzó a recibir apariciones de la Virgen María con el Niño Jesús en brazos. María se identificó como "María del Rosario de San Nicolás". Los mensajes enfatizaban el regreso a las Sagradas Escrituras y la oración del Rosario.',
+legado:'El santuario de Nuestra Señora del Rosario de San Nicolás se convirtió en uno de los centros de peregrinación más importantes de Argentina y del Cono Sur, recibiendo más de 3 millones de peregrinos al año.'}
+];
+function openAparicion(i) {
+    var d = aparicionesData[i]; if (!d) return;
+    document.getElementById('apar-modal-img').src = d.img;
+    document.getElementById('apar-modal-img').alt = d.title;
+    document.getElementById('apar-modal-year').textContent = d.year;
+    document.getElementById('apar-modal-title').textContent = d.title;
+    document.getElementById('apar-modal-loc').innerHTML = '<i class="ri-map-pin-fill"></i> ' + d.loc;
+    document.getElementById('apar-modal-historia').textContent = d.historia;
+    document.getElementById('apar-modal-legado').textContent = d.legado;
+    var modal = document.getElementById('apar-modal');
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+}
+function closeAparicion() {
+    var modal = document.getElementById('apar-modal');
+    modal.classList.remove('open');
+    document.body.style.overflow = '';
+}
 
 
 </script>
