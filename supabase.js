@@ -63,6 +63,16 @@ var db = {
         await sbClient.from('profiles').update({ bio: bio }).eq('id', userId);
     },
 
+    async updateProfileLikes(userId, incrementAmount) {
+        if (!sbClient) return;
+        // In a real scenario we'd use RPC for atomic increment, but for simplicity we'll fetch then update
+        const { data: profile } = await sbClient.from('profiles').select('likes').eq('id', userId).single();
+        const currentLikes = profile && profile.likes ? parseInt(profile.likes, 10) : 0;
+        const newLikes = currentLikes + incrementAmount;
+        await sbClient.from('profiles').update({ likes: newLikes }).eq('id', userId);
+        return newLikes;
+    },
+
     async getProfile(userId) {
         if (!sbClient) return null;
         const { data } = await sbClient.from('profiles').select('*').eq('id', userId).single();

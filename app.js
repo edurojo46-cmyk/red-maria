@@ -1009,7 +1009,11 @@ var app = {
                         bioText.style.color = 'var(--clr-text-title)';
                     }
                 }
-            }).catch(function(e) { console.warn('[Profile] Error loading bio:', e); });
+                if (p && p.likes !== undefined) {
+                    var countEl = document.querySelector('.profile-like-count');
+                    if (countEl) countEl.textContent = p.likes;
+                }
+            }).catch(function(e) { console.warn('[Profile] Error loading profile details:', e); });
         }
 
         // Render each section independently so one error doesn't block the rest
@@ -1424,6 +1428,7 @@ function toggleProfileLike(el) {
     
     var isLiked = icon.classList.contains('ri-heart-fill');
     var count = parseInt(countEl.textContent, 10) || 0;
+    var increment = 0;
     
     if (isLiked) {
         icon.classList.remove('ri-heart-fill');
@@ -1431,11 +1436,18 @@ function toggleProfileLike(el) {
         icon.style.color = 'var(--clr-text-muted)';
         icon.style.transform = 'scale(1)';
         countEl.textContent = count - 1;
+        increment = -1;
     } else {
         icon.classList.remove('ri-heart-line');
         icon.classList.add('ri-heart-fill');
         icon.style.color = '#e74c3c'; // Rojo
         icon.style.transform = 'scale(1.15)';
         countEl.textContent = count + 1;
+        increment = 1;
+    }
+
+    var u = auth.getCurrentUser();
+    if (u && typeof db !== 'undefined' && db.updateProfileLikes) {
+        db.updateProfileLikes(u.id, increment).catch(function(e) { console.error('Error syncing likes:', e); });
     }
 }
