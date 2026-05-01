@@ -662,10 +662,21 @@ var app = {
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const country = document.getElementById('rosary-country') ? document.getElementById('rosary-country').value : '';
-            const city = document.getElementById('rosary-city') ? document.getElementById('rosary-city').value : '';
-            const place = document.getElementById('rosary-place').value.trim(), date = document.getElementById('rosary-date').value, time = document.getElementById('rosary-time').value, mystery = document.getElementById('rosary-mystery').value, intention = document.getElementById('rosary-intention').value.trim();
+            const citySelect = document.getElementById('rosary-city') ? document.getElementById('rosary-city').value : '';
+            const ciudadInput = document.getElementById('rosary-ciudad') ? document.getElementById('rosary-ciudad').value.trim() : '';
+            const city = ciudadInput || citySelect;
+            const place = document.getElementById('rosary-place').value.trim();
+            const date = document.getElementById('rosary-date').value;
+            const time = document.getElementById('rosary-time').value;
+            
             let hasErr = false;
-            [{id:'rosary-country',v:country,m:'Selecciona un país'},{id:'rosary-city',v:city,m:'Selecciona una localidad'},{id:'rosary-place',v:place,m:'Obligatorio'},{id:'rosary-date',v:date,m:'Obligatoria'},{id:'rosary-time',v:time,m:'Obligatoria'},{id:'rosary-mystery',v:mystery,m:'Selecciona uno'},{id:'rosary-intention',v:intention,m:'Obligatoria'}].forEach(f => {
+            [
+                {id:'rosary-country', v:country, m:'Selecciona un país'},
+                {id:'rosary-ciudad', v:city, m:'Ingresa una ciudad'},
+                {id:'rosary-place', v:place, m:'Obligatorio'},
+                {id:'rosary-date', v:date, m:'Obligatoria'},
+                {id:'rosary-time', v:time, m:'Obligatoria'}
+            ].forEach(f => {
                 const el = document.getElementById(f.id), g = el?.closest('.auth-field'), er = g?.querySelector('.field-error');
                 if (!f.v) { if (g) g.classList.add('has-error'); if (er) er.textContent = f.m; hasErr = true; }
                 else { if (g) { g.classList.remove('has-error'); g.classList.add('has-success'); } if (er) er.textContent = ''; }
@@ -677,7 +688,7 @@ var app = {
             const user = auth.getCurrentUser();
             const address = document.getElementById('rosary-address') ? document.getElementById('rosary-address').value.trim() : '';
             const countryName = document.getElementById('rosary-country') ? document.getElementById('rosary-country').options[document.getElementById('rosary-country').selectedIndex].text : '';
-            const rosary = { id: Date.now().toString(36)+Math.random().toString(36).substr(2), place: auth.sanitize(place), address: auth.sanitize(address), country: country, countryName: countryName, city: city, date, time, mystery, intention: auth.sanitize(intention), lat: this.pickerLocation.lat, lng: this.pickerLocation.lng, creatorId: user?.id||'anon', creatorName: user?.name||'Anónimo', createdAt: new Date().toISOString(), participants: 1 };
+            const rosary = { id: Date.now().toString(36)+Math.random().toString(36).substr(2), place: auth.sanitize(place), address: auth.sanitize(address), country: country, countryName: countryName, city: city, date, time, mystery: '', intention: '', lat: this.pickerLocation.lat, lng: this.pickerLocation.lng, creatorId: user?.id||'anon', creatorName: user?.name||'Anónimo', createdAt: new Date().toISOString(), participants: 1 };
             this.saveRosary(rosary); this.addRosaryCard(rosary);
             btn.classList.remove('loading'); btn.disabled = false;
             form.reset(); this.pickerLocation = null;
