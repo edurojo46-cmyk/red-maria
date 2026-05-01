@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link rel="stylesheet" href="index.css?v=39">
+    <link rel="stylesheet" href="index.css?v=40">
     <style>
         /* FORCE FIX FOR COMO REZAR - BYPASS CACHE */
         #screen-como-rezar .rezar-scrollarea {
@@ -360,6 +360,7 @@
                 <form id="create-rosary-form" class="auth-form" novalidate>
                     <div class="auth-field"><label for="rosary-country"><i class="ri-earth-line" style="color:#27ae60"></i> País</label><div class="input-wrapper"><select id="rosary-country" class="auth-select" onchange="updateCitySelect()"><option value="">Selecciona un país...</option><option value="AR">Argentina</option><option value="BO">Bolivia</option><option value="BR">Brasil</option><option value="CL">Chile</option><option value="CO">Colombia</option><option value="CR">Costa Rica</option><option value="CU">Cuba</option><option value="DO">República Dominicana</option><option value="EC">Ecuador</option><option value="SV">El Salvador</option><option value="ES">España</option><option value="GT">Guatemala</option><option value="HN">Honduras</option><option value="MX">México</option><option value="NI">Nicaragua</option><option value="PA">Panamá</option><option value="PY">Paraguay</option><option value="PE">Perú</option><option value="PR">Puerto Rico</option><option value="UY">Uruguay</option><option value="VE">Venezuela</option></select></div><span class="field-error"></span></div>
                     <div class="auth-field"><label for="rosary-city"><i class="ri-building-line" style="color:#2980b9"></i> Localidad</label><div class="input-wrapper"><select id="rosary-city" class="auth-select" disabled><option value="">Primero selecciona un país...</option></select></div><span class="field-error"></span></div>
+                    <div class="auth-field"><label for="rosary-ciudad"><i class="ri-building-4-line" style="color:#f39c12"></i> Ciudad</label><div class="input-wrapper"><input type="text" id="rosary-ciudad" placeholder="Ej: Rosario, Mar del Plata..." oninput="geocodeAddressDebounced()"/><span class="field-check"><i class="ri-check-line"></i></span></div><span class="field-error"></span></div>
                     <div class="auth-field"><label for="rosary-place"><i class="ri-map-pin-line" style="color:#e74c3c"></i> Nombre del Lugar</label><div class="input-wrapper"><input type="text" id="rosary-place" placeholder="Ej: Plaza San Martin"/><span class="field-check"><i class="ri-check-line"></i></span></div><span class="field-error"></span></div>
                     <div class="auth-field"><label for="rosary-address"><i class="ri-road-map-line" style="color:#8e44ad"></i> Direccion</label><div class="input-wrapper"><input type="text" id="rosary-address" placeholder="Ej: Av. Santa Fe 1234, Buenos Aires" oninput="geocodeAddressDebounced()"/><span class="field-check"><i class="ri-check-line"></i></span><span class="geocode-loader" id="geocode-loader" style="display:none;position:absolute;right:36px;top:50%;transform:translateY(-50%)"><i class="ri-loader-4-line ri-spin" style="color:var(--clr-accent)"></i></span></div><span class="field-hint" id="geocode-hint" style="font-size:0.75rem;color:var(--clr-text-muted);margin-top:2px"></span><span class="field-error"></span></div>
                     <div class="auth-field"><label for="rosary-date"><i class="ri-calendar-line" style="color:#e67e22"></i> Fecha</label><div class="input-wrapper"><input type="date" id="rosary-date"/><span class="field-check"><i class="ri-check-line"></i></span></div><span class="field-error"></span></div>
@@ -4009,16 +4010,24 @@ function geocodeAddressDebounced() {
 
 function geocodeAddress() {
     var address = document.getElementById('rosary-address').value.trim();
+    var cityInput = document.getElementById('rosary-ciudad');
+    var city = cityInput ? cityInput.value.trim() : '';
+    
+    var searchString = address;
+    if (city.length > 0) {
+        searchString = address.length > 0 ? address + ', ' + city : city;
+    }
+
     var hint = document.getElementById('geocode-hint');
     var loader = document.getElementById('geocode-loader');
-    if (address.length < 5) {
+    if (searchString.length < 4) {
         if (hint) hint.textContent = '';
         return;
     }
     if (loader) loader.style.display = 'inline';
-    if (hint) hint.textContent = 'Buscando direccion...';
+    if (hint) hint.textContent = 'Buscando ubicacion...';
 
-    fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(address) + '&limit=1&addressdetails=1', {
+    fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(searchString) + '&limit=1&addressdetails=1', {
         headers: { 'Accept-Language': 'es' }
     })
     .then(function(r) { return r.json(); })
