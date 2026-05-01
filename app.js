@@ -1416,3 +1416,26 @@ function saveProfileBio() {
         db.updateProfileBio(u.id, bio).catch(function(e) { console.error('Error saving bio:', e); });
     }
 }
+
+function toggleProfileLike(el) {
+    var icon = el.querySelector('.profile-like-icon');
+    var countEl = el.querySelector('.profile-like-count');
+    if (!icon || !countEl) return;
+    
+    var isLiked = icon.classList.contains('ri-heart-fill');
+    var count = parseInt(countEl.textContent, 10) || 0;
+    
+    if (isLiked) {
+        icon.classList.remove('ri-heart-fill');
+        icon.classList.add('ri-heart-line');
+        icon.style.color = 'var(--clr-text-muted)';
+        icon.style.transform = 'scale(1)';
+        countEl.textContent = count - 1;
+    } else {
+        icon.classList.remove('ri-heart-line');
+        icon.classList.add('ri-heart-fill');
+        icon.style.color = '#e74c3c'; // Rojo
+        icon.style.transform = 'scale(1.15)';
+        countEl.textContent = count + 1;
+    }
+}
