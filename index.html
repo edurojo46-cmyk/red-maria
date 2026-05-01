@@ -19,6 +19,24 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="index.css?v=65">
+    <script>
+        // DEV FIX: Force unregister service workers on localhost
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    for(let registration of registrations) {
+                        registration.unregister();
+                        console.log('Unregistered SW on localhost');
+                    }
+                });
+            }
+            if ('caches' in window) {
+                caches.keys().then(function(names) {
+                    for (let name of names) caches.delete(name);
+                });
+            }
+        }
+    </script>
     <style>
         /* FORCE FIX FOR COMO REZAR - BYPASS CACHE */
         #screen-como-rezar .rezar-scrollarea {
