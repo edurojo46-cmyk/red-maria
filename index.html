@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link rel="stylesheet" href="index.css?v=50">
+    <link rel="stylesheet" href="index.css?v=51">
     <style>
         /* FORCE FIX FOR COMO REZAR - BYPASS CACHE */
         #screen-como-rezar .rezar-scrollarea {
@@ -41,7 +41,7 @@
     <!-- MOBILE HEADER NAV -->
     <div class="mobile-header" id="mobile-header">
         <div class="mobile-header-top">
-            <img src="assets/mary_avatar.png" alt="Logo" class="mobile-header-avatar"/>
+            <div class="mobile-header-avatar" style="background-image: url('assets/mary_avatar.png'); background-size: 140%; background-position: center center; background-repeat: no-repeat; display: inline-block;"></div>
             <span class="mobile-header-title">Red Maria</span>
             <div style="display:flex;gap:4px">
                 <button class="hamburger-btn" onclick="openGlobalSearch()"><i class="ri-search-line"></i></button>
@@ -67,7 +67,7 @@
 
     <!-- DESKTOP HEADER -->
     <header class="desktop-header glass">
-        <div class="header-logo"><img src="assets/mary_avatar.png" alt="Logo" class="header-avatar"/><span>Red Maria</span></div>
+        <div class="header-logo"><div class="header-avatar" style="background-image: url('assets/mary_avatar.png'); background-size: 140%; background-position: center center; background-repeat: no-repeat; display: inline-block;"></div><span>Red Maria</span></div>
         <nav class="header-nav">
             <a href="#" class="active" onclick="app.navigate('screen-splash')">Inicio</a>
             <a href="#" onclick="app.navigate('screen-map')">Buscar Rosarios</a>
