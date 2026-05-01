@@ -1562,10 +1562,10 @@ body {
     font-family: 'Inter', sans-serif;
 }
 
-.rezando-btn i {
+.rezando-emoji {
     font-size: 2.2rem;
-    color: #3DA3D4;
-    transition: transform 0.3s, color 0.3s;
+    transition: transform 0.3s;
+    line-height: 1;
 }
 
 .rezando-btn:hover {
@@ -1582,8 +1582,7 @@ body {
     animation: rezandoPulse 2s ease-in-out infinite;
 }
 
-.rezando-btn.active i {
-    color: white;
+.rezando-btn.active .rezando-emoji {
     transform: scale(1.1);
 }
 
