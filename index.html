@@ -5213,11 +5213,20 @@ async function loadCenaculosFromSupabase() {
             var isMember = false;
             // 1. Check creator_id
             if (myId && c.creator_id === myId) isMember = true;
-            // 2. Check members list
+            // 2. Check members list - multiple matching strategies
             members.forEach(function(m) {
-                if (m.name && m.name.toLowerCase() === myName) isMember = true;
+                var mName = (m.name || '').toLowerCase();
+                var mUser = (m.username || '').toLowerCase();
+                // Exact name match
+                if (mName && mName === myName) isMember = true;
+                // Name contains (e.g. "edy" matches "Edy")
+                if (mName && myName && (mName.indexOf(myName) !== -1 || myName.indexOf(mName) !== -1)) isMember = true;
+                // user_id match
                 if (myId && m.user_id && m.user_id === myId) isMember = true;
-                if (m.username && m.username.toLowerCase() === myUsername.toLowerCase()) isMember = true;
+                // username match
+                if (mUser && myUsername && mUser === myUsername.toLowerCase()) isMember = true;
+                // email-derived username match
+                if (mUser && myEmail && mUser === '@' + myEmail.split('@')[0].toLowerCase()) isMember = true;
             });
             // 3. For cenaculos with no members data, show if creator email matches
             if (!isMember && members.length === 0 && c.creator_id) {
@@ -5429,12 +5438,21 @@ function showInviteMore() {
     document.getElementById('cenaculo-invite-input').focus();
 }
 
-function inviteMember() {
+async function inviteMember() {
     var input = document.getElementById('cenaculo-invite-input');
-    var username = input.value.trim().replace(/^@?/, '@');
-    if (!username || username.length < 2) { alert('Ingresa un nombre de usuario valido'); return; }
+    var rawInput = input.value.trim();
+    if (!rawInput || rawInput.length < 2) { alert('Ingresa un nombre de usuario válido'); return; }
 
-    var displayName = username.replace('@','').replace(/_/g,' ').replace(/\b\w/g, function(l){ return l.toUpperCase(); });
+    // Search for user in Supabase by name (case-insensitive)
+    var allUsers = await db.getAllUsers();
+    var searchTerm = rawInput.replace(/^@/, '').toLowerCase();
+    var foundUser = allUsers.find(function(u) {
+        return u.name.toLowerCase() === searchTerm ||
+               (u.username && u.username.toLowerCase() === '@' + searchTerm);
+    });
+
+    var displayName = foundUser ? foundUser.name : rawInput.replace(/^@/, '').replace(/_/g,' ').replace(/\b\w/g, function(l){ return l.toUpperCase(); });
+    var username = foundUser ? (foundUser.username || '@' + foundUser.name.toLowerCase().replace(/\s+/g,'_')) : '@' + searchTerm.replace(/\s+/g,'_');
 
     // Add to the members list visually
     var membersDiv = document.getElementById('cenaculo-members');
@@ -5444,14 +5462,38 @@ function inviteMember() {
     membersDiv.appendChild(row);
     input.value = '';
 
-    // Save to localStorage if it's a user-created cenaculo
-    if (currentCenaculoId && currentCenaculoId.startsWith('c_')) {
+    // Save to localStorage
+    if (currentCenaculoId) {
         var saved = getSavedCenaculos();
         if (saved[currentCenaculoId]) {
-            saved[currentCenaculoId].members.push({name: displayName, username: username, role:'miembro', active:false});
+            saved[currentCenaculoId].members.push({name: displayName, username: username, role:'miembro', active:false, profileId: foundUser ? foundUser.id : null});
             saveCenaculos(saved);
         }
     }
+
+    // Sync to Supabase: add member to cenaculo_members table
+    if (currentCenaculoId && typeof db !== 'undefined' && db.addCenaculoMember) {
+        try {
+            await db.addCenaculoMember(currentCenaculoId, username, displayName);
+            console.log('[Cenaculos] Member added to Supabase:', displayName);
+        } catch(e) { console.warn('[Cenaculos] Error syncing member:', e.message); }
+    }
+
+    // Send chat notification to invited user
+    if (foundUser && typeof db !== 'undefined' && db.sendMessage) {
+        var user = auth.getCurrentUser();
+        var myProfile = user ? await db.getProfileByEmail(user.email) : null;
+        var myId = myProfile ? myProfile.id : null;
+        var c = getSavedCenaculos()[currentCenaculoId];
+        var cName = c ? c.name : 'un Cenáculo';
+        if (myId) {
+            var msgText = '📨 ¡Te invitaron al Cenáculo "' + cName + '"! Abrí la sección Cenáculos para unirte. 🙏';
+            await db.sendMessage(myId, foundUser.id, msgText);
+            console.log('[Cenaculos] Invitation sent to', foundUser.name);
+        }
+    }
+
+    showMsgToast(foundUser ? '✅ ' + displayName + ' invitado al cenáculo' : '⚠️ Usuario no encontrado, invitación guardada localmente');
 }
 
 var _cenaculoVideoCallActive = false;

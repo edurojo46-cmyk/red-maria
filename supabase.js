@@ -311,12 +311,27 @@ var db = {
 
     async addCenaculoMember(cenaculoId, username, name) {
         if (!sbClient) return;
-        await sbClient.from('cenaculo_members').insert({
+        // Try to find user's profile to link user_id
+        var memberPayload = {
             cenaculo_id: cenaculoId,
             username: username,
             name: name,
             role: 'miembro'
-        });
+        };
+        // Search by name to get the real user_id
+        try {
+            var { data: profiles } = await sbClient.from('profiles')
+                .select('id, name, username')
+                .ilike('name', name)
+                .limit(1);
+            if (profiles && profiles.length > 0) {
+                memberPayload.user_id = profiles[0].id;
+                console.log('[DB] Found user_id for member:', name, '->', profiles[0].id);
+            }
+        } catch(e) { console.warn('[DB] Profile lookup failed for member:', e.message); }
+        var { error } = await sbClient.from('cenaculo_members').insert(memberPayload);
+        if (error) console.error('[DB] Error adding cenaculo member:', error.message, error.details);
+        else console.log('[DB] Cenaculo member added:', name);
     },
 
     async leaveCenaculoDb(cenaculoId, userId) {
