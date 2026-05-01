@@ -1564,8 +1564,16 @@ body {
 }
 
 @keyframes rezandoOffPulse {
-    0%, 100% { box-shadow: 0 4px 16px rgba(46, 139, 192, 0.15); border-color: rgba(46, 139, 192, 0.4); }
-    50% { box-shadow: 0 4px 35px rgba(46, 139, 192, 0.55); border-color: rgba(46, 139, 192, 0.8); }
+    0%, 100% { 
+        box-shadow: 0 4px 16px rgba(46, 139, 192, 0.2); 
+        border-color: rgba(46, 139, 192, 0.5); 
+        transform: scale(1);
+    }
+    50% { 
+        box-shadow: 0 4px 45px rgba(46, 139, 192, 0.7), 0 0 20px rgba(46, 139, 192, 0.4); 
+        border-color: rgba(46, 139, 192, 1); 
+        transform: scale(1.04);
+    }
 }
 
 .rezando-emoji {
@@ -1618,11 +1626,18 @@ body {
 .rezando-map-wrapper {
     width: 100%;
     height: 260px;
-    border-radius: 16px;
-    overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.5);
-    box-shadow: 0 4px 20px rgba(46, 139, 192, 0.12);
-    animation: fadeInUp 0.4s ease-out;
+    border-radius: 20px;
+    padding: 4px;
+    background: linear-gradient(45deg, #ff9a9e, #fecfef, #a1c4fd, #c2e9fb);
+    background-size: 300% 300%;
+    box-shadow: 0 6px 20px rgba(161, 196, 253, 0.4);
+    animation: mapGradientFlow 6s ease infinite, fadeInUp 0.4s ease-out;
+}
+
+@keyframes mapGradientFlow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
 }
 
 .rezando-marker {
