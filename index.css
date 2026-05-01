@@ -1245,12 +1245,10 @@ body {
 }
 
 /* Confirmed Items */
-.confirmed-list { display: flex; flex-direction: column; gap: 6px; }
+.confirmed-list { display: flex; flex-direction: row; flex-wrap: wrap; gap: 14px; margin-top: 10px; }
 .confirmed-item {
-    display: flex; align-items: center; gap: 12px;
-    padding: 10px 14px; border-radius: 14px;
-    background: rgba(255,255,255,0.5); backdrop-filter: blur(6px);
-    border: 1px solid rgba(200,220,240,0.3);
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    padding: 0; background: transparent; border: none; backdrop-filter: none;
     animation: fadeInUp 0.3s ease-out both;
 }
 .confirmed-avatar {
@@ -7976,24 +7974,26 @@ body {
 /* Confirmed List */
 .confirmed-list {
     display: flex;
-    flex-direction: column;
-    gap: 8px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-top: 10px;
 }
 
 .confirmed-item {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 12px;
-    padding: 10px 14px;
-    background: var(--glass-bg);
-    backdrop-filter: blur(14px);
-    border: 1px solid var(--glass-border);
-    border-radius: 14px;
+    gap: 6px;
+    padding: 0;
+    background: transparent;
+    backdrop-filter: none;
+    border: none;
     transition: transform 0.2s;
 }
 
 .confirmed-item:hover {
-    transform: translateX(4px);
+    transform: translateY(-4px);
 }
 
 .confirmed-avatar {
