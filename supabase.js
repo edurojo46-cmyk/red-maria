@@ -58,6 +58,11 @@ var db = {
         });
     },
 
+    async updateProfileBio(userId, bio) {
+        if (!sbClient) return;
+        await sbClient.from('profiles').update({ bio: bio }).eq('id', userId);
+    },
+
     async getProfile(userId) {
         if (!sbClient) return null;
         const { data } = await sbClient.from('profiles').select('*').eq('id', userId).single();

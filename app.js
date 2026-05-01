@@ -984,6 +984,34 @@ var app = {
         // Restore saved city from geolocation
         const savedCity = localStorage.getItem('redmaria_user_city');
         if (savedCity && pc) pc.textContent = savedCity;
+
+        // Restore saved bio
+        const savedBio = localStorage.getItem('redmaria_user_bio');
+        const bioText = document.getElementById('profile-bio-text');
+        if (bioText) {
+            if (savedBio) {
+                bioText.textContent = '"' + savedBio + '"';
+                bioText.style.fontStyle = 'normal';
+                bioText.style.color = 'var(--clr-text-title)';
+            } else {
+                bioText.textContent = '"Toca aquí para agregar una frase que te represente..."';
+                bioText.style.fontStyle = 'italic';
+                bioText.style.color = 'var(--clr-text-muted)';
+            }
+        }
+        if (typeof db !== 'undefined' && db.getProfile) {
+            db.getProfile(u.id).then(function(p) {
+                if (p && p.bio) {
+                    localStorage.setItem('redmaria_user_bio', p.bio);
+                    if (bioText) {
+                        bioText.textContent = '"' + p.bio + '"';
+                        bioText.style.fontStyle = 'normal';
+                        bioText.style.color = 'var(--clr-text-title)';
+                    }
+                }
+            }).catch(function(e) { console.warn('[Profile] Error loading bio:', e); });
+        }
+
         // Render each section independently so one error doesn't block the rest
         try { this.renderProfileSlots(); } catch(e) { console.error('[Profile] renderProfileSlots error:', e); }
         try { this.renderProfileJoined(); } catch(e) { console.error('[Profile] renderProfileJoined error:', e); }
@@ -1332,3 +1360,59 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Ensure global access for inline onclick handlers
 window.app = app;
+
+// Profile Bio functions
+function editProfileBio() {
+    var textEl = document.getElementById('profile-bio-text');
+    var editorEl = document.getElementById('profile-bio-editor');
+    if (textEl) textEl.style.display = 'none';
+    if (editorEl) editorEl.style.display = 'flex';
+    var savedBio = localStorage.getItem('redmaria_user_bio') || '';
+    var inputEl = document.getElementById('profile-bio-input');
+    if (inputEl) {
+        inputEl.value = savedBio;
+        inputEl.focus();
+    }
+}
+
+function cancelEditBio() {
+    var textEl = document.getElementById('profile-bio-text');
+    var editorEl = document.getElementById('profile-bio-editor');
+    if (textEl) textEl.style.display = 'block';
+    if (editorEl) editorEl.style.display = 'none';
+}
+
+function saveProfileBio() {
+    var inputEl = document.getElementById('profile-bio-input');
+    if (!inputEl) return;
+    var bio = inputEl.value.trim();
+    // check word count
+    var words = bio.match(/\S+/g);
+    var wordCount = words ? words.length : 0;
+    if (wordCount > 80) {
+        if (typeof showMsgToast === 'function') showMsgToast('La frase no puede tener más de 80 palabras.');
+        return;
+    }
+    
+    localStorage.setItem('redmaria_user_bio', bio);
+    
+    var bioText = document.getElementById('profile-bio-text');
+    if (bioText) {
+        if (bio) {
+            bioText.textContent = '"' + bio + '"';
+            bioText.style.fontStyle = 'normal';
+            bioText.style.color = 'var(--clr-text-title)';
+        } else {
+            bioText.textContent = '"Toca aquí para agregar una frase que te represente..."';
+            bioText.style.fontStyle = 'italic';
+            bioText.style.color = 'var(--clr-text-muted)';
+        }
+    }
+    
+    cancelEditBio();
+    
+    var u = auth.getCurrentUser();
+    if (u && typeof db !== 'undefined' && db.updateProfileBio) {
+        db.updateProfileBio(u.id, bio).catch(function(e) { console.error('Error saving bio:', e); });
+    }
+}

@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link rel="stylesheet" href="index.css?v=47">
+    <link rel="stylesheet" href="index.css?v=48">
     <style>
         /* FORCE FIX FOR COMO REZAR - BYPASS CACHE */
         #screen-como-rezar .rezar-scrollarea {
@@ -1901,7 +1901,22 @@ if (document.readyState !== 'loading') renderIglesiasGrid();
                     <div class="profile-avatar-overlay"><i class="ri-camera-fill"></i></div>
                     <input type="file" id="avatar-upload" accept="image/*" style="display:none" onchange="handleAvatarUpload(this)">
                 </div>
-                <div class="profile-info"><h3 id="profile-user-name">Santiago</h3><p id="profile-user-city">Buenos Aires</p></div>
+                <div class="profile-info">
+                    <h3 id="profile-user-name">Santiago</h3>
+                    <p id="profile-user-city">Buenos Aires</p>
+                    <div class="profile-bio-container" style="margin-top:8px;">
+                        <p id="profile-bio-text" class="profile-bio-text" onclick="editProfileBio()" style="font-size:0.85rem;color:var(--clr-text-muted);font-style:italic;cursor:pointer;line-height:1.3;margin:0;word-break:break-word;">
+                            "Toca aquí para agregar una frase que te represente..."
+                        </p>
+                        <div id="profile-bio-editor" style="display:none;flex-direction:column;gap:8px;margin-top:5px;">
+                            <textarea id="profile-bio-input" class="profile-bio-input" placeholder="Escribe tu frase (máx 80 palabras)..." style="width:100%;border-radius:12px;padding:8px;border:1px solid rgba(0,0,0,0.1);font-size:0.85rem;font-family:inherit;resize:none;background:rgba(255,255,255,0.7);" rows="3"></textarea>
+                            <div style="display:flex;justify-content:flex-end;gap:6px;">
+                                <button class="btn btn-sm" onclick="cancelEditBio()" style="padding:4px 10px;font-size:0.8rem;background:transparent;color:var(--clr-text-muted);border:1px solid var(--clr-text-muted);">Cancelar</button>
+                                <button class="btn btn-sm" onclick="saveProfileBio()" style="padding:4px 10px;font-size:0.8rem;">Guardar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="glass card devotion-card"><div class="card-title-row"><span>Devoción: Ntra. Sra. de Luján</span><i class="ri-heart-fill heart-icon"></i></div><img src="assets/basilica.png" id="img-devotion" alt="Lujan" class="devotion-img"/></div>
 
