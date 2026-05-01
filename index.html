@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link rel="stylesheet" href="index.css?v=40">
+    <link rel="stylesheet" href="index.css?v=41">
     <style>
         /* FORCE FIX FOR COMO REZAR - BYPASS CACHE */
         #screen-como-rezar .rezar-scrollarea {
@@ -365,8 +365,7 @@
                     <div class="auth-field"><label for="rosary-address"><i class="ri-road-map-line" style="color:#8e44ad"></i> Direccion</label><div class="input-wrapper"><input type="text" id="rosary-address" placeholder="Ej: Av. Santa Fe 1234, Buenos Aires" oninput="geocodeAddressDebounced()"/><span class="field-check"><i class="ri-check-line"></i></span><span class="geocode-loader" id="geocode-loader" style="display:none;position:absolute;right:36px;top:50%;transform:translateY(-50%)"><i class="ri-loader-4-line ri-spin" style="color:var(--clr-accent)"></i></span></div><span class="field-hint" id="geocode-hint" style="font-size:0.75rem;color:var(--clr-text-muted);margin-top:2px"></span><span class="field-error"></span></div>
                     <div class="auth-field"><label for="rosary-date"><i class="ri-calendar-line" style="color:#e67e22"></i> Fecha</label><div class="input-wrapper"><input type="date" id="rosary-date"/><span class="field-check"><i class="ri-check-line"></i></span></div><span class="field-error"></span></div>
                     <div class="auth-field"><label for="rosary-time"><i class="ri-time-line" style="color:#6366f1"></i> Hora</label><div class="input-wrapper"><input type="time" id="rosary-time"/><span class="field-check"><i class="ri-check-line"></i></span></div><span class="field-error"></span></div>
-                    <div class="auth-field"><label for="rosary-mystery"><i class="ri-sparkling-line" style="color:#f0a500"></i> Misterios</label><div class="input-wrapper"><select id="rosary-mystery" class="auth-select"><option value="">Selecciona un misterio...</option><option value="Gozosos">Misterios Gozosos</option><option value="Dolorosos">Misterios Dolorosos</option><option value="Gloriosos">Misterios Gloriosos</option><option value="Luminosos">Misterios Luminosos</option></select></div><span class="field-error"></span></div>
-                    <div class="auth-field"><label for="rosary-intention"><i class="ri-candle-line" style="color:#e84393"></i> Intencion</label><div class="input-wrapper"><input type="text" id="rosary-intention" placeholder="Ej: Por la paz del mundo"/><span class="field-check"><i class="ri-check-line"></i></span></div><span class="field-error"></span></div>
+
                     <div class="auth-field"><label><i class="ri-map-2-line" style="color:#00b894"></i> Ubicacion <span class="label-hint">(se marca automaticamente con la direccion)</span></label><div class="picker-map-container"><div id="picker-map"></div><div class="picker-map-overlay" id="picker-overlay"><i class="ri-map-pin-add-fill"></i><span>Toca para elegir ubicacion o escribe la direccion arriba</span></div></div><div class="picker-coords" id="picker-coords"></div><span class="field-error" id="rosary-location-error"></span></div>
 
                     <button type="submit" class="btn btn-primary btn-auth-submit btn-create-rosary"><span class="btn-text"><i class="ri-check-double-fill"></i> Crear Rosario</span><span class="btn-loader"><i class="ri-loader-4-line"></i></span></button>
