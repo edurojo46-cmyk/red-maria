@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link rel="stylesheet" href="index.css?v=43">
+    <link rel="stylesheet" href="index.css?v=44">
     <style>
         /* FORCE FIX FOR COMO REZAR - BYPASS CACHE */
         #screen-como-rezar .rezar-scrollarea {
@@ -2530,6 +2530,28 @@ async function _initRealChatInner() {
     }
     if (chatSubscription) { try { chatSubscription.unsubscribe(); } catch(e){} }
     if (myId) { chatSubscription = db.subscribeToMessages(myId, function(newMsg) {
+        if (newMsg.text && newMsg.text.indexOf('__VIDEOCALL__|') === 0) {
+            var parts = newMsg.text.split('|');
+            var callId = parts[1];
+            var callerName = parts[2] || 'Usuario';
+            if (typeof showIncomingCenaculoCall === 'function') {
+                showIncomingCenaculoCall({
+                    cenaculoId: callId,
+                    roomName: callId,
+                    callerName: callerName,
+                    cenaculoName: 'Llamada Privada',
+                    cenaculoColor: '#2E8BC0',
+                    cenaculoIcon: 'ri-user-fill'
+                });
+            }
+            if (currentChatId === newMsg.from_id) {
+                appendMessageBubble(newMsg, false);
+                db.markConversationAsRead(myId, newMsg.from_id);
+            }
+            refreshContactList();
+            return;
+        }
+
         incrementNavMsgBadge();
         if (currentChatId === newMsg.from_id) {
             appendMessageBubble(newMsg, false);
@@ -2658,7 +2680,9 @@ function appendMessageBubble(msg, isMe) {
     // Detect image messages
     var textContent = msg.text;
     var isImage = false;
-    if (textContent && textContent.indexOf('[VID]') === 0) {
+    if (textContent && textContent.indexOf('__VIDEOCALL__|') === 0) {
+        textContent = '<div style="display:flex;align-items:center;gap:6px;font-weight:600"><i class="ri-vidicon-fill" style="font-size:1.1rem"></i> Videollamada</div>';
+    } else if (textContent && textContent.indexOf('[VID]') === 0) {
         var vidSrc = textContent.substring(5);
         textContent = '<video src="' + vidSrc + '" controls playsinline preload="metadata" style="max-width:100%;border-radius:12px;margin-bottom:4px;max-height:300px"></video>';
         isImage = true;
@@ -3003,163 +3027,39 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 
-// === Chat Video Call with Ringing ===
-var callState = { overlay: null, ringtoneInterval: null, audioCtx: null, answerTimeout: null };
-
-function chatVideoCall() {
+// === Chat Video Call with WebRTC ===
+async function chatVideoCall() {
     if (!currentChatId) return;
-    var c = chatData[currentChatId];
-    if (!c) return;
 
-    // Create call overlay
-    var overlay = document.createElement('div');
-    overlay.className = 'call-overlay';
-    overlay.id = 'call-overlay';
-    overlay.innerHTML =
-        '<div class="call-card">' +
-            '<div class="call-pulse-ring"></div>' +
-            '<div class="call-pulse-ring call-pulse-ring-2"></div>' +
-            '<div class="call-avatar" style="background:linear-gradient(135deg,' + (c.color || '#3DA3D4') + ',' + (c.color2 || '#2E8BC0') + ')">' + (c.name.charAt(0).toUpperCase()) + '</div>' +
-            '<h2 class="call-name">' + c.name + '</h2>' +
-            '<p class="call-status" id="call-status-text"><i class="ri-phone-fill call-ring-icon"></i> Llamando...</p>' +
-            '<div class="call-actions">' +
-                '<button class="call-btn call-btn-decline" onclick="endCall(false)" title="Colgar"><i class="ri-phone-fill"></i></button>' +
-            '</div>' +
-        '</div>';
-    document.body.appendChild(overlay);
-    callState.overlay = overlay;
+    var localUser = auth.getCurrentUser();
+    if (!localUser) { showMsgToast('Inicia sesión para llamar'); return; }
+    
+    var profile = null;
+    try { profile = await db.getProfileByEmail(localUser.email); } catch(e){}
+    if (!profile) { showMsgToast('Inicia sesión para llamar'); return; }
 
-    // Start ringtone using Web Audio API
-    startRingtone();
+    var myId = profile.id;
+    var callId = 'chat_' + (myId < currentChatId ? myId + '_' + currentChatId : currentChatId + '_' + myId);
 
-    // Waiting for real connection (no simulation)
-}
+    // Initialize signaling channel
+    if (typeof joinGcChannel === 'function') joinGcChannel(callId);
 
-function startRingtone() {
-    try {
-        var ctx = new (window.AudioContext || window.webkitAudioContext)();
-        callState.audioCtx = ctx;
+    // Send the push notification (ring) via DB
+    db.sendMessage(myId, currentChatId, '__VIDEOCALL__|' + callId + '|' + profile.name).catch(function(e){ console.error(e); });
 
-        function playRing() {
-            // Ring tone: two-tone beep pattern
-            var osc1 = ctx.createOscillator();
-            var osc2 = ctx.createOscillator();
-            var gain = ctx.createGain();
+    // Add to chat locally so user sees they initiated it
+    var msgObj = { text: '__VIDEOCALL__|' + callId, created_at: new Date().toISOString(), from_id: myId };
+    appendMessageBubble(msgObj, true);
 
-            osc1.type = 'sine';
-            osc1.frequency.value = 440;
-            osc2.type = 'sine';
-            osc2.frequency.value = 480;
+    // Launch caller UI
+    if (typeof _vcInitCaller === 'function') _vcInitCaller(callId);
 
-            gain.gain.value = 0.15;
-
-            osc1.connect(gain);
-            osc2.connect(gain);
-            gain.connect(ctx.destination);
-
-            var now = ctx.currentTime;
-            osc1.start(now);
-            osc2.start(now);
-            osc1.stop(now + 1);
-            osc2.stop(now + 1);
-
-            // Second ring after pause
-            var osc3 = ctx.createOscillator();
-            var osc4 = ctx.createOscillator();
-            var gain2 = ctx.createGain();
-            osc3.type = 'sine';
-            osc3.frequency.value = 440;
-            osc4.type = 'sine';
-            osc4.frequency.value = 480;
-            gain2.gain.value = 0.15;
-            osc3.connect(gain2);
-            osc4.connect(gain2);
-            gain2.connect(ctx.destination);
-            osc3.start(now + 1.2);
-            osc4.start(now + 1.2);
-            osc3.stop(now + 2.2);
-            osc4.stop(now + 2.2);
-        }
-
-        playRing();
-        callState.ringtoneInterval = setInterval(playRing, 3500);
-    } catch(e) {
-        console.log('Audio not available:', e);
-    }
-}
-
-function stopRingtone() {
-    if (callState.ringtoneInterval) {
-        clearInterval(callState.ringtoneInterval);
-        callState.ringtoneInterval = null;
-    }
-    if (callState.audioCtx) {
-        try { callState.audioCtx.close(); } catch(e) {}
-        callState.audioCtx = null;
-    }
-}
-
-function answerCall() {
-    stopRingtone();
-
-    var statusEl = document.getElementById('call-status-text');
-    if (statusEl) {
-        statusEl.innerHTML = '<i class="ri-vidicon-fill" style="color:#27ae60"></i> Conectando...';
-        statusEl.style.color = '#27ae60';
-    }
-
-    // Play answer sound
-    try {
-        var ctx = new (window.AudioContext || window.webkitAudioContext)();
-        var osc = ctx.createOscillator();
-        var gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.value = 600;
-        gain.gain.value = 0.1;
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.3);
-        setTimeout(function() { ctx.close(); }, 500);
-    } catch(e) {}
-
-    // Open Jitsi after brief delay
     setTimeout(function() {
-        var roomName = 'RedMaria_' + currentChatId + '_' + Date.now().toString(36);
-        var jitsiUrl = 'https://framatalk.org/' + roomName;
-        window.open(jitsiUrl, '_blank');
-
-        // Log in chat
-        var now = new Date();
-        var time = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
-        if (chatData[currentChatId]) {
-            chatData[currentChatId].messages.push({from:'me', text:'📹 Videollamada iniciada', time:time});
-            saveChats();
-            renderMessages();
-        }
-
-        endCall(true);
-    }, 1500);
-}
-
-function endCall(answered) {
-    stopRingtone();
-    if (callState.answerTimeout) {
-        clearTimeout(callState.answerTimeout);
-        callState.answerTimeout = null;
-    }
-    var overlay = document.getElementById('call-overlay');
-    if (overlay) {
-        overlay.classList.add('call-fade-out');
-        setTimeout(function() { overlay.remove(); }, 300);
-    }
-    if (!answered && currentChatId && chatData[currentChatId]) {
-        var now = new Date();
-        var time = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
-        chatData[currentChatId].messages.push({from:'me', text:'📵 Llamada cancelada', time:time});
-        saveChats();
-        renderMessages();
-    }
+        var titleEl = document.getElementById('videocall-overlay-title');
+        var partnerNameEl = document.getElementById('chat-conv-name');
+        var partnerName = partnerNameEl ? partnerNameEl.textContent : 'Usuario';
+        if (titleEl) titleEl.textContent = 'Llamando a ' + partnerName + '...';
+    }, 400);
 }
 
 // === Chat More Menu ===
