@@ -135,6 +135,7 @@ var app = {
                 totalPeople += pCount;
                 const icon = L.divIcon({ className: 'custom-marker-wrapper', html: '<div class="custom-map-marker user-marker"><i class="ri-map-pin-fill" style="font-size:1rem;color:white"></i><span class="marker-count">' + pCount + '</span></div>', iconSize: [36, 44], iconAnchor: [18, 44] });
                 const marker = L.marker([r.lat, r.lng], { icon }).addTo(this.buscarMap);
+                marker.rosaryData = r;
                 marker.bindPopup(() => this._buildMapPopup(r.id, r.place, r.time, r.mystery, r.intention, r.participants || 1), { className: 'rosary-map-popup', maxWidth: 260 });
                 this._buscarMarkers.push(marker);
             }
@@ -272,12 +273,29 @@ var app = {
         const cards = document.querySelectorAll('#rosary-list .rosary-card');
         const q = query.toLowerCase().trim();
         let visible = 0;
+        let firstMatchMarker = null;
+
         cards.forEach(card => {
             const text = card.textContent.toLowerCase();
             const show = !q || text.includes(q);
             card.style.display = show ? '' : 'none';
             if (show) visible++;
         });
+
+        if (this._buscarMarkers) {
+            this._buscarMarkers.forEach(m => {
+                if (!m.rosaryData) return;
+                const match = !q || (m.rosaryData.place && m.rosaryData.place.toLowerCase().includes(q)) || (m.rosaryData.intention && m.rosaryData.intention.toLowerCase().includes(q));
+                if (match && !firstMatchMarker && q.length > 2) {
+                    firstMatchMarker = m;
+                }
+            });
+            if (firstMatchMarker) {
+                this.buscarMap.setView(firstMatchMarker.getLatLng(), 14);
+                setTimeout(() => firstMatchMarker.openPopup(), 300);
+            }
+        }
+
         const countEl = document.getElementById('buscar-cards-count');
         if (countEl) countEl.textContent = visible + ' encontrados';
         const emptyEl = document.getElementById('buscar-empty');
