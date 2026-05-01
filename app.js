@@ -1017,8 +1017,8 @@ var app = {
                 bioText.style.color = 'var(--clr-text-muted)';
             }
         }
-        if (typeof db !== 'undefined' && db.getProfile) {
-            db.getProfile(u.id).then(function(p) {
+        if (typeof db !== 'undefined' && db.getProfileByEmail) {
+            db.getProfileByEmail(u.email).then(function(p) {
                 if (p && p.bio) {
                     localStorage.setItem('redmaria_user_bio', p.bio);
                     if (bioText) {
@@ -1466,6 +1466,6 @@ function toggleProfileLike(el) {
 
     var u = auth.getCurrentUser();
     if (u && typeof db !== 'undefined' && db.updateProfileLikes) {
-        db.updateProfileLikes(u.id, increment).catch(function(e) { console.error('Error syncing likes:', e); });
+        db.updateProfileLikes(u.email, increment).catch(function(e) { console.error('Error syncing likes:', e); });
     }
 }

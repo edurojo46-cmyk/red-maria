@@ -63,13 +63,27 @@ var db = {
         await sbClient.from('profiles').update({ bio: bio }).eq('id', userId);
     },
 
-    async updateProfileLikes(userId, incrementAmount) {
+    async updateProfileLikes(userIdOrEmail, incrementAmount) {
         if (!sbClient) return;
-        // In a real scenario we'd use RPC for atomic increment, but for simplicity we'll fetch then update
-        const { data: profile } = await sbClient.from('profiles').select('likes').eq('id', userId).single();
+        
+        let profileMatch = sbClient.from('profiles').select('likes');
+        if (userIdOrEmail.includes('@')) {
+            profileMatch = profileMatch.eq('email', userIdOrEmail);
+        } else {
+            profileMatch = profileMatch.eq('id', userIdOrEmail);
+        }
+        
+        const { data: profile } = await profileMatch.single();
         const currentLikes = profile && profile.likes ? parseInt(profile.likes, 10) : 0;
         const newLikes = currentLikes + incrementAmount;
-        await sbClient.from('profiles').update({ likes: newLikes }).eq('id', userId);
+        
+        let updateMatch = sbClient.from('profiles').update({ likes: newLikes });
+        if (userIdOrEmail.includes('@')) {
+            updateMatch = updateMatch.eq('email', userIdOrEmail);
+        } else {
+            updateMatch = updateMatch.eq('id', userIdOrEmail);
+        }
+        await updateMatch;
         return newLikes;
     },
 
@@ -91,7 +105,7 @@ var db = {
     async getProfileByEmail(email) {
         if (!sbClient) return null;
         const { data } = await sbClient.from('profiles')
-            .select('id, name, username, email')
+            .select('*')
             .eq('email', email)
             .order('updated_at', { ascending: false })
             .limit(1);
