@@ -112,9 +112,29 @@ var db = {
             .select('*')
             .gte('date', new Date().toISOString().split('T')[0])
             .order('date', { ascending: true });
+            
         if (error) { console.error('[DB] Error loading rosaries:', error.message, error); return getLocal('rosaries'); }
-        console.log('[DB] Rosaries from Supabase:', data ? data.length : 0);
-        return data || [];
+        
+        // Filter out rosaries that are older than 10 hours from their scheduled start time
+        var filteredData = [];
+        if (data) {
+            var now = new Date();
+            for (var i = 0; i < data.length; i++) {
+                var r = data[i];
+                if (r.date && r.time) {
+                    var rosaryTime = new Date(r.date + 'T' + r.time);
+                    var diffHours = (now - rosaryTime) / (1000 * 60 * 60);
+                    // If it's been more than 10 hours since the start time, skip it
+                    if (diffHours > 10) {
+                        continue;
+                    }
+                }
+                filteredData.push(r);
+            }
+        }
+        
+        console.log('[DB] Rosaries from Supabase:', filteredData.length);
+        return filteredData;
     },
 
     async deleteRosary(rosaryId) {
