@@ -1,7 +1,7 @@
 // === Red Maria Service Worker v6 ===
 // Handles background notifications + cache busting
 
-const CACHE_NAME = 'redmaria-v34';
+const CACHE_NAME = 'redmaria-v35';
 
 // Install event - force immediate activation
 self.addEventListener('install', function(event) {

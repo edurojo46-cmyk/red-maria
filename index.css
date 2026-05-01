@@ -1544,9 +1544,11 @@ body {
     width: 140px;
     height: 140px;
     border-radius: 50%;
-    border: none;
-    background: linear-gradient(145deg, #ddd, #bbb);
-    color: #888;
+    border: 1.5px solid rgba(46, 139, 192, 0.5);
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    color: var(--clr-text-title);
     font-size: 1rem;
     font-weight: 700;
     cursor: pointer;
@@ -1556,28 +1558,32 @@ body {
     align-items: center;
     gap: 6px;
     transition: all 0.4s ease;
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 6px 24px rgba(46, 139, 192, 0.15);
     font-family: 'Inter', sans-serif;
 }
 
 .rezando-btn i {
     font-size: 2.2rem;
-    transition: transform 0.3s;
+    color: #3DA3D4;
+    transition: transform 0.3s, color 0.3s;
 }
 
 .rezando-btn:hover {
     transform: scale(1.05);
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 8px 30px rgba(46, 139, 192, 0.25);
+    border-color: rgba(46, 139, 192, 0.8);
 }
 
 .rezando-btn.active {
     background: linear-gradient(145deg, #e74c3c, #c0392b);
+    border-color: transparent;
     color: white;
     box-shadow: 0 0 30px rgba(231, 76, 60, 0.5), 0 0 60px rgba(231, 76, 60, 0.2);
     animation: rezandoPulse 2s ease-in-out infinite;
 }
 
 .rezando-btn.active i {
+    color: white;
     transform: scale(1.1);
 }
 
