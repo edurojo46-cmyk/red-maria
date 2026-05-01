@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link rel="stylesheet" href="index.css?v=60">
+    <link rel="stylesheet" href="index.css?v=61">
     <style>
         /* FORCE FIX FOR COMO REZAR - BYPASS CACHE */
         #screen-como-rezar .rezar-scrollarea {
@@ -2055,9 +2055,9 @@ if (document.readyState !== 'loading') renderIglesiasGrid();
     </nav>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="auth.js?v=60"></script>
-<script src="supabase.js?v=60"></script>
-<script src="app.js?v=60"></script>
+<script src="auth.js?v=61"></script>
+<script src="supabase.js?v=61"></script>
+<script src="app.js?v=61"></script>
 
 <!-- Meditation Modal (self-contained, outside app-container) -->
 <div id="meditation-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:9999;justify-content:center;align-items:center;padding:20px;">
@@ -5231,6 +5231,17 @@ async function createCenaculo() {
     var invites = document.getElementById('cenaculo-invites').value.trim();
     if (!name) { alert('Ingresa un nombre para el Cenáculo'); return; }
 
+    var userLat = -34.5955, userLng = -58.3739;
+    if (navigator.geolocation) {
+        try {
+            var pos = await new Promise(function(resolve, reject) {
+                navigator.geolocation.getCurrentPosition(resolve, reject, {timeout: 4000});
+            });
+            userLat = pos.coords.latitude;
+            userLng = pos.coords.longitude;
+        } catch(e) { console.warn('Geolocation failed', e); }
+    }
+
     var user = (typeof auth !== 'undefined' && auth.getCurrentUser) ? auth.getCurrentUser() : null;
     var myProfile = user ? await db.getProfileByEmail(user.email) : null;
     var myName = myProfile ? myProfile.name : (user ? user.name : 'Tú');
@@ -5255,19 +5266,31 @@ async function createCenaculo() {
     });
 
     var id = 'c_' + Date.now().toString(36);
-    var colors = ['#6366f1','#f0a500','#3DA3D4','#27ae60','#e74c3c','#8b5cf6'];
     var icons = ['ri-team-fill','ri-heart-3-fill','ri-group-fill','ri-hand-heart-fill'];
     var cenaculo = {
         id: id, name: name, access: cenaculoAccessType,
-        color: colors[Math.floor(Math.random()*colors.length)],
+        color: '#8b5cf6', // Fijo violeta
         icon: icons[Math.floor(Math.random()*icons.length)],
-        creatorId: myId, members: members
+        creatorId: myId, members: members,
+        lat: userLat, lng: userLng
     };
 
     var saved = getSavedCenaculos();
     saved[id] = cenaculo;
     saveCenaculos(saved);
     addCenaculoCard(cenaculo);
+
+    if (cenaculoMap && cenaculo.lat && cenaculo.lng) {
+        var memberCount = cenaculo.members.length;
+        var mIcon = L.divIcon({
+            className: 'custom-marker-wrapper',
+            html: '<div style="width:38px;height:38px;border-radius:50%;background:' + cenaculo.color + ';display:flex;align-items:center;justify-content:center;color:white;font-size:1rem;border:3px solid white;box-shadow:0 4px 12px ' + cenaculo.color + '66;position:relative"><i class="' + cenaculo.icon + '"></i><span class="marker-count">' + memberCount + '</span></div>',
+            iconSize: [38, 38],
+            iconAnchor: [19, 38]
+        });
+        var marker = L.marker([cenaculo.lat, cenaculo.lng], { icon: mIcon }).addTo(cenaculoMap);
+        marker.bindPopup('<div style="text-align:center;padding:4px"><b style="font-size:0.9rem">' + cenaculo.name + '</b><br><span style="font-size:0.75rem;color:#666">' + memberCount + ' miembros</span><br><button onclick="openCenaculo(\'' + cenaculo.id + '\')" style="margin-top:6px;background:' + cenaculo.color + ';color:white;border:none;padding:5px 14px;border-radius:8px;font-size:0.75rem;font-weight:700;cursor:pointer"><i class="ri-door-open-line"></i> Abrir</button></div>', { className: 'rosary-map-popup', maxWidth: 200 });
+    }
 
     // Sync to Supabase - update local ID with real UUID
     if (typeof db !== 'undefined' && db.createCenaculo) {
