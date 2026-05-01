@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link rel="stylesheet" href="index.css?v=59">
+    <link rel="stylesheet" href="index.css?v=60">
     <style>
         /* FORCE FIX FOR COMO REZAR - BYPASS CACHE */
         #screen-como-rezar .rezar-scrollarea {
@@ -40,10 +40,12 @@
 <div id="app-container">
     <!-- MOBILE HEADER NAV -->
     <div class="mobile-header" id="mobile-header">
-        <div class="mobile-header-top">
-            <div class="mobile-header-avatar" style="background-image: url('assets/mary_avatar.png'); background-size: 140%; background-position: center center; background-repeat: no-repeat; display: inline-block;"></div>
-            <span class="mobile-header-title">Red Maria</span>
-            <div style="display:flex;gap:4px">
+        <div class="mobile-header-top" style="justify-content: space-between;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <div class="mobile-header-avatar" style="background-image: url('assets/mary_avatar.png'); background-size: 140%; background-position: center center; background-repeat: no-repeat; display: inline-block;"></div>
+                <span class="mobile-header-title">Red Maria</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
                 <button class="hamburger-btn" onclick="openGlobalSearch()"><i class="ri-search-line"></i></button>
                 <button class="hamburger-btn" id="hamburger-btn" onclick="app.toggleMobileMenu()"><i class="ri-menu-line"></i></button>
             </div>
@@ -2053,9 +2055,9 @@ if (document.readyState !== 'loading') renderIglesiasGrid();
     </nav>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="auth.js?v=59"></script>
-<script src="supabase.js?v=59"></script>
-<script src="app.js?v=59"></script>
+<script src="auth.js?v=60"></script>
+<script src="supabase.js?v=60"></script>
+<script src="app.js?v=60"></script>
 
 <!-- Meditation Modal (self-contained, outside app-container) -->
 <div id="meditation-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:9999;justify-content:center;align-items:center;padding:20px;">
