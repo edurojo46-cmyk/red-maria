@@ -148,7 +148,13 @@ body {
     font-size: 1rem;
     color: var(--clr-text-title);
     font-weight: 500;
+    font-style: italic;
+    font-family: 'Georgia', serif;
     letter-spacing: 0.5px;
+    line-height: 1.4;
+    max-width: 85%;
+    margin: 0 auto;
+    text-align: center;
 }
 
 .page-title {
