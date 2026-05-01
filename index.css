@@ -1550,7 +1550,7 @@ body {
     inset: 0;
     border-radius: 24px;
     padding: 4px; /* Border thickness */
-    background: linear-gradient(45deg, #ffeaa7, #74b9ff, #ff7675, #55efc4); /* Colores pastel suaves */
+    background: linear-gradient(45deg, #fff9c4, #bbdefb, #ffcdd2, #c8e6c9); /* Colores pastel muy claros */
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
