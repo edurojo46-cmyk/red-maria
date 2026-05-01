@@ -2024,12 +2024,12 @@ body {
     font-size: 1.2rem;
     font-family: 'Inter';
     font-weight: 700;
-    color: #1e40af; /* Azul oscuro/fuerte */
+    color: #3b82f6; /* Azul más claro para el nombre */
 }
 
 .profile-info p {
     font-size: 0.9rem;
-    color: #3b82f6; /* Azul más claro */
+    color: #60a5fa; /* Azul aún más claro para la ciudad */
     font-weight: 500;
 }
 
