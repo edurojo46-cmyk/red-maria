@@ -6106,6 +6106,8 @@ body {
     align-items: center;
     font-size: 0.9rem;
     flex-shrink: 0;
+}
+
 /* ===== APARICIONES GALLERY (NEW) ===== */
 .apar-gallery-scroll {
     flex: 1;
@@ -6317,9 +6319,6 @@ body {
     border-radius: 14px;
     border-left: 3px solid var(--clr-primary-light);
 }
-    align-items: center;
-    gap: 6px;
-    text-transform: uppercase;
 .apar-modal-section h4 {
     font-size: 0.78rem;
     font-weight: 700;
