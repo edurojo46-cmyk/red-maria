@@ -4208,6 +4208,7 @@ body {
 .chat-msg {
     max-width: 78%; padding: 11px 16px; border-radius: 18px;
     font-size: 0.85rem; line-height: 1.5; animation: fadeInUp 0.3s ease;
+    position: relative; overflow: visible;
 }
 .chat-msg.received {
     align-self: flex-start; background: #f0f0f0;
@@ -5326,6 +5327,9 @@ body {
     line-height: 1.5;
     animation: fadeInUp 0.3s ease;
     word-break: break-word;
+    position: relative;
+    overflow: visible;
+    cursor: pointer;
 }
 
 .gc-bubble-sent {

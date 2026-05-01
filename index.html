@@ -2692,7 +2692,7 @@ function appendMessageBubble(msg, isMe) {
     // Emoji reaction bar
     var emojiBar = document.createElement('div');
     emojiBar.className = 'msg-emoji-bar';
-    var emojis = ['👍','❤️','😂','😮','🙏'];
+    var emojis = ['👍','❤️','😂','😮','🙏','🔥'];
     emojis.forEach(function(em) {
         var btn = document.createElement('button');
         btn.textContent = em;
@@ -5859,6 +5859,46 @@ function renderGcMessages() {
         if (!isMe && !showHeader) bubble.classList.add('gc-bubble-continuation');
 
         bubble.innerHTML = m.text + '<div class="gc-msg-time">' + m.time + '</div>';
+
+        // Emoji reaction bar for GC messages
+        var emojiBar = document.createElement('div');
+        emojiBar.className = 'msg-emoji-bar';
+        var emojis = ['👍','❤️','😂','😮','🙏','🔥'];
+        emojis.forEach(function(em) {
+            var btn = document.createElement('button');
+            btn.textContent = em;
+            btn.onclick = function(e) {
+                e.stopPropagation();
+                emojiBar.classList.remove('visible');
+                // Show reaction on the bubble
+                var display = bubble.querySelector('.msg-reactions-display');
+                if (!display) {
+                    display = document.createElement('div');
+                    display.className = 'msg-reactions-display';
+                    var timeEl = bubble.querySelector('.gc-msg-time');
+                    if (timeEl) bubble.insertBefore(display, timeEl);
+                    else bubble.appendChild(display);
+                }
+                var existing = display.querySelector('[data-emoji="'+em+'"]');
+                if (existing) { existing.remove(); }
+                else {
+                    var pill = document.createElement('span');
+                    pill.className = 'msg-reaction-pill';
+                    pill.setAttribute('data-emoji', em);
+                    pill.textContent = em;
+                    display.appendChild(pill);
+                }
+            };
+            emojiBar.appendChild(btn);
+        });
+        bubble.appendChild(emojiBar);
+
+        // Toggle emoji bar on tap
+        bubble.addEventListener('click', function(e) {
+            if (e.target.closest('.msg-emoji-bar') || e.target.closest('.msg-reaction-pill')) return;
+            document.querySelectorAll('.msg-emoji-bar.visible').forEach(function(b) { if (b !== emojiBar) b.classList.remove('visible'); });
+            emojiBar.classList.toggle('visible');
+        });
 
         // Actions
         var actions = document.createElement('div');
