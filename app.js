@@ -1031,6 +1031,23 @@ var app = {
                     var countEl = document.querySelector('.profile-like-count');
                     if (countEl) countEl.textContent = p.likes;
                 }
+                
+                // Restore heart icon state from localStorage
+                var likedProfiles = JSON.parse(localStorage.getItem('redmaria_liked_profiles') || '{}');
+                var icon = document.querySelector('.profile-like-icon');
+                if (icon) {
+                    if (likedProfiles[u.email]) {
+                        icon.classList.remove('ri-heart-line');
+                        icon.classList.add('ri-heart-fill');
+                        icon.style.color = '#e74c3c';
+                        icon.style.transform = 'scale(1.15)';
+                    } else {
+                        icon.classList.remove('ri-heart-fill');
+                        icon.classList.add('ri-heart-line');
+                        icon.style.color = 'var(--clr-text-muted)';
+                        icon.style.transform = 'scale(1)';
+                    }
+                }
             }).catch(function(e) { console.warn('[Profile] Error loading profile details:', e); });
         }
 
@@ -1448,6 +1465,10 @@ function toggleProfileLike(el) {
     var count = parseInt(countEl.textContent, 10) || 0;
     var increment = 0;
     
+    var u = auth.getCurrentUser();
+    var emailKey = u ? u.email : 'anon';
+    var likedProfiles = JSON.parse(localStorage.getItem('redmaria_liked_profiles') || '{}');
+    
     if (isLiked) {
         icon.classList.remove('ri-heart-fill');
         icon.classList.add('ri-heart-line');
@@ -1455,6 +1476,7 @@ function toggleProfileLike(el) {
         icon.style.transform = 'scale(1)';
         countEl.textContent = count - 1;
         increment = -1;
+        likedProfiles[emailKey] = false;
     } else {
         icon.classList.remove('ri-heart-line');
         icon.classList.add('ri-heart-fill');
@@ -1462,9 +1484,11 @@ function toggleProfileLike(el) {
         icon.style.transform = 'scale(1.15)';
         countEl.textContent = count + 1;
         increment = 1;
+        likedProfiles[emailKey] = true;
     }
 
-    var u = auth.getCurrentUser();
+    localStorage.setItem('redmaria_liked_profiles', JSON.stringify(likedProfiles));
+
     if (u && typeof db !== 'undefined' && db.updateProfileLikes) {
         db.updateProfileLikes(u.email, increment).catch(function(e) { console.error('Error syncing likes:', e); });
     }
