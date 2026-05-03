@@ -18,7 +18,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link rel="stylesheet" href="index.css?v=69">
+    <link rel="stylesheet" href="index.css?v=70">
     <script>
         // DEV FIX: Force unregister service workers on localhost
         if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
@@ -2092,9 +2092,9 @@ if (document.readyState !== 'loading') renderIglesiasGrid();
     </nav>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="auth.js?v=69"></script>
-<script src="supabase.js?v=69"></script>
-<script src="app.js?v=69"></script>
+<script src="auth.js?v=70"></script>
+<script src="supabase.js?v=70"></script>
+<script src="app.js?v=70"></script>
 
 <!-- Meditation Modal (self-contained, outside app-container) -->
 <div id="meditation-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:9999;justify-content:center;align-items:center;padding:20px;">
@@ -2541,32 +2541,10 @@ async function _initRealChatInner() {
     if (loading) loading.style.display = 'none';
     var empty = document.getElementById('chat-empty');
     if (convs.length === 0) {
-        // No conversations yet - show all users as potential contacts
-        if (empty) empty.style.display = 'none';
-        if (loading) loading.style.display = 'none';
-        var otherUsers = allUsers.filter(function(u) { return u.id !== myId; });
-        if (otherUsers.length === 0) {
-            if (empty) { empty.style.display = 'block'; }
-            return;
-        }
-        // Show other users as available contacts
+        // No conversations yet - just show the empty state
+        if (empty) empty.style.display = 'block';
         var list = document.getElementById('chat-contacts-list');
-        list.querySelectorAll('.chat-contact').forEach(function(el) { el.remove(); });
-        // Add header
-        var hdrDiv = document.createElement('div');
-        hdrDiv.style.cssText = 'padding:12px 16px 6px;font-size:0.72rem;font-weight:700;color:var(--clr-text-muted);text-transform:uppercase;letter-spacing:0.5px';
-        hdrDiv.textContent = 'Usuarios disponibles';
-        hdrDiv.className = 'chat-section-header';
-        list.appendChild(hdrDiv);
-        otherUsers.forEach(function(u) {
-            var color = getChatColor(u.name);
-            var initial = (u.name||'?').charAt(0).toUpperCase();
-            var div = document.createElement('div');
-            div.className = 'chat-contact'; div.setAttribute('data-id', u.id);
-            div.onclick = function() { openChat(u.id); };
-            div.innerHTML = '<div class="chat-avatar-wrapper"><div class="chat-contact-avatar" style="background:linear-gradient(135deg,'+color+','+color+'cc)">'+initial+'</div></div><div class="chat-contact-info"><div class="chat-contact-top"><h4>'+u.name+'</h4><span class="chat-time">'+(u.username||'')+'</span></div><div class="chat-contact-bottom"><p class="chat-last-msg" style="color:var(--clr-text-muted)">Toca para iniciar conversación</p></div></div>';
-            list.appendChild(div);
-        });
+        list.querySelectorAll('.chat-contact, .chat-section-header').forEach(function(el) { el.remove(); });
         return;
     }
     if (empty) empty.style.display = 'none';
@@ -5698,21 +5676,31 @@ var gcMemberColors = ['#A8C4DE','#F4D35E','#B5D6A7','#E8A0BF','#C4B5FD','#89CFF0
 // Group chat messages (real only)
 var gcDefaultMessages = {};
 
+function getGcStorageKey() {
+    var userId = 'anonymous';
+    if (typeof auth !== 'undefined' && auth.isAuthenticated()) {
+        var user = auth.getCurrentUser();
+        if (user) userId = user.id;
+    }
+    return GC_STORAGE_KEY + '_' + userId;
+}
+
 function getGcMessages(cenaculoId) {
     try {
-        var all = JSON.parse(localStorage.getItem(GC_STORAGE_KEY)) || {};
-        if (all[cenaculoId]) return all[cenaculoId];
+        var all = JSON.parse(localStorage.getItem(getGcStorageKey())) || {};
+        var messages = all[cenaculoId];
+        if (!messages) return gcDefaultMessages[cenaculoId] || [];
+        return messages;
     } catch(e) {}
-    // Return defaults if no saved data
     return gcDefaultMessages[cenaculoId] || [];
 }
 
 function saveGcMessages(cenaculoId, messages) {
     var all = {};
-    try { all = JSON.parse(localStorage.getItem(GC_STORAGE_KEY)) || {}; } catch(e) {}
+    try { all = JSON.parse(localStorage.getItem(getGcStorageKey())) || {}; } catch(e) {}
     all[cenaculoId] = messages;
     try {
-        localStorage.setItem(GC_STORAGE_KEY, JSON.stringify(all));
+        localStorage.setItem(getGcStorageKey(), JSON.stringify(all));
     } catch(e) {
         // localStorage full - remove oldest media messages to free space
         console.warn('[GC] localStorage full, cleaning old media...');
@@ -5730,7 +5718,7 @@ function saveGcMessages(cenaculoId, messages) {
         });
         if (cleaned) {
             try {
-                localStorage.setItem(GC_STORAGE_KEY, JSON.stringify(all));
+                localStorage.setItem(getGcStorageKey(), JSON.stringify(all));
                 console.log('[GC] Storage cleaned, saved successfully');
             } catch(e2) {
                 // Still full - keep only last 20 messages per chat
@@ -5739,7 +5727,7 @@ function saveGcMessages(cenaculoId, messages) {
                         all[cid] = all[cid].slice(-20);
                     }
                 });
-                try { localStorage.setItem(GC_STORAGE_KEY, JSON.stringify(all)); } catch(e3) {
+                try { localStorage.setItem(getGcStorageKey(), JSON.stringify(all)); } catch(e3) {
                     console.error('[GC] Cannot save even after cleanup');
                 }
             }
