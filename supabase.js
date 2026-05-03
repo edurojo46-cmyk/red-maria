@@ -412,12 +412,18 @@ var db = {
         return data;
     },
 
-    async getIntenciones() {
+    async getIntenciones(userCreatedAtIso) {
         if (!sbClient) return [];
-        const { data, error } = await sbClient.from('intenciones')
+        let query = sbClient.from('intenciones')
             .select('*')
             .order('created_at', { ascending: false })
             .limit(20);
+            
+        if (userCreatedAtIso) {
+            query = query.gte('created_at', userCreatedAtIso);
+        }
+        
+        const { data, error } = await query;
         if (error) { console.error('[DB] Error fetching intenciones:', error); return []; }
         return data || [];
     },
