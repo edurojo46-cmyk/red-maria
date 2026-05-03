@@ -393,22 +393,31 @@ var db = {
 
     // ==================== INTENCIONES ====================
     async createIntencion(intencion) {
-        if (!sbClient) { console.warn('Supabase no disponible'); return null; }
-        // Store user_name in 'category' field (since table doesn't have a user_name column)
-        var payload = {
+        if (!sbClient) return null;
+        const payload = {
             text: intencion.text,
-            category: intencion.user_name || 'Anónimo'
+            user_name: intencion.user_name || 'Anónimo'
         };
         // Only include user_id if it's a valid UUID
         if (intencion.user_id && /^[0-9a-f]{8}-/.test(intencion.user_id)) {
             payload.user_id = intencion.user_id;
         }
-        const { data, error } = await sbClient.from('intenciones').insert(payload).select();
+        
+        let { data, error } = await sbClient.from('intenciones').insert(payload).select();
+        
+        // If it failed because of missing user_name column (schema mismatch), try category instead
+        if (error && error.message && error.message.toLowerCase().includes('column')) {
+            delete payload.user_name;
+            payload.category = intencion.user_name || 'Anónimo';
+            const retry = await sbClient.from('intenciones').insert(payload).select();
+            data = retry.data;
+            error = retry.error;
+        }
+
         if (error) {
             console.error('[DB] Error inserting intencion:', error.message, error.details);
             return null;
         }
-        console.log('[DB] Intencion saved:', data);
         return data;
     },
 

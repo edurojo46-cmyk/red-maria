@@ -18,7 +18,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link rel="stylesheet" href="index.css?v=77">
+    <link rel="stylesheet" href="index.css?v=78">
     <script>
         // DEV FIX: Force unregister service workers on localhost
         if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
@@ -2092,9 +2092,9 @@ if (document.readyState !== 'loading') renderIglesiasGrid();
     </nav>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="auth.js?v=77"></script>
-<script src="supabase.js?v=77"></script>
-<script src="app.js?v=77"></script>
+<script src="auth.js?v=78"></script>
+<script src="supabase.js?v=78"></script>
+<script src="app.js?v=78"></script>
 
 <!-- Meditation Modal (self-contained, outside app-container) -->
 <div id="meditation-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:9999;justify-content:center;align-items:center;padding:20px;">
@@ -4744,10 +4744,11 @@ function addRezoIntencion() {
             userId = chatProfiles[localUser.id].id;
         }
         db.createIntencion({ text: text, user_name: name, user_id: userId }).catch(function(e) { console.error(e); });
-        if (typeof sbClient !== 'undefined' && sbClient) {
+        
+        // Broadcast to other users in real-time
+        if (typeof window._globalIntencionesChannel !== 'undefined' && window._globalIntencionesChannel) {
             try {
-                var globalIntCh = sbClient.channel('public:intenciones');
-                globalIntCh.send({
+                window._globalIntencionesChannel.send({
                     type: 'broadcast',
                     event: 'new_intencion',
                     payload: { text: text, category: name, created_at: intencion.time, id: intencion.id }
@@ -5001,10 +5002,11 @@ async function loadCommunityIntenciones() {
     
     // Subscribe to realtime updates for new intentions from others
     if (typeof sbClient !== 'undefined' && sbClient) {
-        sbClient.channel('public:intenciones')
-            .on('broadcast', { event: 'new_intencion' }, function(payload) {
+        if (!window._globalIntencionesChannel) {
+            window._globalIntencionesChannel = sbClient.channel('public:intenciones', { config: { broadcast: { self: true, ack: false } } });
+            window._globalIntencionesChannel.on('broadcast', { event: 'new_intencion' }, function(payload) {
                 var r = payload.payload;
-                var userName = r.category || 'Anónimo';
+                var userName = r.category || r.user_name || 'Anónimo';
                 var colors = ['#A8C4DE','#F4D35E','#B5D6A7','#E8A0BF','#C4B5FD','#8FACC5','#FFB4A2','#89CFF0','#FFC6FF','#CAFFBF'];
                 var color = colors[Math.floor(Math.random() * colors.length)];
                 var color2 = colors[(Math.floor(Math.random() * colors.length) + 3) % colors.length];
@@ -5019,14 +5021,23 @@ async function loadCommunityIntenciones() {
                         text: r.text,
                         color: color,
                         color2: color2,
-                        time: r.created_at
+                        time: r.created_at || new Date().toISOString()
                     });
+                    
+                    // Filter based on privacy setting before saving/showing
+                    var currentUser = typeof auth !== 'undefined' && auth.isAuthenticated() ? auth.getCurrentUser() : null;
+                    var userCreatedAtTime = currentUser && currentUser.createdAt ? new Date(currentUser.createdAt).getTime() : 0;
+                    if (userCreatedAtTime > 0 && new Date(r.created_at).getTime() < userCreatedAtTime) {
+                        return; // Ignore if older than account
+                    }
+                    
                     saveRezoIntenciones(localInt);
                     var l = document.getElementById('community-intentions-list');
                     if (l) renderCommunityList(l, localInt);
                     renderRezoIntenciones();
                 }
             }).subscribe();
+        }
     }
 }
 
