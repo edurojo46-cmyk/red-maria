@@ -18,7 +18,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link rel="stylesheet" href="index.css?v=73">
+    <link rel="stylesheet" href="index.css?v=74">
     <script>
         // DEV FIX: Force unregister service workers on localhost
         if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
@@ -2092,9 +2092,9 @@ if (document.readyState !== 'loading') renderIglesiasGrid();
     </nav>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="auth.js?v=73"></script>
-<script src="supabase.js?v=73"></script>
-<script src="app.js?v=73"></script>
+<script src="auth.js?v=74"></script>
+<script src="supabase.js?v=74"></script>
+<script src="app.js?v=74"></script>
 
 <!-- Meditation Modal (self-contained, outside app-container) -->
 <div id="meditation-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:9999;justify-content:center;align-items:center;padding:20px;">
@@ -4749,17 +4749,7 @@ function renderRezoIntenciones() {
 
     var intenciones = getRezoIntenciones();
     
-    var currentUser = typeof auth !== 'undefined' && auth.isAuthenticated() ? auth.getCurrentUser() : null;
-    var userCreatedAtTime = currentUser && currentUser.createdAt ? new Date(currentUser.createdAt).getTime() : 0;
-
-    var toShow = intenciones.filter(function(int) {
-        if (userCreatedAtTime > 0) {
-            var timeToCheck = int.time || int.created_at;
-            if (!timeToCheck) return false; // Hide old legacy intentions without timestamp
-            if (new Date(timeToCheck).getTime() < userCreatedAtTime) return false;
-        }
-        return true;
-    }).slice(-REZO_INTENCIONES_MAX).reverse();
+    var toShow = intenciones.slice(-REZO_INTENCIONES_MAX).reverse();
     
     var totalCount = toShow.length;
     if (countEl) countEl.textContent = toShow.length;
@@ -4934,15 +4924,12 @@ async function loadCommunityIntenciones() {
     // First render from localStorage (instant)
     var localIntenciones = getRezoIntenciones();
     
-    var currentUser = typeof auth !== 'undefined' && auth.isAuthenticated() ? auth.getCurrentUser() : null;
-    var userCreatedAt = currentUser ? currentUser.createdAt : null;
-
     renderCommunityList(list, localIntenciones);
 
     // Then merge Supabase data (async, enriches with cross-device intenciones)
     if (typeof db !== 'undefined' && db.getIntenciones) {
         try {
-            var remote = await db.getIntenciones(userCreatedAt);
+            var remote = await db.getIntenciones();
             if (remote && remote.length > 0) {
                 // Convert Supabase format to local format and merge
                 var localIds = {};
@@ -4985,20 +4972,8 @@ async function loadCommunityIntenciones() {
 }
 
 function renderCommunityList(listEl, intenciones) {
-    var currentUser = typeof auth !== 'undefined' && auth.isAuthenticated() ? auth.getCurrentUser() : null;
-    var userCreatedAtTime = currentUser && currentUser.createdAt ? new Date(currentUser.createdAt).getTime() : 0;
-
-    // Filter out intentions older than user account, then sort and show last 20
-    var toShow = intenciones.filter(function(int) {
-        if (userCreatedAtTime > 0) {
-            var timeToCheck = int.time || int.created_at;
-            if (!timeToCheck) return false; // Hide old legacy intentions without timestamp
-            if (new Date(timeToCheck).getTime() < userCreatedAtTime) {
-                return false;
-            }
-        }
-        return true;
-    }).sort(function(a, b) {
+    // Sort and show last 20
+    var toShow = intenciones.sort(function(a, b) {
         return new Date(b.time || b.created_at || 0) - new Date(a.time || a.created_at || 0);
     }).slice(0, 20);
 
