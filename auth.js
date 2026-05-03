@@ -245,10 +245,20 @@ var auth = {
         email = this.sanitize(email.trim().toLowerCase());
         city = this.sanitize(city.trim());
 
-        // Check if email already exists
+        // Check if email already exists locally
         const users = this.getUsers();
         if (users.find(u => u.email === email)) {
-            return { success: false, error: 'Este email ya está registrado' };
+            return { success: false, error: 'Este email ya está registrado localmente' };
+        }
+
+        // IMPORTANT: Check if email already exists in Supabase to prevent profile hijacking
+        if (typeof sbClient !== 'undefined' && sbClient) {
+            try {
+                const { data } = await sbClient.from('profiles').select('id').eq('email', email).single();
+                if (data) {
+                    return { success: false, error: 'Este email ya está registrado en la red. Usa otro o inicia sesión.' };
+                }
+            } catch(e) {}
         }
 
         // Hash password with salt (PBKDF2)
