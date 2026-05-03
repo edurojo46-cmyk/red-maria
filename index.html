@@ -18,7 +18,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link rel="stylesheet" href="index.css?v=82">
+    <link rel="stylesheet" href="index.css?v=83">
     <script>
         // DEV FIX: Force unregister service workers on localhost
         if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
@@ -2092,9 +2092,9 @@ if (document.readyState !== 'loading') renderIglesiasGrid();
     </nav>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="auth.js?v=82"></script>
-<script src="supabase.js?v=82"></script>
-<script src="app.js?v=82"></script>
+<script src="auth.js?v=83"></script>
+<script src="supabase.js?v=83"></script>
+<script src="app.js?v=83"></script>
 
 <!-- Meditation Modal (self-contained, outside app-container) -->
 <div id="meditation-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:9999;justify-content:center;align-items:center;padding:20px;">
@@ -2550,6 +2550,8 @@ async function _initRealChatInner() {
     if (empty) empty.style.display = 'none';
     if (loading) loading.style.display = 'none';
     renderContactList(convs, myId);
+
+
 
     // Subscribe to read receipt updates (when partner reads our messages)
     if (typeof readReceiptSub !== 'undefined' && readReceiptSub) { try { readReceiptSub.unsubscribe(); } catch(e){} }
@@ -4990,34 +4992,55 @@ async function loadCommunityIntenciones() {
     // Subscribe to realtime updates for new intentions from others
     if (typeof sbClient !== 'undefined' && sbClient) {
         if (!window._globalIntencionesChannel) {
+            console.log('[Intenciones] Initializing WebSocket antenna...');
             window._globalIntencionesChannel = sbClient.channel('public:intenciones', { config: { broadcast: { self: true, ack: false } } });
+            
+            // 1. Listen for Broadcasts (Optimistic, no DB replication needed)
             window._globalIntencionesChannel.on('broadcast', { event: 'new_intencion' }, function(payload) {
-                var r = payload.payload;
-                var userName = r.category || r.user_name || 'Anónimo';
-                var colors = ['#A8C4DE','#F4D35E','#B5D6A7','#E8A0BF','#C4B5FD','#8FACC5','#FFB4A2','#89CFF0','#FFC6FF','#CAFFBF'];
-                var color = colors[Math.floor(Math.random() * colors.length)];
-                var color2 = colors[(Math.floor(Math.random() * colors.length) + 3) % colors.length];
-                
-                var localInt = getRezoIntenciones();
-                var exists = localInt.find(function(i) { return i.text === r.text && i.name === userName; });
-                if (!exists) {
-                    localInt.push({
-                        id: r.id,
-                        name: userName,
-                        initial: userName.charAt(0).toUpperCase(),
-                        text: r.text,
-                        color: color,
-                        color2: color2,
-                        time: r.created_at || new Date().toISOString()
-                    });
-                    
-                    saveRezoIntenciones(localInt);
-                    var l = document.getElementById('community-intentions-list');
-                    if (l) renderCommunityList(l, localInt);
-                    renderRezoIntenciones();
-                }
-            }).subscribe();
+                console.log('[Intenciones] Received BROADCAST:', payload);
+                _handleRealtimeIntencion(payload.payload);
+            });
+            
+            // 2. Listen for Database Changes (Reliable, requires replication)
+            window._globalIntencionesChannel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'intenciones' }, function(payload) {
+                console.log('[Intenciones] Received POSTGRES_CHANGES:', payload);
+                _handleRealtimeIntencion(payload.new);
+            });
+            
+            window._globalIntencionesChannel.subscribe(function(status) {
+                console.log('[Intenciones] Channel status:', status);
+            });
         }
+    }
+}
+
+// Helper to process incoming realtime intentions without duplicating logic
+function _handleRealtimeIntencion(r) {
+    if (!r || !r.text) return;
+    var userName = r.category || r.user_name || r.name || 'Anónimo';
+    var colors = ['#A8C4DE','#F4D35E','#B5D6A7','#E8A0BF','#C4B5FD','#8FACC5','#FFB4A2','#89CFF0','#FFC6FF','#CAFFBF'];
+    var color = colors[Math.floor(Math.random() * colors.length)];
+    var color2 = colors[(Math.floor(Math.random() * colors.length) + 3) % colors.length];
+    
+    var localInt = getRezoIntenciones();
+    var exists = localInt.find(function(i) { return i.text === r.text && (i.name === userName || (i.name || 'Anónimo') === userName); });
+    if (!exists) {
+        console.log('[Intenciones] Adding new intention to UI from', userName);
+        localInt.push({
+            id: r.id || Date.now().toString(),
+            name: userName,
+            initial: userName.charAt(0).toUpperCase(),
+            text: r.text,
+            color: color,
+            color2: color2,
+            time: r.created_at || r.time || new Date().toISOString()
+        });
+        
+        saveRezoIntenciones(localInt);
+        var l = document.getElementById('community-intentions-list');
+        if (l) renderCommunityList(l, localInt);
+        renderRezoIntenciones();
+    }
     }
 }
 
@@ -6671,7 +6694,16 @@ function closeAparicion() {
     document.body.style.overflow = '';
 }
 
-
+// Fallback: Guarantee sync every 5 seconds if WebSockets drop UDP packets
+setInterval(function() {
+    var isRezoActive = document.getElementById('screen-rezo') && document.getElementById('screen-rezo').classList.contains('active');
+    var isComunidadActive = document.getElementById('screen-intenciones') && document.getElementById('screen-intenciones').classList.contains('active');
+    if (isRezoActive || isComunidadActive) {
+        if (typeof loadCommunityIntenciones === 'function') {
+            loadCommunityIntenciones();
+        }
+    }
+}, 5000);
 </script>
 </body>
 </html>
