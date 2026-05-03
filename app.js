@@ -1395,6 +1395,9 @@ var app = {
 // Init app
 document.addEventListener('DOMContentLoaded', function() {
     app.init();
+    if (typeof loadCommunityIntenciones === 'function') {
+        loadCommunityIntenciones();
+    }
 });
 
 // Ensure global access for inline onclick handlers
