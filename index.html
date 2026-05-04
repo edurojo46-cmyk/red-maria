@@ -18,7 +18,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link rel="stylesheet" href="index.css?v=86">
+    <link rel="stylesheet" href="index.css?v=87">
     <script>
         // DEV FIX: Force unregister service workers on localhost
         if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
@@ -2092,9 +2092,9 @@ if (document.readyState !== 'loading') renderIglesiasGrid();
     </nav>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="auth.js?v=86"></script>
-<script src="supabase.js?v=86"></script>
-<script src="app.js?v=86"></script>
+<script src="auth.js?v=87"></script>
+<script src="supabase.js?v=87"></script>
+<script src="app.js?v=87"></script>
 
 <!-- Meditation Modal (self-contained, outside app-container) -->
 <div id="meditation-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:9999;justify-content:center;align-items:center;padding:20px;">
@@ -4790,7 +4790,7 @@ function renderRezoIntenciones() {
             '<div class="rz-int-right">' +
                 '<span class="rz-int-time">' + timeAgo + '</span>' +
                 '<div class="rz-int-actions">' +
-                    '<div class="rz-int-heart-area"><button class="rz-int-heart-btn' + (isLiked ? ' liked' : '') + '" onclick="toggleRezoHeart(this,\'' + int.id + '\')"><i class="' + (isLiked ? 'ri-heart-fill' : 'ri-heart-line') + '"></i></button><span class="rz-int-heart-count">' + hearts + '</span></div>' +
+                    '<div class="rz-int-heart-area"><button class="rz-int-heart-btn' + (isLiked ? ' liked' : '') + '" onclick="toggleRezoHeart(this,\'' + int.id + '\')"><i class="' + (isLiked ? 'ri-hand-heart-fill' : 'ri-hand-heart-line') + '"></i></button><span class="rz-int-heart-count">' + hearts + '</span></div>' +
                     '<button class="rz-int-msg-btn" data-chatid="' + chatId + '" data-name="' + escapeHtml(int.name) + '" onclick="msgFromIntencion(this)" title="Enviar mensaje"><i class="ri-chat-1-line"></i></button>' +
                     '<button class="rz-int-block-btn" data-name="' + escapeHtml(int.name) + '" onclick="blockFromIntencion(this)" title="Bloquear usuario"><i class="ri-close-line"></i></button>' +
                 '</div>' +
@@ -4842,7 +4842,7 @@ function toggleRezoHeart(btn, intentionId) {
     if (btn.classList.contains('liked')) {
         // Unlike
         btn.classList.remove('liked');
-        icon.className = 'ri-heart-line';
+        icon.className = 'ri-hand-heart-line';
         likedIds = likedIds.filter(function(id) { return id !== intentionId; });
         // Update count in data
         intenciones.forEach(function(int) {
@@ -4855,7 +4855,7 @@ function toggleRezoHeart(btn, intentionId) {
     } else {
         // Like
         btn.classList.add('liked');
-        icon.className = 'ri-heart-fill';
+        icon.className = 'ri-hand-heart-fill';
         likedIds.push(intentionId);
         // Update count in data
         intenciones.forEach(function(int) {
@@ -5058,7 +5058,7 @@ function renderCommunityList(listEl, intenciones) {
             '<div class="ci-avatar" style="background:' + color + '">' + initial + '</div>' +
             '<div class="ci-content"><span class="ci-name">' + escapedName + '</span><p>' + escapedText + '</p>' +
             '<span style="font-size:0.7rem;color:var(--clr-text-muted)">' + timeAgo + '</span></div>' +
-            '<div class="ci-heart-area"><button class="ci-heart-btn' + (isLiked ? ' liked' : '') + '" onclick="toggleRezoHeart(this,\'' + int.id + '\')"><i class="' + (isLiked ? 'ri-heart-fill' : 'ri-heart-line') + '"></i></button><span class="ci-heart-count">' + hearts + '</span></div>' +
+            '<div class="ci-heart-area"><button class="ci-heart-btn' + (isLiked ? ' liked' : '') + '" onclick="toggleRezoHeart(this,\'' + int.id + '\')"><i class="' + (isLiked ? 'ri-hand-heart-fill' : 'ri-hand-heart-line') + '"></i></button><span class="ci-heart-count">' + hearts + '</span></div>' +
             '</div>';
     });
     listEl.innerHTML = html;

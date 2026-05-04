@@ -1372,7 +1372,7 @@ var app = {
             const item = document.createElement('div');
             item.className = 'community-intention glass';
             item.style.animation = 'fadeInUp 0.4s ease-out';
-            item.innerHTML = '<div class="ci-avatar" style="background:' + color + '">' + initial + '</div><div class="ci-content"><span class="ci-name">' + auth.sanitize(name) + '</span><p>' + auth.sanitize(text) + '</p></div><div class="ci-heart-area"><button class="ci-heart-btn" onclick="toggleRezoHeart(this,\'' + intencion.id + '\')"><i class="ri-heart-line"></i></button><span class="ci-heart-count">0</span></div>';
+            item.innerHTML = '<div class="ci-avatar" style="background:' + color + '">' + initial + '</div><div class="ci-content"><span class="ci-name">' + auth.sanitize(name) + '</span><p>' + auth.sanitize(text) + '</p></div><div class="ci-heart-area"><button class="ci-heart-btn" onclick="toggleRezoHeart(this,\'' + intencion.id + '\')"><i class="ri-hand-heart-line"></i></button><span class="ci-heart-count">0</span></div>';
             communityList.insertBefore(item, communityList.firstChild);
         }
 
