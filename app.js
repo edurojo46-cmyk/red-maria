@@ -1037,14 +1037,14 @@ var app = {
                 var icon = document.querySelector('.profile-like-icon');
                 if (icon) {
                     if (likedProfiles[u.email]) {
-                        icon.classList.remove('ri-heart-line');
-                        icon.classList.add('ri-heart-fill');
-                        icon.style.color = '#e74c3c';
-                        icon.style.transform = 'scale(1.15)';
+                        icon.classList.add('liked-emoji');
+                        icon.style.filter = 'none';
+                        icon.style.opacity = '1';
+                        icon.style.transform = 'scale(1.2)';
                     } else {
-                        icon.classList.remove('ri-heart-fill');
-                        icon.classList.add('ri-heart-line');
-                        icon.style.color = 'var(--clr-text-muted)';
+                        icon.classList.remove('liked-emoji');
+                        icon.style.filter = 'grayscale(100%)';
+                        icon.style.opacity = '0.5';
                         icon.style.transform = 'scale(1)';
                     }
                 }
@@ -1464,7 +1464,7 @@ function toggleProfileLike(el) {
     var countEl = el.querySelector('.profile-like-count');
     if (!icon || !countEl) return;
     
-    var isLiked = icon.classList.contains('ri-heart-fill');
+    var isLiked = icon.classList.contains('liked-emoji');
     var count = parseInt(countEl.textContent, 10) || 0;
     var increment = 0;
     
@@ -1473,21 +1473,24 @@ function toggleProfileLike(el) {
     var likedProfiles = JSON.parse(localStorage.getItem('redmaria_liked_profiles') || '{}');
     
     if (isLiked) {
-        icon.classList.remove('ri-heart-fill');
-        icon.classList.add('ri-heart-line');
-        icon.style.color = 'var(--clr-text-muted)';
+        icon.classList.remove('liked-emoji');
+        icon.style.filter = 'grayscale(100%)';
+        icon.style.opacity = '0.5';
         icon.style.transform = 'scale(1)';
         countEl.textContent = count - 1;
         increment = -1;
-        likedProfiles[emailKey] = false;
+        if (likedProfiles[emailKey]) {
+            likedProfiles[emailKey] = likedProfiles[emailKey].filter(function(i){ return i !== window._currentProfileViewId; });
+        }
     } else {
-        icon.classList.remove('ri-heart-line');
-        icon.classList.add('ri-heart-fill');
-        icon.style.color = '#e74c3c'; // Rojo
-        icon.style.transform = 'scale(1.15)';
+        icon.classList.add('liked-emoji');
+        icon.style.filter = 'none';
+        icon.style.opacity = '1';
+        icon.style.transform = 'scale(1.2)';
         countEl.textContent = count + 1;
         increment = 1;
-        likedProfiles[emailKey] = true;
+        if (!likedProfiles[emailKey]) likedProfiles[emailKey] = [];
+        if (window._currentProfileViewId) likedProfiles[emailKey].push(window._currentProfileViewId);
     }
 
     localStorage.setItem('redmaria_liked_profiles', JSON.stringify(likedProfiles));
