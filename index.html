@@ -18,7 +18,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link rel="stylesheet" href="index.css?v=92">
+    <link rel="stylesheet" href="index.css?v=93">
     <script>
         // DEV FIX: Force unregister service workers on localhost
         if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
@@ -2092,9 +2092,9 @@ if (document.readyState !== 'loading') renderIglesiasGrid();
     </nav>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="auth.js?v=92"></script>
-<script src="supabase.js?v=92"></script>
-<script src="app.js?v=92"></script>
+<script src="auth.js?v=93"></script>
+<script src="supabase.js?v=93"></script>
+<script src="app.js?v=93"></script>
 
 <!-- Meditation Modal (self-contained, outside app-container) -->
 <div id="meditation-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:9999;justify-content:center;align-items:center;padding:20px;">
@@ -5268,6 +5268,8 @@ async function loadCenaculosFromSupabase() {
         // Clear existing cards to prevent duplicates
         list.querySelectorAll('.cenaculo-item').forEach(function(el) { el.remove(); });
         
+        var validSaved = {};
+        
         cenaculos.forEach(function(c) {
             var members = c.cenaculo_members || [];
             
@@ -5311,12 +5313,12 @@ async function loadCenaculosFromSupabase() {
                     return { name: m.name, role: m.role, active: false, profileId: m.user_id };
                 })
             };
-            // Save to localStorage so openCenaculo can find it
-            var saved = getSavedCenaculos();
-            saved[c.id] = cenObj;
-            saveCenaculos(saved);
+            validSaved[c.id] = cenObj;
             addCenaculoCard(cenObj);
         });
+        
+        // Save ONLY the valid cenaculos to localStorage to clear out any old ones
+        saveCenaculos(validSaved);
     } catch(e) {
         console.error('[Cenaculos] Error loading:', e);
     }

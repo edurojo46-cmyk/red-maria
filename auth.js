@@ -321,7 +321,7 @@ var auth = {
             city: user.city,
             loginAt: new Date().toISOString()
         });
-
+        localStorage.removeItem('redmaria_cenaculos');
         return { success: true, user };
     },
 
@@ -410,13 +410,14 @@ var auth = {
                 }
             });
         }
-
+        localStorage.removeItem('redmaria_cenaculos');
         return { success: true, user };
     },
 
     // ---- Logout ----
     logoutUser() {
         this.clearSession();
+        localStorage.removeItem('redmaria_cenaculos');
         // Sync with Supabase
         if (typeof db !== 'undefined' && db.signOut) { db.signOut(); }
     },
