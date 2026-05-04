@@ -18,7 +18,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link rel="stylesheet" href="index.css?v=85">
+    <link rel="stylesheet" href="index.css?v=86">
     <script>
         // DEV FIX: Force unregister service workers on localhost
         if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
@@ -2092,9 +2092,9 @@ if (document.readyState !== 'loading') renderIglesiasGrid();
     </nav>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="auth.js?v=85"></script>
-<script src="supabase.js?v=85"></script>
-<script src="app.js?v=85"></script>
+<script src="auth.js?v=86"></script>
+<script src="supabase.js?v=86"></script>
+<script src="app.js?v=86"></script>
 
 <!-- Meditation Modal (self-contained, outside app-container) -->
 <div id="meditation-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:9999;justify-content:center;align-items:center;padding:20px;">
@@ -2179,22 +2179,6 @@ document.addEventListener('click', function(e) {
 
 <script>
 
-// Heart toggle for intention cards
-function toggleHeart(btn) {
-    var countEl = btn.parentElement.querySelector('.ci-heart-count');
-    var count = parseInt(countEl.textContent) || 0;
-    var icon = btn.querySelector('i');
-
-    if (btn.classList.contains('liked')) {
-        btn.classList.remove('liked');
-        icon.className = 'ri-heart-line';
-        countEl.textContent = Math.max(0, count - 1);
-    } else {
-        btn.classList.add('liked');
-        icon.className = 'ri-heart-fill';
-        countEl.textContent = count + 1;
-    }
-}
 </script>
 
 <script>
@@ -4851,7 +4835,7 @@ function getRezoLikedIds() {
 
 function toggleRezoHeart(btn, intentionId) {
     var likedIds = getRezoLikedIds();
-    var countEl = btn.parentElement.querySelector('.rz-int-heart-count');
+    var countEl = btn.parentElement.querySelector('.rz-int-heart-count, .ci-heart-count');
     var icon = btn.querySelector('i');
     var intenciones = getRezoIntenciones();
 
@@ -5056,6 +5040,7 @@ function renderCommunityList(listEl, intenciones) {
         return;
     }
 
+    var likedIds = getRezoLikedIds();
     var html = '';
     toShow.forEach(function(int, i) {
         var timeAgo = typeof getTimeAgo === 'function' ? getTimeAgo(int.time) : '';
@@ -5064,11 +5049,16 @@ function renderCommunityList(listEl, intenciones) {
         var color = int.color || '#A8C4DE';
         var escapedName = typeof escapeHtml === 'function' ? escapeHtml(name) : name;
         var escapedText = typeof escapeHtml === 'function' ? escapeHtml(int.text) : int.text;
+        
+        var hearts = int.hearts || 0;
+        var isLiked = likedIds.indexOf(int.id) !== -1;
+        if (isLiked) hearts = Math.max(hearts, 1);
+
         html += '<div class="community-intention glass" style="animation-delay:' + (i * 0.05) + 's">' +
             '<div class="ci-avatar" style="background:' + color + '">' + initial + '</div>' +
             '<div class="ci-content"><span class="ci-name">' + escapedName + '</span><p>' + escapedText + '</p>' +
             '<span style="font-size:0.7rem;color:var(--clr-text-muted)">' + timeAgo + '</span></div>' +
-            '<div class="ci-heart-area"><button class="ci-heart-btn" onclick="toggleHeart(this)"><i class="ri-heart-line"></i></button><span class="ci-heart-count">0</span></div>' +
+            '<div class="ci-heart-area"><button class="ci-heart-btn' + (isLiked ? ' liked' : '') + '" onclick="toggleRezoHeart(this,\'' + int.id + '\')"><i class="' + (isLiked ? 'ri-heart-fill' : 'ri-heart-line') + '"></i></button><span class="ci-heart-count">' + hearts + '</span></div>' +
             '</div>';
     });
     listEl.innerHTML = html;
