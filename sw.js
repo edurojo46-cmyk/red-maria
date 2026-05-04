@@ -1,7 +1,7 @@
 // === Red Maria Service Worker v6 ===
 // Handles background notifications + cache busting
 
-const CACHE_NAME = 'redmaria-v88';
+const CACHE_NAME = 'redmaria-v89';
 
 // Install event - force immediate activation
 self.addEventListener('install', function(event) {
@@ -33,7 +33,12 @@ self.addEventListener('fetch', function(event) {
             }
             return response;
         }).catch(function() {
-            return caches.match(event.request);
+            return caches.match(event.request).then(function(response) {
+                return response || new Response("Offline - Please connect to internet", { 
+                    status: 503, 
+                    statusText: "Service Unavailable" 
+                });
+            });
         })
     );
 });
