@@ -681,11 +681,11 @@ body {
 
 .ci-heart-btn:hover {
     transform: scale(1.15);
-    color: #f39c12;
+    color: #E8A0BF;
 }
 
 .ci-heart-btn.liked {
-    color: #f39c12;
+    color: #e74c3c;
     animation: heartBounce 0.4s ease;
 }
 
@@ -8403,11 +8403,11 @@ body {
 
 .rz-int-heart-btn:hover {
     transform: scale(1.15);
-    color: #f39c12;
+    color: #E8A0BF;
 }
 
 .rz-int-heart-btn.liked {
-    color: #f39c12;
+    color: #e74c3c;
 }
 
 .rz-int-heart-btn.liked i {
@@ -8424,7 +8424,7 @@ body {
 }
 
 .rz-int-heart-btn.liked ~ .rz-int-heart-count {
-    color: #f39c12;
+    color: #e74c3c;
 }
 
 /* Actions row (heart + message) */
