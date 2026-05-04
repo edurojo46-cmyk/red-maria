@@ -18,7 +18,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link rel="stylesheet" href="index.css?v=89">
+    <link rel="stylesheet" href="index.css?v=90">
     <script>
         // DEV FIX: Force unregister service workers on localhost
         if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
@@ -75,9 +75,9 @@
             <a href="#" class="active" onclick="app.mobileNav('screen-splash')"><i class="ri-home-4-line"></i> Inicio</a>
             <a href="#" onclick="app.mobileNav('screen-map')"><i class="ri-map-pin-line"></i> Buscar</a>
             <a href="#" onclick="app.mobileNav('screen-create-rosary')"><i class="ri-add-circle-line"></i> Crear</a>
-            <a href="#" onclick="app.mobileNav('screen-rezo')"><i class="ri-hand-heart-line"></i> Rezar</a>
+            <a href="#" onclick="app.mobileNav('screen-rezo')"><i class="ri-cross-line"></i> Rezar</a>
             <a href="#" onclick="app.mobileNav('screen-live')"><i class="ri-time-line"></i> Rosario Continuo</a>
-            <a href="#" onclick="app.mobileNav('screen-intenciones')"><i class="ri-heart-3-line"></i> Intenciones</a>
+            <a href="#" onclick="app.mobileNav('screen-intenciones')"><i class="ri-message-3-line"></i> Intenciones</a>
             <a href="#" onclick="app.mobileNav('screen-como-rezar')"><i class="ri-book-open-line"></i> Cómo Rezar</a>
             <a href="#" onclick="app.mobileNav('screen-porque-rezar')"><i class="ri-question-line"></i> Por qué Rezar</a>
             <a href="#" onclick="app.mobileNav('screen-apariciones')"><i class="ri-eye-line"></i> Apariciones</a>
@@ -100,7 +100,7 @@
             <div class="header-dropdown">
                 <a href="#" class="header-dropdown-trigger" onclick="event.preventDefault()">Reza x Mi <i class="ri-arrow-down-s-line"></i></a>
                 <div class="header-dropdown-menu glass">
-                    <a href="#" onclick="app.navigate('screen-intenciones')"><i class="ri-heart-3-fill"></i> Mis Intenciones</a>
+                    <a href="#" onclick="app.navigate('screen-intenciones')"><i class="ri-message-3-fill"></i> Mis Intenciones</a>
                     <a href="#" onclick="app.navigate('screen-como-rezar')"><i class="ri-book-open-fill"></i> Cómo Rezar</a>
                     <a href="#" onclick="app.navigate('screen-porque-rezar')"><i class="ri-question-fill"></i> Por qué Rezar</a>
                     <a href="#" onclick="app.navigate('screen-apariciones')"><i class="ri-eye-fill"></i> Apariciones</a>
@@ -173,7 +173,7 @@
             <div class="how-it-works-steps">
                 <div class="step-item glass card"><div class="step-number">1</div><div class="step-icon"><i class="ri-search-line"></i></div><h4>Busca un Rosario</h4><p>Abre el mapa y encuentra rosarios cercanos.</p></div>
                 <div class="step-connector"><i class="ri-arrow-right-line"></i></div>
-                <div class="step-item glass card"><div class="step-number">2</div><div class="step-icon"><i class="ri-hand-heart-line"></i></div><h4>Ãšnete y Reza</h4><p>Confirmá tu asistencia.</p></div>
+                <div class="step-item glass card"><div class="step-number">2</div><div class="step-icon"><i class="ri-cross-line"></i></div><h4>Ãšnete y Reza</h4><p>Confirmá tu asistencia.</p></div>
                 <div class="step-connector"><i class="ri-arrow-right-line"></i></div>
                 <div class="step-item glass card"><div class="step-number">3</div><div class="step-icon"><i class="ri-group-line"></i></div><h4>Reza en Comunidad</h4><p>Participá del rosario en vivo.</p></div>
             </div>
@@ -310,7 +310,7 @@
         <!-- Rosary Cards List -->
         <div class="buscar-cards-area">
             <div class="buscar-cards-header">
-                <h3><i class="ri-hand-heart-fill"></i> Rosarios Cercanos</h3>
+                <h3><i class="ri-cross-fill"></i> Rosarios Cercanos</h3>
                 <span class="buscar-cards-count" id="buscar-cards-count">0 encontrados</span>
             </div>
             <div class="rosary-list" id="rosary-list">
@@ -339,7 +339,7 @@
         </div>
         <div class="intenciones-scrollarea">
             <div class="intenciones-hero">
-                <div class="intenciones-hero-icon"><i class="ri-heart-3-fill"></i></div>
+                <div class="intenciones-hero-icon"><i class="ri-message-3-fill"></i></div>
                 <h2>Intenciones</h2>
             </div>
 
@@ -357,7 +357,7 @@
 
             <!-- Community Intentions -->
             <div class="community-intentions">
-                <h3 class="mysteries-title"><i class="ri-chat-heart-fill"></i> Intenciones de la Comunidad</h3>
+                <h3 class="mysteries-title"><i class="ri-message-3-fill"></i> Intenciones de la Comunidad</h3>
                 <div class="community-intentions-list" id="community-intentions-list">
                 </div>
             </div>
@@ -401,7 +401,7 @@
     <section id="screen-rezo" class="screen unirme-bg">
         <div class="top-bar glass rezo-topbar">
             <button class="icon-btn" onclick="app.navigate('screen-map')"><i class="ri-arrow-left-line"></i></button>
-            <h2><i class="ri-hand-heart-fill" style="color:#e74c3c;margin-right:6px"></i> Rezar</h2>
+            <h2><i class="ri-cross-fill" style="color:#e74c3c;margin-right:6px"></i> Rezar</h2>
             <button class="icon-btn"><i class="ri-share-forward-fill"></i></button>
         </div>
         <div class="unirme-scrollarea">
@@ -472,7 +472,7 @@
             <!-- Intenciones -->
             <div class="rz-section">
                 <div class="rz-section-header">
-                    <div class="rz-section-icon" style="background:linear-gradient(135deg,#e67e22,#f39c12)"><i class="ri-chat-heart-fill"></i></div>
+                    <div class="rz-section-icon" style="background:linear-gradient(135deg,#e67e22,#f39c12)"><i class="ri-message-3-fill"></i></div>
                     <h4>Intenciones</h4>
                     <span class="rz-section-badge" id="rezo-intenciones-count">0</span>
                 </div>
@@ -711,11 +711,11 @@
                     <i class="ri-arrow-down-s-line rzr-chevron"></i>
                 </button>
                 <div class="rzr-accordion-body">
-                    <div class="rzr-mystery"><div class="rzr-m-num">1°</div><img src="assets/misterio_anunciacion.png" alt="La Anunciación"/><div class="rzr-m-info"><h4>La Anunciación del Ángel a María</h4><p>El ángel Gabriel anuncia a María que será la Madre del Hijo de Dios.</p><p class="rzr-med"><i class="ri-heart-line"></i> Señor, dame la humildad de María para aceptar tu voluntad.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: La Humildad</span></div></div>
-                    <div class="rzr-mystery"><div class="rzr-m-num">2°</div><img src="assets/misterio_visitacion.png" alt="La Visitación"/><div class="rzr-m-info"><h4>La Visitación de María a Isabel</h4><p>María visita a su prima Isabel: "¡Bendita tú entre las mujeres!"</p><p class="rzr-med"><i class="ri-heart-line"></i> Ayúdame a ser portador de tu presencia.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: La Caridad</span></div></div>
-                    <div class="rzr-mystery"><div class="rzr-m-num">3°</div><img src="assets/misterio_nacimiento.png" alt="El Nacimiento"/><div class="rzr-m-info"><h4>El Nacimiento del Hijo de Dios</h4><p>Jesús nace en Belén en un humilde pesebre.</p><p class="rzr-med"><i class="ri-heart-line"></i> Enséñame a valorar la sencillez.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: La Pobreza de Espíritu</span></div></div>
-                    <div class="rzr-mystery"><div class="rzr-m-num">4°</div><img src="assets/misterio_presentacion.png" alt="La Presentación"/><div class="rzr-m-info"><h4>La Presentación en el Templo</h4><p>María y José presentan al Niño Jesús. Simeón reconoce al Salvador.</p><p class="rzr-med"><i class="ri-heart-line"></i> Ayúdame a entregarte lo más valioso.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: La Obediencia</span></div></div>
-                    <div class="rzr-mystery"><div class="rzr-m-num">5°</div><img src="assets/misterio_hallado_templo.png" alt="Hallado en el Templo"/><div class="rzr-m-info"><h4>El Niño Perdido y Hallado en el Templo</h4><p>Tras tres días, encuentran a Jesús enseñando en el Templo.</p><p class="rzr-med"><i class="ri-heart-line"></i> Que siempre busque estar cerca de Ti.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: La Piedad</span></div></div>
+                    <div class="rzr-mystery"><div class="rzr-m-num">1°</div><img src="assets/misterio_anunciacion.png" alt="La Anunciación"/><div class="rzr-m-info"><h4>La Anunciación del Ángel a María</h4><p>El ángel Gabriel anuncia a María que será la Madre del Hijo de Dios.</p><p class="rzr-med"><i class="ri-candle-line"></i> Señor, dame la humildad de María para aceptar tu voluntad.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: La Humildad</span></div></div>
+                    <div class="rzr-mystery"><div class="rzr-m-num">2°</div><img src="assets/misterio_visitacion.png" alt="La Visitación"/><div class="rzr-m-info"><h4>La Visitación de María a Isabel</h4><p>María visita a su prima Isabel: "¡Bendita tú entre las mujeres!"</p><p class="rzr-med"><i class="ri-candle-line"></i> Ayúdame a ser portador de tu presencia.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: La Caridad</span></div></div>
+                    <div class="rzr-mystery"><div class="rzr-m-num">3°</div><img src="assets/misterio_nacimiento.png" alt="El Nacimiento"/><div class="rzr-m-info"><h4>El Nacimiento del Hijo de Dios</h4><p>Jesús nace en Belén en un humilde pesebre.</p><p class="rzr-med"><i class="ri-candle-line"></i> Enséñame a valorar la sencillez.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: La Pobreza de Espíritu</span></div></div>
+                    <div class="rzr-mystery"><div class="rzr-m-num">4°</div><img src="assets/misterio_presentacion.png" alt="La Presentación"/><div class="rzr-m-info"><h4>La Presentación en el Templo</h4><p>María y José presentan al Niño Jesús. Simeón reconoce al Salvador.</p><p class="rzr-med"><i class="ri-candle-line"></i> Ayúdame a entregarte lo más valioso.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: La Obediencia</span></div></div>
+                    <div class="rzr-mystery"><div class="rzr-m-num">5°</div><img src="assets/misterio_hallado_templo.png" alt="Hallado en el Templo"/><div class="rzr-m-info"><h4>El Niño Perdido y Hallado en el Templo</h4><p>Tras tres días, encuentran a Jesús enseñando en el Templo.</p><p class="rzr-med"><i class="ri-candle-line"></i> Que siempre busque estar cerca de Ti.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: La Piedad</span></div></div>
                 </div>
             </div>
 
@@ -728,11 +728,11 @@
                     <i class="ri-arrow-down-s-line rzr-chevron"></i>
                 </button>
                 <div class="rzr-accordion-body">
-                    <div class="rzr-mystery"><div class="rzr-m-num">1°</div><img src="assets/misterio_agonia_huerto.png" alt="La Agonía en el Huerto"/><div class="rzr-m-info"><h4>La Oración en el Huerto</h4><p>Jesús ora en Getsemaní y suda sangre ante su Pasión.</p><p class="rzr-med"><i class="ri-heart-line"></i> Dame fortaleza para enfrentar el sufrimiento.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: El Dolor de los pecados</span></div></div>
-                    <div class="rzr-mystery"><div class="rzr-m-num">2°</div><img src="assets/misterio_flagelacion.png" alt="La Flagelación"/><div class="rzr-m-info"><h4>La Flagelación del Señor</h4><p>Jesús es azotado cruelmente por los soldados romanos.</p><p class="rzr-med"><i class="ri-heart-line"></i> Que nunca olvide el precio de mi salvación.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: La Pureza</span></div></div>
-                    <div class="rzr-mystery"><div class="rzr-m-num">3°</div><img src="assets/misterio_coronacion_espinas.png" alt="La Coronación de Espinas"/><div class="rzr-m-info"><h4>La Coronación de Espinas</h4><p>Los soldados coronan a Jesús y se burlan: "¡Salve, Rey de los Judíos!"</p><p class="rzr-med"><i class="ri-heart-line"></i> Que nunca me avergüence de tu nombre.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: El Valor</span></div></div>
-                    <div class="rzr-mystery"><div class="rzr-m-num">4°</div><img src="assets/misterio_cruz_cuestas.png" alt="La Cruz a Cuestas"/><div class="rzr-m-info"><h4>Jesús Carga con la Cruz</h4><p>Jesús lleva la Cruz hasta el Calvario, cayendo varias veces.</p><p class="rzr-med"><i class="ri-heart-line"></i> Enséñame a cargar mis cruces con paciencia.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: La Paciencia</span></div></div>
-                    <div class="rzr-mystery"><div class="rzr-m-num">5°</div><img src="assets/misterio_crucifixion.png" alt="La Crucifixión"/><div class="rzr-m-info"><h4>La Crucifixión y Muerte de Jesús</h4><p>Jesús muere en la Cruz por la salvación de la humanidad.</p><p class="rzr-med"><i class="ri-heart-line"></i> Que viva agradecido por tan inmenso sacrificio.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: La Generosidad</span></div></div>
+                    <div class="rzr-mystery"><div class="rzr-m-num">1°</div><img src="assets/misterio_agonia_huerto.png" alt="La Agonía en el Huerto"/><div class="rzr-m-info"><h4>La Oración en el Huerto</h4><p>Jesús ora en Getsemaní y suda sangre ante su Pasión.</p><p class="rzr-med"><i class="ri-candle-line"></i> Dame fortaleza para enfrentar el sufrimiento.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: El Dolor de los pecados</span></div></div>
+                    <div class="rzr-mystery"><div class="rzr-m-num">2°</div><img src="assets/misterio_flagelacion.png" alt="La Flagelación"/><div class="rzr-m-info"><h4>La Flagelación del Señor</h4><p>Jesús es azotado cruelmente por los soldados romanos.</p><p class="rzr-med"><i class="ri-candle-line"></i> Que nunca olvide el precio de mi salvación.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: La Pureza</span></div></div>
+                    <div class="rzr-mystery"><div class="rzr-m-num">3°</div><img src="assets/misterio_coronacion_espinas.png" alt="La Coronación de Espinas"/><div class="rzr-m-info"><h4>La Coronación de Espinas</h4><p>Los soldados coronan a Jesús y se burlan: "¡Salve, Rey de los Judíos!"</p><p class="rzr-med"><i class="ri-candle-line"></i> Que nunca me avergüence de tu nombre.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: El Valor</span></div></div>
+                    <div class="rzr-mystery"><div class="rzr-m-num">4°</div><img src="assets/misterio_cruz_cuestas.png" alt="La Cruz a Cuestas"/><div class="rzr-m-info"><h4>Jesús Carga con la Cruz</h4><p>Jesús lleva la Cruz hasta el Calvario, cayendo varias veces.</p><p class="rzr-med"><i class="ri-candle-line"></i> Enséñame a cargar mis cruces con paciencia.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: La Paciencia</span></div></div>
+                    <div class="rzr-mystery"><div class="rzr-m-num">5°</div><img src="assets/misterio_crucifixion.png" alt="La Crucifixión"/><div class="rzr-m-info"><h4>La Crucifixión y Muerte de Jesús</h4><p>Jesús muere en la Cruz por la salvación de la humanidad.</p><p class="rzr-med"><i class="ri-candle-line"></i> Que viva agradecido por tan inmenso sacrificio.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: La Generosidad</span></div></div>
                 </div>
             </div>
 
@@ -745,11 +745,11 @@
                     <i class="ri-arrow-down-s-line rzr-chevron"></i>
                 </button>
                 <div class="rzr-accordion-body">
-                    <div class="rzr-mystery"><div class="rzr-m-num">1°</div><img src="assets/misterio_resurreccion.png" alt="La Resurrección"/><div class="rzr-m-info"><h4>La Resurrección del Señor</h4><p>Al tercer día, Jesús resucita glorioso venciendo la muerte.</p><p class="rzr-med"><i class="ri-heart-line"></i> Renueva mi esperanza y hazme testigo de tu victoria.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: La Fe</span></div></div>
-                    <div class="rzr-mystery"><div class="rzr-m-num">2°</div><img src="assets/misterio_ascension.png" alt="La Ascensión"/><div class="rzr-m-info"><h4>La Ascensión del Señor</h4><p>Jesús sube al cielo y promete enviar al Espíritu Santo.</p><p class="rzr-med"><i class="ri-heart-line"></i> Levanta mi corazón hacia las cosas del cielo.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: La Esperanza</span></div></div>
-                    <div class="rzr-mystery"><div class="rzr-m-num">3°</div><img src="assets/misterio_pentecostes.png" alt="Pentecostés"/><div class="rzr-m-info"><h4>La Venida del Espíritu Santo</h4><p>El Espíritu Santo desciende sobre los Apóstoles y María.</p><p class="rzr-med"><i class="ri-heart-line"></i> Ven, Espíritu Santo, renueva mi corazón.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: El Amor de Dios</span></div></div>
-                    <div class="rzr-mystery"><div class="rzr-m-num">4°</div><img src="assets/misterio_asuncion.png" alt="La Asunción"/><div class="rzr-m-info"><h4>La Asunción de la Virgen María</h4><p>María es elevada al cielo en cuerpo y alma.</p><p class="rzr-med"><i class="ri-heart-line"></i> Que mi vida sea un camino hacia la patria celestial.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: La Gracia de una buena muerte</span></div></div>
-                    <div class="rzr-mystery"><div class="rzr-m-num">5°</div><img src="assets/misterio_coronacion_maria.png" alt="Coronación de María"/><div class="rzr-m-info"><h4>La Coronación de María como Reina</h4><p>María es coronada Reina del Cielo y de la Tierra.</p><p class="rzr-med"><i class="ri-heart-line"></i> Que aprenda que la grandeza está en el servicio.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: La Devoción a María</span></div></div>
+                    <div class="rzr-mystery"><div class="rzr-m-num">1°</div><img src="assets/misterio_resurreccion.png" alt="La Resurrección"/><div class="rzr-m-info"><h4>La Resurrección del Señor</h4><p>Al tercer día, Jesús resucita glorioso venciendo la muerte.</p><p class="rzr-med"><i class="ri-candle-line"></i> Renueva mi esperanza y hazme testigo de tu victoria.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: La Fe</span></div></div>
+                    <div class="rzr-mystery"><div class="rzr-m-num">2°</div><img src="assets/misterio_ascension.png" alt="La Ascensión"/><div class="rzr-m-info"><h4>La Ascensión del Señor</h4><p>Jesús sube al cielo y promete enviar al Espíritu Santo.</p><p class="rzr-med"><i class="ri-candle-line"></i> Levanta mi corazón hacia las cosas del cielo.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: La Esperanza</span></div></div>
+                    <div class="rzr-mystery"><div class="rzr-m-num">3°</div><img src="assets/misterio_pentecostes.png" alt="Pentecostés"/><div class="rzr-m-info"><h4>La Venida del Espíritu Santo</h4><p>El Espíritu Santo desciende sobre los Apóstoles y María.</p><p class="rzr-med"><i class="ri-candle-line"></i> Ven, Espíritu Santo, renueva mi corazón.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: El Amor de Dios</span></div></div>
+                    <div class="rzr-mystery"><div class="rzr-m-num">4°</div><img src="assets/misterio_asuncion.png" alt="La Asunción"/><div class="rzr-m-info"><h4>La Asunción de la Virgen María</h4><p>María es elevada al cielo en cuerpo y alma.</p><p class="rzr-med"><i class="ri-candle-line"></i> Que mi vida sea un camino hacia la patria celestial.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: La Gracia de una buena muerte</span></div></div>
+                    <div class="rzr-mystery"><div class="rzr-m-num">5°</div><img src="assets/misterio_coronacion_maria.png" alt="Coronación de María"/><div class="rzr-m-info"><h4>La Coronación de María como Reina</h4><p>María es coronada Reina del Cielo y de la Tierra.</p><p class="rzr-med"><i class="ri-candle-line"></i> Que aprenda que la grandeza está en el servicio.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: La Devoción a María</span></div></div>
                 </div>
             </div>
 
@@ -762,17 +762,17 @@
                     <i class="ri-arrow-down-s-line rzr-chevron"></i>
                 </button>
                 <div class="rzr-accordion-body">
-                    <div class="rzr-mystery"><div class="rzr-m-num">1°</div><img src="assets/misterio_bautismo.png" alt="El Bautismo"/><div class="rzr-m-info"><h4>El Bautismo de Jesús en el Jordán</h4><p>"Este es mi Hijo amado, en quien tengo mis complacencias."</p><p class="rzr-med"><i class="ri-heart-line"></i> Que viva cada día a la altura de mi dignidad bautismal.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: La Fidelidad</span></div></div>
-                    <div class="rzr-mystery"><div class="rzr-m-num">2°</div><img src="assets/misterio_bodas_cana.png" alt="Las Bodas de Caná"/><div class="rzr-m-info"><h4>Las Bodas de Caná</h4><p>A petición de María, Jesús convierte el agua en vino.</p><p class="rzr-med"><i class="ri-heart-line"></i> Confío en la intercesión de la Virgen María.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: La Confianza en María</span></div></div>
-                    <div class="rzr-mystery"><div class="rzr-m-num">3°</div><img src="assets/misterio_predicacion_reino.png" alt="Predicación del Reino"/><div class="rzr-m-info"><h4>La Predicación del Reino</h4><p>"Convertíos y creed en el Evangelio."</p><p class="rzr-med"><i class="ri-heart-line"></i> Abre mi corazón a tu Palabra.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: La Conversión</span></div></div>
-                    <div class="rzr-mystery"><div class="rzr-m-num">4°</div><img src="assets/misterio_transfiguracion.png" alt="La Transfiguración"/><div class="rzr-m-info"><h4>La Transfiguración del Señor</h4><p>Jesús muestra su gloria divina en el monte Tabor.</p><p class="rzr-med"><i class="ri-heart-line"></i> En la oscuridad, recuérdame que tu luz brilla.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: El Deseo de santidad</span></div></div>
-                    <div class="rzr-mystery"><div class="rzr-m-num">5°</div><img src="assets/misterio_eucaristia.png" alt="La Eucaristía"/><div class="rzr-m-info"><h4>La Institución de la Eucaristía</h4><p>"Esto es mi Cuerpo, que se entrega por vosotros."</p><p class="rzr-med"><i class="ri-heart-line"></i> Que valore este regalo inmenso de amor.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: La Adoración Eucarística</span></div></div>
+                    <div class="rzr-mystery"><div class="rzr-m-num">1°</div><img src="assets/misterio_bautismo.png" alt="El Bautismo"/><div class="rzr-m-info"><h4>El Bautismo de Jesús en el Jordán</h4><p>"Este es mi Hijo amado, en quien tengo mis complacencias."</p><p class="rzr-med"><i class="ri-candle-line"></i> Que viva cada día a la altura de mi dignidad bautismal.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: La Fidelidad</span></div></div>
+                    <div class="rzr-mystery"><div class="rzr-m-num">2°</div><img src="assets/misterio_bodas_cana.png" alt="Las Bodas de Caná"/><div class="rzr-m-info"><h4>Las Bodas de Caná</h4><p>A petición de María, Jesús convierte el agua en vino.</p><p class="rzr-med"><i class="ri-candle-line"></i> Confío en la intercesión de la Virgen María.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: La Confianza en María</span></div></div>
+                    <div class="rzr-mystery"><div class="rzr-m-num">3°</div><img src="assets/misterio_predicacion_reino.png" alt="Predicación del Reino"/><div class="rzr-m-info"><h4>La Predicación del Reino</h4><p>"Convertíos y creed en el Evangelio."</p><p class="rzr-med"><i class="ri-candle-line"></i> Abre mi corazón a tu Palabra.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: La Conversión</span></div></div>
+                    <div class="rzr-mystery"><div class="rzr-m-num">4°</div><img src="assets/misterio_transfiguracion.png" alt="La Transfiguración"/><div class="rzr-m-info"><h4>La Transfiguración del Señor</h4><p>Jesús muestra su gloria divina en el monte Tabor.</p><p class="rzr-med"><i class="ri-candle-line"></i> En la oscuridad, recuérdame que tu luz brilla.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: El Deseo de santidad</span></div></div>
+                    <div class="rzr-mystery"><div class="rzr-m-num">5°</div><img src="assets/misterio_eucaristia.png" alt="La Eucaristía"/><div class="rzr-m-info"><h4>La Institución de la Eucaristía</h4><p>"Esto es mi Cuerpo, que se entrega por vosotros."</p><p class="rzr-med"><i class="ri-candle-line"></i> Que valore este regalo inmenso de amor.</p><span class="rzr-fruit"><i class="ri-seedling-line"></i> Fruto: La Adoración Eucarística</span></div></div>
                 </div>
             </div>
 
             <!-- CTA Final -->
             <div class="rezar-cta glass card">
-                <div class="rezar-cta-icon"><i class="ri-heart-3-fill"></i></div>
+                <div class="rezar-cta-icon"><i class="ri-message-3-fill"></i></div>
                 <h3>¡Comienza a rezar hoy!</h3>
                 <p>Únete a la comunidad de Red Maria y reza el Rosario en tu plaza más cercana</p>
                 <button class="btn btn-primary" onclick="app.navigate('screen-map')"><i class="ri-map-pin-line"></i> Buscar Rosario Cercano</button>
@@ -841,7 +841,7 @@
             </div>
 
             <div class="porque-divider">
-                <span class="porque-divider-text"><i class="ri-heart-3-fill"></i> Razones para Rezar Hoy</span>
+                <span class="porque-divider-text"><i class="ri-message-3-fill"></i> Razones para Rezar Hoy</span>
             </div>
 
             <div class="porque-card glass card">
@@ -898,7 +898,7 @@
                     </thead>
                     <tbody>
                         <tr><td><i class="ri-book-open-fill" style="color:#3DA3D4"></i> <strong>Bíblico</strong></td><td>Te mantiene empapado de la Palabra de Dios diariamente.</td></tr>
-                        <tr><td><i class="ri-heart-pulse-fill" style="color:#e74c3c"></i> <strong>Emocional</strong></td><td>Te da calma, orden interior y resiliencia ante el dolor.</td></tr>
+                        <tr><td><i class="ri-star-smile-fill" style="color:#e74c3c"></i> <strong>Emocional</strong></td><td>Te da calma, orden interior y resiliencia ante el dolor.</td></tr>
                         <tr><td><i class="ri-sparkling-fill" style="color:#f0a500"></i> <strong>Espiritual</strong></td><td>Fortalece la conexión directa con la voluntad divina.</td></tr>
                         <tr><td><i class="ri-group-fill" style="color:#27ae60"></i> <strong>Solidario</strong></td><td>Te une a una red global que pide por la justicia y la paz.</td></tr>
                     </tbody>
@@ -950,7 +950,7 @@
             </div>
 
             <div class="porque-card glass card">
-                <div class="porque-num"><i class="ri-hand-heart-fill" style="font-size:0.85rem"></i></div>
+                <div class="porque-num"><i class="ri-cross-fill" style="font-size:0.85rem"></i></div>
                 <h3>3. Sobre la humildad y la sencillez</h3>
                 <p>Los santos que trabajaron con los más necesitados destacaban que el Rosario iguala a todos los hombres.</p>
                 <div class="santo-quote">
@@ -979,7 +979,7 @@
             </div>
 
             <div class="rezar-cta glass card">
-                <div class="rezar-cta-icon"><i class="ri-heart-3-fill"></i></div>
+                <div class="rezar-cta-icon"><i class="ri-message-3-fill"></i></div>
                 <h3>¡Comienza a rezar hoy!</h3>
                 <p>Ãšnete a la comunidad de Red Maria y reza el Rosario</p>
                 <button class="btn btn-primary" onclick="app.navigate('screen-como-rezar')"><i class="ri-book-open-line"></i> Cómo Rezar el Rosario</button>
@@ -1337,7 +1337,7 @@ var zonasData = [
 {n:'Ntra. Sra. de Luján',d:'Campo de Mayo',h:'L-V 19:00 | D 10:00, 19:00'},
 {n:'Santa Teresita del Niño Jesús',d:'San Miguel',h:'L-V 19:00 | D 10:00, 12:00, 19:00'}
 ]},
-{id:34, nombre:'Luján', sub:'Luján Â· Open Door Â· Carlos Keen', icon:'ri-heart-3-fill', color:'#0984e3', grad:'linear-gradient(135deg,#0984e3,#6c5ce7)', iglesias:[
+{id:34, nombre:'Luján', sub:'Luján Â· Open Door Â· Carlos Keen', icon:'ri-message-3-fill', color:'#0984e3', grad:'linear-gradient(135deg,#0984e3,#6c5ce7)', iglesias:[
 {n:'Basílica Ntra. Sra. de Luján',d:'San Martín 51, Luján',h:'L-V 07:00, 08:00, 10:00, 12:00, 16:00, 18:00, 20:00 | S 07:00, 10:00, 18:00, 20:00 | D 07:00, 08:30, 10:00, 11:30, 16:00, 18:00, 20:00'},
 {n:'San José',d:'Av. Nuestra Señora 1275, Luján',h:'L-V 08:00, 19:00 | D 10:00, 19:00'},
 {n:'Ntra. Sra. del Rosario',d:'Open Door',h:'D 10:00'},
@@ -1936,7 +1936,7 @@ if (document.readyState !== 'loading') renderIglesiasGrid();
             <div class="profile-header glass card" style="position:relative;">
                 <!-- Profile Like Button -->
                 <div class="profile-likes" style="position:absolute; top:16px; right:20px; display:flex; flex-direction:column; align-items:center; gap:2px; cursor:pointer;" onclick="toggleProfileLike(this)">
-                    <i class="ri-heart-line profile-like-icon" style="font-size:1.6rem; color:var(--clr-text-muted); transition:all 0.3s;"></i>
+                    <i class="ri-candle-line profile-like-icon" style="font-size:1.6rem; color:var(--clr-text-muted); transition:all 0.3s;"></i>
                     <span class="profile-like-count" style="font-size:0.8rem; color:var(--clr-text-muted); font-weight:600;">0</span>
                 </div>
                 
@@ -1968,7 +1968,7 @@ if (document.readyState !== 'loading') renderIglesiasGrid();
             <!-- Welcome Prayer Network Card -->
             <div class="red-welcome-card">
                 <div class="red-welcome-glow"></div>
-                <div class="red-welcome-icon"><i class="ri-hand-heart-fill"></i></div>
+                <div class="red-welcome-icon"><i class="ri-cross-fill"></i></div>
                 <h3>Bienvenidos/as a la Red de Oración</h3>
                 <p>Para pedir y rezar por todos/as. Pulsa el botón blanco y aparecerás en la red para participar de esta cadena de oración.</p>
                 <div class="red-welcome-dots">
@@ -2083,7 +2083,7 @@ if (document.readyState !== 'loading') renderIglesiasGrid();
         <a href="#" class="nav-item active" onclick="app.navigate('screen-splash')"><i class="ri-home-4-line"></i><span>Inicio</span></a>
         <a href="#" class="nav-item" onclick="app.navigate('screen-map')"><i class="ri-map-pin-line"></i><span>Buscar</span></a>
         <a href="#" class="nav-item" onclick="app.navigate('screen-create-rosary')"><i class="ri-add-circle-line"></i><span>Crear</span></a>
-        <a href="#" class="nav-item" onclick="app.navigate('screen-rezo')"><i class="ri-hand-heart-line"></i><span>Rezar</span></a>
+        <a href="#" class="nav-item" onclick="app.navigate('screen-rezo')"><i class="ri-cross-line"></i><span>Rezar</span></a>
         <a href="#" class="nav-item" onclick="app.navigate('screen-live')"><i class="ri-time-line"></i><span>Continuo</span></a>
         <a href="#" class="nav-item" onclick="app.navigate('screen-iglesias')"><i class="ri-building-4-line"></i><span>Iglesias</span></a>
         <a href="#" class="nav-item" onclick="app.navigate('screen-cenaculo')"><i class="ri-team-line"></i><span>Cenáculo</span></a>
@@ -2092,9 +2092,9 @@ if (document.readyState !== 'loading') renderIglesiasGrid();
     </nav>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="auth.js?v=89"></script>
-<script src="supabase.js?v=89"></script>
-<script src="app.js?v=89"></script>
+<script src="auth.js?v=90"></script>
+<script src="supabase.js?v=90"></script>
+<script src="app.js?v=90"></script>
 
 <!-- Meditation Modal (self-contained, outside app-container) -->
 <div id="meditation-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:9999;justify-content:center;align-items:center;padding:20px;">
@@ -2317,7 +2317,7 @@ function addOtherMarker(id, name, lat, lng, profileId) {
         iconSize: [16, 16], iconAnchor: [8, 8]
     });
     var heartId = 'heart-' + id.replace(/[^a-zA-Z0-9]/g,'');
-    var heartBtn = '<div style="display:flex;align-items:center;gap:12px;margin:8px 0 4px"><button class="map-heart-btn" id="' + heartId + '" onclick="toggleMapHeart(this)" style="background:none;border:none;cursor:pointer;font-size:1.3rem;display:flex;align-items:center;gap:4px;color:#ccc;transition:all 0.2s"><i class="ri-heart-3-line"></i><span style="font-size:0.75rem;font-weight:700">0</span></button></div>';
+    var heartBtn = '<div style="display:flex;align-items:center;gap:12px;margin:8px 0 4px"><button class="map-heart-btn" id="' + heartId + '" onclick="toggleMapHeart(this)" style="background:none;border:none;cursor:pointer;font-size:1.3rem;display:flex;align-items:center;gap:4px;color:#ccc;transition:all 0.2s"><i class="ri-message-3-line"></i><span style="font-size:0.75rem;font-weight:700">0</span></button></div>';
     var msgBtn = profileId ? '<button class="map-user-msg-btn" onclick="openChatFromMap(\'' + profileId + '\',\'' + (name||'').replace(/'/g,'') + '\')"><i class="ri-chat-1-fill"></i> Enviar Mensaje</button>' : '';
     rezandoMarkers[id] = L.marker([lat, lng], {icon: prayIcon})
         .addTo(rezandoMap)
@@ -2330,12 +2330,12 @@ function toggleMapHeart(btn) {
     var count = parseInt(countEl.textContent) || 0;
     if (btn.classList.contains('liked')) {
         btn.classList.remove('liked');
-        icon.className = 'ri-heart-3-line';
+        icon.className = 'ri-message-3-line';
         btn.style.color = '#ccc';
         countEl.textContent = Math.max(0, count - 1);
     } else {
         btn.classList.add('liked');
-        icon.className = 'ri-heart-3-fill';
+        icon.className = 'ri-message-3-fill';
         btn.style.color = '#e74c3c';
         countEl.textContent = count + 1;
         btn.style.transform = 'scale(1.3)';
@@ -3774,8 +3774,8 @@ var searchIndex = [
     {type:'page',icon:'ri-map-pin-fill',title:'Buscar Rosarios',desc:'Encontrá rosarios cerca tuyo',action:"app.navigate('screen-map')"},
     {type:'page',icon:'ri-add-circle-fill',title:'Crear Rosario',desc:'Organizá un rosario en tu zona',action:"app.navigate('screen-create-rosary')"},
     {type:'page',icon:'ri-time-fill',title:'Rosario Continuo',desc:'Cronograma 24hs de oración',action:"app.navigate('screen-live')"},
-    {type:'page',icon:'ri-heart-3-fill',title:'Reza x Mi',desc:'Intenciones de la comunidad',action:"app.navigate('screen-intenciones')"},
-    {type:'page',icon:'ri-hand-heart-fill',title:'Rezar',desc:'Ãšnete a un rosario en vivo',action:"app.navigate('screen-rezo')"},
+    {type:'page',icon:'ri-message-3-fill',title:'Reza x Mi',desc:'Intenciones de la comunidad',action:"app.navigate('screen-intenciones')"},
+    {type:'page',icon:'ri-cross-fill',title:'Rezar',desc:'Ãšnete a un rosario en vivo',action:"app.navigate('screen-rezo')"},
     {type:'page',icon:'ri-book-open-fill',title:'Cómo Rezar',desc:'Guía completa del Santo Rosario',action:"app.navigate('screen-como-rezar')"},
     {type:'page',icon:'ri-question-fill',title:'Por qué Rezar',desc:'Historia y razones del Rosario',action:"app.navigate('screen-porque-rezar')"},
     {type:'page',icon:'ri-chat-3-fill',title:'Mensajes',desc:'Mensajes con la comunidad',action:"app.navigate('screen-chat')"},
@@ -3792,10 +3792,10 @@ var searchIndex = [
     {type:'content',icon:'ri-quill-pen-fill',title:'Santa Teresa de Calcuta',desc:'"Aférrate al Rosario como la planta trepadora"',action:"app.navigate('screen-porque-rezar')"},
     {type:'content',icon:'ri-quill-pen-fill',title:'San Juan Bosco',desc:'"Recen todos los días el Rosario"',action:"app.navigate('screen-porque-rezar')"},
     // Intenciones
-    {type:'intention',icon:'ri-chat-heart-fill',title:'Por la salud de mi familia',desc:'María García Â· Intención',action:"app.navigate('screen-intenciones')"},
-    {type:'intention',icon:'ri-chat-heart-fill',title:'Por la paz en el mundo',desc:'Laura Martínez Â· Intención',action:"app.navigate('screen-intenciones')"},
-    {type:'intention',icon:'ri-chat-heart-fill',title:'Por los jóvenes que buscan a Dios',desc:'Juan Rodríguez Â· Intención',action:"app.navigate('screen-intenciones')"},
-    {type:'intention',icon:'ri-chat-heart-fill',title:'Por los enfermos',desc:'Sofía López Â· Intención',action:"app.navigate('screen-intenciones')"},
+    {type:'intention',icon:'ri-message-3-fill',title:'Por la salud de mi familia',desc:'María García Â· Intención',action:"app.navigate('screen-intenciones')"},
+    {type:'intention',icon:'ri-message-3-fill',title:'Por la paz en el mundo',desc:'Laura Martínez Â· Intención',action:"app.navigate('screen-intenciones')"},
+    {type:'intention',icon:'ri-message-3-fill',title:'Por los jóvenes que buscan a Dios',desc:'Juan Rodríguez Â· Intención',action:"app.navigate('screen-intenciones')"},
+    {type:'intention',icon:'ri-message-3-fill',title:'Por los enfermos',desc:'Sofía López Â· Intención',action:"app.navigate('screen-intenciones')"},
 ];
 
 var typeLabels = {page:'Paginas',user:'Usuarios',rosary:'Rosarios',content:'Contenido',intention:'Intenciones'};
@@ -5396,7 +5396,7 @@ async function createCenaculo() {
     });
 
     var id = 'c_' + Date.now().toString(36);
-    var icons = ['ri-team-fill','ri-heart-3-fill','ri-group-fill','ri-hand-heart-fill'];
+    var icons = ['ri-team-fill','ri-message-3-fill','ri-group-fill','ri-cross-fill'];
     var cenaculo = {
         id: id, name: name, access: cenaculoAccessType,
         color: '#8b5cf6', // Fijo violeta
@@ -6698,3 +6698,4 @@ setInterval(function() {
 </script>
 </body>
 </html>
+

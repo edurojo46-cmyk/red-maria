@@ -1037,13 +1037,13 @@ var app = {
                 var icon = document.querySelector('.profile-like-icon');
                 if (icon) {
                     if (likedProfiles[u.email]) {
-                        icon.classList.remove('ri-heart-line');
-                        icon.classList.add('ri-heart-fill');
+                        icon.classList.remove('ri-candle-line');
+                        icon.classList.add('ri-candle-fill');
                         icon.style.color = '#e74c3c';
                         icon.style.transform = 'scale(1.15)';
                     } else {
-                        icon.classList.remove('ri-heart-fill');
-                        icon.classList.add('ri-heart-line');
+                        icon.classList.remove('ri-candle-fill');
+                        icon.classList.add('ri-candle-line');
                         icon.style.color = 'var(--clr-text-muted)';
                         icon.style.transform = 'scale(1)';
                     }
@@ -1464,7 +1464,7 @@ function toggleProfileLike(el) {
     var countEl = el.querySelector('.profile-like-count');
     if (!icon || !countEl) return;
     
-    var isLiked = icon.classList.contains('ri-heart-fill');
+    var isLiked = icon.classList.contains('ri-candle-fill');
     var count = parseInt(countEl.textContent, 10) || 0;
     var increment = 0;
     
@@ -1473,16 +1473,16 @@ function toggleProfileLike(el) {
     var likedProfiles = JSON.parse(localStorage.getItem('redmaria_liked_profiles') || '{}');
     
     if (isLiked) {
-        icon.classList.remove('ri-heart-fill');
-        icon.classList.add('ri-heart-line');
+        icon.classList.remove('ri-candle-fill');
+        icon.classList.add('ri-candle-line');
         icon.style.color = 'var(--clr-text-muted)';
         icon.style.transform = 'scale(1)';
         countEl.textContent = count - 1;
         increment = -1;
         likedProfiles[emailKey] = false;
     } else {
-        icon.classList.remove('ri-heart-line');
-        icon.classList.add('ri-heart-fill');
+        icon.classList.remove('ri-candle-line');
+        icon.classList.add('ri-candle-fill');
         icon.style.color = '#e74c3c'; // Rojo
         icon.style.transform = 'scale(1.15)';
         countEl.textContent = count + 1;
@@ -1496,3 +1496,4 @@ function toggleProfileLike(el) {
         db.updateProfileLikes(u.email, increment).catch(function(e) { console.error('Error syncing likes:', e); });
     }
 }
+
