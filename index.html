@@ -2221,11 +2221,13 @@ async function toggleRezando() {
         if (rezandoInterval) { clearInterval(rezandoInterval); rezandoInterval = null; }
         if (myRezandoMarker && rezandoMap) { rezandoMap.removeLayer(myRezandoMarker); myRezandoMarker = null; }
         // Remove self from rezandoPeople so counter goes down
-        var myId = getMyRezandoId();
-        delete rezandoPeople[myId];
-        // Broadcast leave
-        if (rezandoChannel) {
-            try { rezandoChannel.send({ type: 'broadcast', event: 'rezando', payload: { action: 'leave', id: myId } }); } catch(e){}
+        if (_myRezandoId) {
+            delete rezandoPeople[_myRezandoId];
+            // Broadcast leave
+            if (rezandoChannel) {
+                try { rezandoChannel.send({ type: 'broadcast', event: 'rezando', payload: { action: 'leave', id: _myRezandoId } }); } catch(e){}
+            }
+            _myRezandoId = null;
         }
         updateRezandoCount();
     } else {
@@ -2241,15 +2243,15 @@ async function toggleRezando() {
             var pp = await db.getProfileByEmail(lu.email);
             if (pp) myProfileId = pp.id;
         } catch(e) {}
-        var myId = getMyRezandoId();
+        _myRezandoId = getMyRezandoId();
 
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(function(pos) {
                 var lat = pos.coords.latitude, lng = pos.coords.longitude;
-                broadcastRezando(myId, userName, lat, lng, myProfileId);
+                broadcastRezando(_myRezandoId, userName, lat, lng, myProfileId);
                 addMyMarker(userName, lat, lng);
             }, function() {
-                broadcastRezando(myId, userName, -34.6 + Math.random()*0.05, -58.4 + Math.random()*0.05);
+                broadcastRezando(_myRezandoId, userName, -34.6 + Math.random()*0.05, -58.4 + Math.random()*0.05);
             }, {enableHighAccuracy: true, timeout: 8000});
         }
 
@@ -2257,7 +2259,7 @@ async function toggleRezando() {
         rezandoInterval = setInterval(function() {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(function(pos) {
-                    broadcastRezando(myId, userName, pos.coords.latitude, pos.coords.longitude, myProfileId);
+                    broadcastRezando(_myRezandoId, userName, pos.coords.latitude, pos.coords.longitude, myProfileId);
                 }, function() {});
             }
             // Clean stale users (>60s without heartbeat)
