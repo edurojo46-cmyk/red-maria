@@ -1670,25 +1670,22 @@ if (document.readyState !== 'loading') renderIglesiasGrid();
         <div class="rezar-scrollarea" style="padding:16px">
 
             <!-- Header Card -->
-            <div class="glass card" style="text-align:center; padding:28px 22px 24px; margin-bottom:20px; border-radius:22px; background:linear-gradient(160deg, rgba(99,102,241,0.04), rgba(139,92,246,0.07), rgba(168,85,247,0.04)); border: 1px solid rgba(99,102,241,0.15); position:relative; overflow:hidden;">
-                <!-- Decorative shimmer line -->
-                <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,rgba(99,102,241,0.4),rgba(139,92,246,0.6),rgba(168,85,247,0.4),transparent);border-radius:22px 22px 0 0;"></div>
-                <!-- Icon with glow ring -->
-                <div style="position:relative;width:72px;height:72px;margin:0 auto 18px;">
-                    <div style="position:absolute;inset:0;border-radius:50%;background:linear-gradient(135deg,rgba(99,102,241,0.15),rgba(139,92,246,0.1));animation:pulse 3s ease-in-out infinite;"></div>
-                    <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6,#a855f7);display:flex;align-items:center;justify-content:center;font-size:1.9rem;color:white;box-shadow:0 8px 28px rgba(99,102,241,0.35),0 0 0 4px rgba(99,102,241,0.08);position:relative;"><i class="ri-team-fill"></i></div>
-                </div>
-                <!-- Title with subtle gradient -->
-                <h3 style="font-size:1.25rem;margin:0 0 10px;font-weight:800;letter-spacing:-0.3px;background:linear-gradient(135deg,#6366f1,#8b5cf6,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Grupos Privados de Oración</h3>
-                <!-- Description in colored container -->
-                <div style="background:linear-gradient(135deg,rgba(99,102,241,0.06),rgba(139,92,246,0.08));border-radius:14px;padding:14px 16px;margin:0 0 16px;border-left:3px solid rgba(139,92,246,0.4);">
-                    <p style="color:#7dd3fc;font-size:0.85rem;margin:0;line-height:1.7;font-weight:400;text-align:left;"><i class="ri-sparkling-fill" style="color:#a78bfa;margin-right:4px;font-size:0.8rem;"></i>Creá grupos cerrados donde solo se entra con invitación. Pensado para familia o amigos que se juntan a rezar.</p>
+            <div class="glass card" style="text-align:center; padding:28px 22px 22px; margin-bottom:20px; border-radius:22px; position:relative; overflow:hidden; border:1px solid rgba(46,139,192,0.15);">
+                <!-- Top accent bar -->
+                <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent 5%,#3DA3D4 30%,#6366f1 50%,#8b5cf6 70%,transparent 95%);"></div>
+                <!-- Icon -->
+                <div style="width:68px;height:68px;border-radius:50%;background:linear-gradient(135deg,#3DA3D4,#6366f1);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:1.7rem;color:white;box-shadow:0 6px 24px rgba(61,163,212,0.3),0 0 0 5px rgba(61,163,212,0.08);"><i class="ri-team-fill"></i></div>
+                <!-- Title -->
+                <h3 style="font-size:1.2rem;margin:0 0 14px;font-weight:700;color:#1A3A5C;letter-spacing:-0.2px;">Grupos Privados de Oración</h3>
+                <!-- Description box -->
+                <div style="background:linear-gradient(135deg,rgba(61,163,212,0.07),rgba(99,102,241,0.06));border-radius:14px;padding:14px 16px;margin:0 0 16px;border:1px solid rgba(61,163,212,0.12);">
+                    <p style="color:#2E6B8A;font-size:0.84rem;margin:0;line-height:1.65;font-weight:400;text-align:left;"><i class="ri-sparkling-fill" style="color:#3DA3D4;margin-right:5px;font-size:0.78rem;"></i>Creá grupos cerrados donde solo se entra con invitación. Pensado para familia o amigos que se juntan a rezar.</p>
                 </div>
                 <!-- Feature pills -->
                 <div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap;">
-                    <span style="display:inline-flex;align-items:center;gap:4px;padding:5px 12px;border-radius:20px;background:rgba(99,102,241,0.08);color:#818cf8;font-size:0.72rem;font-weight:600;border:1px solid rgba(99,102,241,0.12);"><i class="ri-lock-fill" style="font-size:0.7rem;"></i> Privado</span>
-                    <span style="display:inline-flex;align-items:center;gap:4px;padding:5px 12px;border-radius:20px;background:rgba(139,92,246,0.08);color:#a78bfa;font-size:0.72rem;font-weight:600;border:1px solid rgba(139,92,246,0.12);"><i class="ri-heart-fill" style="font-size:0.7rem;"></i> Familiar</span>
-                    <span style="display:inline-flex;align-items:center;gap:4px;padding:5px 12px;border-radius:20px;background:rgba(168,85,247,0.08);color:#c084fc;font-size:0.72rem;font-weight:600;border:1px solid rgba(168,85,247,0.12);"><i class="ri-mail-send-fill" style="font-size:0.7rem;"></i> Invitación</span>
+                    <span style="display:inline-flex;align-items:center;gap:4px;padding:5px 12px;border-radius:20px;background:rgba(61,163,212,0.08);color:#2E8BC0;font-size:0.72rem;font-weight:600;border:1px solid rgba(61,163,212,0.15);"><i class="ri-lock-fill" style="font-size:0.68rem;"></i> Privado</span>
+                    <span style="display:inline-flex;align-items:center;gap:4px;padding:5px 12px;border-radius:20px;background:rgba(99,102,241,0.07);color:#6366f1;font-size:0.72rem;font-weight:600;border:1px solid rgba(99,102,241,0.12);"><i class="ri-heart-fill" style="font-size:0.68rem;"></i> Familiar</span>
+                    <span style="display:inline-flex;align-items:center;gap:4px;padding:5px 12px;border-radius:20px;background:rgba(139,92,246,0.07);color:#7c3aed;font-size:0.72rem;font-weight:600;border:1px solid rgba(139,92,246,0.12);"><i class="ri-mail-send-fill" style="font-size:0.68rem;"></i> Invitación</span>
                 </div>
             </div>
 
