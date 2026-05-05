@@ -1044,7 +1044,7 @@ var app = {
                         icon.style.transform = 'scale(1.1)';
                     } else {
                         icon.classList.remove('liked-emoji');
-                        icon.textContent = '🤲';
+                        icon.textContent = '🙏';
                         icon.style.filter = 'grayscale(80%)';
                         icon.style.opacity = '0.5';
                         icon.style.transform = 'scale(1)';
@@ -1477,7 +1477,7 @@ function toggleProfileLike(el) {
     if (isLiked) {
         // Was liked (filled hand) -> unlike (empty hand), subtract 1
         icon.classList.remove('liked-emoji');
-        icon.textContent = '🤲';
+        icon.textContent = '🙏';
         icon.style.filter = 'grayscale(80%)';
         icon.style.opacity = '0.5';
         icon.style.transform = 'scale(1)';
