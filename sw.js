@@ -5,8 +5,15 @@ const CACHE_NAME = 'redmaria-v95';
 
 // Install event - force immediate activation
 self.addEventListener('install', function(event) {
-    console.log('[SW] Installing v6...');
+    console.log('[SW] Installing v95...');
     self.skipWaiting();
+});
+
+// Listen for SKIP_WAITING message from the page
+self.addEventListener('message', function(event) {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+    }
 });
 
 // Activate event - clean old caches

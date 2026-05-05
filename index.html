@@ -6080,15 +6080,22 @@ function _initNotifications() {
                 var newSW = reg.installing;
                 if (newSW) {
                     newSW.addEventListener('statechange', function() {
-                        if (newSW.state === 'activated') {
-                            console.log('[SW] New version activated, reloading...');
-                            window.location.reload();
+                        if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+                            console.log('[SW] New version ready, activating...');
+                            newSW.postMessage({ type: 'SKIP_WAITING' });
                         }
                     });
                 }
             });
+            // Poll for updates every 30 seconds
+            setInterval(function() { reg.update(); }, 30000);
         }).catch(function(err) {
             console.warn('[SW] Registration failed:', err);
+        });
+        // Reload when new SW takes control
+        navigator.serviceWorker.addEventListener('controllerchange', function() {
+            console.log('[SW] New version activated, reloading...');
+            window.location.reload();
         });
 
         // Listen for messages from Service Worker (notification actions)
