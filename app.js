@@ -1038,12 +1038,14 @@ var app = {
                 if (icon) {
                     if (likedProfiles[u.email]) {
                         icon.classList.add('liked-emoji');
+                        icon.textContent = '🙏';
                         icon.style.filter = 'none';
                         icon.style.opacity = '1';
-                        icon.style.transform = 'scale(1.2)';
+                        icon.style.transform = 'scale(1.1)';
                     } else {
                         icon.classList.remove('liked-emoji');
-                        icon.style.filter = 'grayscale(100%)';
+                        icon.textContent = '🤲';
+                        icon.style.filter = 'grayscale(80%)';
                         icon.style.opacity = '0.5';
                         icon.style.transform = 'scale(1)';
                     }
@@ -1473,20 +1475,25 @@ function toggleProfileLike(el) {
     var likedProfiles = JSON.parse(localStorage.getItem('redmaria_liked_profiles') || '{}');
     
     if (isLiked) {
+        // Was liked (filled hand) -> unlike (empty hand), subtract 1
         icon.classList.remove('liked-emoji');
-        icon.style.filter = 'grayscale(100%)';
+        icon.textContent = '🤲';
+        icon.style.filter = 'grayscale(80%)';
         icon.style.opacity = '0.5';
         icon.style.transform = 'scale(1)';
-        countEl.textContent = count - 1;
+        countEl.textContent = Math.max(0, count - 1);
         increment = -1;
         if (likedProfiles[emailKey]) {
             likedProfiles[emailKey] = likedProfiles[emailKey].filter(function(i){ return i !== window._currentProfileViewId; });
         }
     } else {
+        // Was not liked (empty hand) -> like (filled hand), add 1
         icon.classList.add('liked-emoji');
+        icon.textContent = '🙏';
         icon.style.filter = 'none';
         icon.style.opacity = '1';
-        icon.style.transform = 'scale(1.2)';
+        icon.style.transform = 'scale(1.3)';
+        setTimeout(function(){ icon.style.transform = 'scale(1.1)'; }, 200);
         countEl.textContent = count + 1;
         increment = 1;
         if (!likedProfiles[emailKey]) likedProfiles[emailKey] = [];
