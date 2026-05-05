@@ -2220,9 +2220,12 @@ async function toggleRezando() {
         textEl.textContent = 'Reza x mí';
         if (rezandoInterval) { clearInterval(rezandoInterval); rezandoInterval = null; }
         if (myRezandoMarker && rezandoMap) { rezandoMap.removeLayer(myRezandoMarker); myRezandoMarker = null; }
+        // Remove self from rezandoPeople so counter goes down
+        var myId = getMyRezandoId();
+        delete rezandoPeople[myId];
         // Broadcast leave
         if (rezandoChannel) {
-            try { rezandoChannel.send({ type: 'broadcast', event: 'rezando', payload: { action: 'leave', id: getMyRezandoId() } }); } catch(e){}
+            try { rezandoChannel.send({ type: 'broadcast', event: 'rezando', payload: { action: 'leave', id: myId } }); } catch(e){}
         }
         updateRezandoCount();
     } else {
