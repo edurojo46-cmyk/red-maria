@@ -1033,10 +1033,10 @@ var app = {
                 }
                 
                 // Restore heart icon state from localStorage
-                var likedProfiles = JSON.parse(localStorage.getItem('redmaria_liked_profiles') || '{}');
+                var myLiked = localStorage.getItem('redmaria_my_profile_liked') === 'true';
                 var icon = document.querySelector('.profile-like-icon');
                 if (icon) {
-                    if (likedProfiles[u.email]) {
+                    if (myLiked) {
                         icon.classList.add('liked-emoji');
                         icon.textContent = '🙏';
                         icon.style.filter = 'none';
@@ -1469,10 +1469,7 @@ function toggleProfileLike(el) {
     var isLiked = icon.classList.contains('liked-emoji');
     var count = parseInt(countEl.textContent, 10) || 0;
     var increment = 0;
-    
     var u = auth.getCurrentUser();
-    var emailKey = u ? u.email : 'anon';
-    var likedProfiles = JSON.parse(localStorage.getItem('redmaria_liked_profiles') || '{}');
     
     if (isLiked) {
         // Was liked (filled hand) -> unlike (empty hand), subtract 1
@@ -1483,9 +1480,7 @@ function toggleProfileLike(el) {
         icon.style.transform = 'scale(1)';
         countEl.textContent = Math.max(0, count - 1);
         increment = -1;
-        if (likedProfiles[emailKey]) {
-            likedProfiles[emailKey] = likedProfiles[emailKey].filter(function(i){ return i !== window._currentProfileViewId; });
-        }
+        localStorage.setItem('redmaria_my_profile_liked', 'false');
     } else {
         // Was not liked (empty hand) -> like (filled hand), add 1
         icon.classList.add('liked-emoji');
@@ -1496,11 +1491,8 @@ function toggleProfileLike(el) {
         setTimeout(function(){ icon.style.transform = 'scale(1.1)'; }, 200);
         countEl.textContent = count + 1;
         increment = 1;
-        if (!likedProfiles[emailKey]) likedProfiles[emailKey] = [];
-        if (window._currentProfileViewId) likedProfiles[emailKey].push(window._currentProfileViewId);
+        localStorage.setItem('redmaria_my_profile_liked', 'true');
     }
-
-    localStorage.setItem('redmaria_liked_profiles', JSON.stringify(likedProfiles));
 
     if (u && typeof db !== 'undefined' && db.updateProfileLikes) {
         db.updateProfileLikes(u.email, increment).catch(function(e) { console.error('Error syncing likes:', e); });
