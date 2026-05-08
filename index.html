@@ -2855,6 +2855,8 @@ async function _initRealChatInner() {
     }
     if (chatSubscription) { try { chatSubscription.unsubscribe(); } catch(e){} }
     if (myId) { chatSubscription = db.subscribeToMessages(myId, function(newMsg) {
+        if (isChatBlocked(newMsg.from_id)) return; // Ignore incoming from blocked user
+
         if (newMsg.text && newMsg.text.indexOf('__VIDEOCALL__|') === 0) {
             var parts = newMsg.text.split('|');
             var callId = parts[1];
@@ -2970,6 +2972,39 @@ async function openChat(partnerId) {
     document.getElementById('chat-contacts-view').style.display = 'none';
     document.getElementById('chat-conversation-view').style.display = 'flex';
     var fab = document.getElementById('new-chat-fab'); if(fab) fab.style.display = 'none';
+
+    var blocked = isChatBlocked(partnerId);
+    var blockBtn = document.getElementById('chat-block-btn');
+    if (blockBtn) {
+        if (blocked) {
+            blockBtn.innerHTML = '<i class="ri-lock-unlock-line"></i> Desbloquear usuario';
+            blockBtn.onclick = unblockChatUser;
+        } else {
+            blockBtn.innerHTML = '<i class="ri-forbid-line"></i> Bloquear usuario';
+            blockBtn.onclick = blockChatUser;
+        }
+    }
+    
+    var inputBar = document.querySelector('.chat-input-bar');
+    if (inputBar) {
+        if (blocked) {
+            inputBar.style.display = 'none';
+            var existingBlockedBar = document.getElementById('chat-blocked-banner');
+            if (!existingBlockedBar) {
+                var banner = document.createElement('div');
+                banner.id = 'chat-blocked-banner';
+                banner.style.cssText = 'padding:14px; text-align:center; background:rgba(231,76,60,0.1); border-top:1px solid rgba(231,76,60,0.2); color:#e74c3c; font-size:0.85rem; font-weight:600; display:flex; flex-direction:column; gap:8px;';
+                banner.innerHTML = '<span>Has bloqueado a este usuario</span><button onclick="unblockChatUser()" style="background:none;border:1px solid #e74c3c;color:#e74c3c;padding:6px 16px;border-radius:20px;margin:0 auto;cursor:pointer;transition:all 0.2s">Desbloquear</button>';
+                document.getElementById('chat-conversation-view').appendChild(banner);
+            } else {
+                existingBlockedBar.style.display = 'flex';
+            }
+        } else {
+            inputBar.style.display = 'flex';
+            var existingBlockedBar = document.getElementById('chat-blocked-banner');
+            if (existingBlockedBar) existingBlockedBar.style.display = 'none';
+        }
+    }
 
     var msgArea = document.getElementById('chat-messages');
     if(msgArea) msgArea.innerHTML = '<div style="text-align:center;padding:20px;color:var(--clr-text-muted);font-size:0.8rem"><i class="ri-loader-4-line" style="animation:spin 1s linear infinite"></i></div>';
@@ -3270,6 +3305,7 @@ async function sendMessage() {
     var input = document.getElementById('chat-input');
     var text = input.value.trim();
     if (!text || !currentChatId) return;
+    if (isChatBlocked(currentChatId)) { showMsgToast('No puedes enviar mensajes a un usuario bloqueado.'); return; }
     var localUser = auth.getCurrentUser();
     var profile = localUser ? await db.getProfileByEmail(localUser.email) : null;
     if (!profile) { showMsgToast('Sesión expirada. Volvé a iniciar sesión.'); return; }
@@ -3403,6 +3439,10 @@ document.addEventListener('DOMContentLoaded', function() {
 // === Chat Video Call with WebRTC ===
 async function chatVideoCall() {
     if (!currentChatId) return;
+    if (isChatBlocked(currentChatId)) {
+        showMsgToast('No puedes llamar a un usuario bloqueado.');
+        return;
+    }
 
     var localUser = auth.getCurrentUser();
     if (!localUser) { showMsgToast('Inicia sesión para llamar'); return; }
