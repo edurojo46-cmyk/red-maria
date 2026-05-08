@@ -541,6 +541,29 @@ var db = {
             .subscribe();
     },
 
+    // ==================== IGLESIAS COMUNIDAD ====================
+    async addIglesiaComunidad(iglesia) {
+        if (!sbClient) { saveLocal('iglesias_comunidad', iglesia); return iglesia; }
+        let payload = Object.assign({}, iglesia);
+        const { data, error } = await sbClient.from('iglesias_comunidad').insert(payload).select().single();
+        if (error) {
+            console.error('[DB] Error inserting iglesia:', error.message);
+            saveLocal('iglesias_comunidad', iglesia);
+            return iglesia;
+        }
+        return data;
+    },
+
+    async getIglesiasComunidad() {
+        if (!sbClient) return getLocal('iglesias_comunidad');
+        const { data, error } = await sbClient.from('iglesias_comunidad').select('*').order('pais', {ascending:true}).order('ciudad', {ascending:true});
+        if (error) {
+            console.error('[DB] Error fetching iglesias:', error.message);
+            return getLocal('iglesias_comunidad');
+        }
+        return data || [];
+    },
+
     // ==================== REALTIME ====================
     subscribeToRosaries(callback) {
         if (!sbClient) return;

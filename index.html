@@ -1008,6 +1008,11 @@
                     <input type="text" placeholder="Buscar iglesia, barrio o dirección..." oninput="filterIglesiasGrid(this.value)" id="iglesias-search-input">
                 </div>
             </div>
+            <div style="text-align: center; margin-bottom: 20px;">
+                <button class="btn btn-primary" onclick="openAddIglesiaModal()" style="display:inline-flex; align-items:center; gap:8px;">
+                    <i class="ri-add-line"></i> Agregar Iglesia de tu zona
+                </button>
+            </div>
 
             <div id="iglesias-grid" class="iglesias-grid"></div>
             <!-- Search results appear here -->
@@ -1025,6 +1030,36 @@
             </div>
             <div class="iglesias-detail-scroll" id="iglesias-detail-list"></div>
         </div>
+
+        <!-- ADD IGLESIA MODAL -->
+        <div id="add-iglesia-modal" class="glass card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width:90%; max-width:400px; z-index:9999; padding:20px; flex-direction:column; gap:15px; box-shadow:0 10px 40px rgba(0,0,0,0.3);">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0; color:var(--clr-text-title);">Agregar Iglesia</h3>
+                <button class="icon-btn" onclick="closeAddIglesiaModal()" style="color:var(--clr-text-muted);"><i class="ri-close-line"></i></button>
+            </div>
+            <div class="auth-field">
+                <label>País</label>
+                <input type="text" id="add-iglesia-pais" placeholder="Ej: Argentina" class="auth-input">
+            </div>
+            <div class="auth-field">
+                <label>Ciudad</label>
+                <input type="text" id="add-iglesia-ciudad" placeholder="Ej: Córdoba" class="auth-input">
+            </div>
+            <div class="auth-field">
+                <label>Nombre de la Parroquia/Iglesia</label>
+                <input type="text" id="add-iglesia-nombre" placeholder="Ej: Catedral Nuestra Señora" class="auth-input">
+            </div>
+            <div class="auth-field">
+                <label>Dirección</label>
+                <input type="text" id="add-iglesia-direccion" placeholder="Ej: San Martín 100" class="auth-input">
+            </div>
+            <div class="auth-field">
+                <label>Horarios de Misa</label>
+                <input type="text" id="add-iglesia-horarios" placeholder="Ej: L-V 19:00 | D 11:00" class="auth-input">
+            </div>
+            <button class="btn btn-primary" onclick="submitAddIglesia()" id="btn-submit-iglesia">Guardar</button>
+        </div>
+        <div id="add-iglesia-overlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9998; backdrop-filter:blur(4px);" onclick="closeAddIglesiaModal()"></div>
 
 <script>
 // === IGLESIAS DATA ===
@@ -1655,12 +1690,208 @@ function filterIglesiasGrid(query) {
     results.innerHTML = html;
 }
 
+// Add Iglesia Modal Logic
+function openAddIglesiaModal() {
+    if (!auth || !auth.isAuthenticated()) {
+        alert("Por favor iniciá sesión para agregar iglesias.");
+        app.navigate('screen-login');
+        return;
+    }
+    document.getElementById('add-iglesia-modal').style.display = 'flex';
+    document.getElementById('add-iglesia-overlay').style.display = 'block';
+}
+
+function closeAddIglesiaModal() {
+    document.getElementById('add-iglesia-modal').style.display = 'none';
+    document.getElementById('add-iglesia-overlay').style.display = 'none';
+    document.getElementById('add-iglesia-pais').value = '';
+    document.getElementById('add-iglesia-ciudad').value = '';
+    document.getElementById('add-iglesia-nombre').value = '';
+    document.getElementById('add-iglesia-direccion').value = '';
+    document.getElementById('add-iglesia-horarios').value = '';
+}
+
+async function submitAddIglesia() {
+    var p = document.getElementById('add-iglesia-pais').value.trim();
+    var c = document.getElementById('add-iglesia-ciudad').value.trim();
+    var n = document.getElementById('add-iglesia-nombre').value.trim();
+    var d = document.getElementById('add-iglesia-direccion').value.trim();
+    var h = document.getElementById('add-iglesia-horarios').value.trim();
+
+    if (!p || !c || !n || !d || !h) {
+        alert("Por favor completá todos los campos.");
+        return;
+    }
+
+    var btn = document.getElementById('btn-submit-iglesia');
+    btn.disabled = true;
+    btn.textContent = 'Guardando...';
+
+    var u = auth.getCurrentUser();
+    var iglesia = {
+        pais: p,
+        ciudad: c,
+        nombre: n,
+        direccion: d,
+        horarios: h,
+        user_email: u ? u.email : 'anon'
+    };
+
+    if (typeof db !== 'undefined' && db.addIglesiaComunidad) {
+        await db.addIglesiaComunidad(iglesia);
+        alert("¡Iglesia agregada con éxito!");
+        closeAddIglesiaModal();
+        await loadAndRenderIglesias();
+    } else {
+        alert("Error de conexión a la base de datos.");
+    }
+    btn.disabled = false;
+    btn.textContent = 'Guardar';
+}
+
+async function loadAndRenderIglesias() {
+    // Start with default zonas
+    var renderData = JSON.parse(JSON.stringify(zonasData)); // Deep copy to avoid duplicate appends on reload
+    
+    if (typeof db !== 'undefined' && db.getIglesiasComunidad) {
+        var communityIglesias = await db.getIglesiasComunidad();
+        
+        // Group community churches by Pais -> Ciudad
+        var groups = {};
+        communityIglesias.forEach(function(ig) {
+            var key = ig.pais + " - " + ig.ciudad;
+            if (!groups[key]) groups[key] = [];
+            groups[key].push({ n: ig.nombre, d: ig.direccion, h: ig.horarios });
+        });
+
+        var idCounter = 1000; // avoid colliding with existing IDs
+        for (var k in groups) {
+            var splitK = k.split(" - ");
+            var pais = splitK[0];
+            var ciudad = splitK[1];
+            renderData.push({
+                id: idCounter++,
+                nombre: ciudad + ', ' + pais,
+                sub: 'Agregado por la comunidad',
+                icon: 'ri-building-4-fill',
+                color: '#f39c12',
+                grad: 'linear-gradient(135deg,#f39c12,#d35400)',
+                iglesias: groups[k]
+            });
+        }
+    }
+    
+    // Temporarily overwrite global zonasData so search/detail works
+    window._activeZonasData = renderData;
+    
+    var grid = document.getElementById('iglesias-grid');
+    if (!grid) return;
+    var html = '';
+    renderData.forEach(function(z) {
+        html += '<div class="ig-zona-card glass" onclick="openIglesiasDetail('+z.id+')">' +
+            '<div class="ig-zona-accent" style="background:'+z.grad+'"></div>' +
+            '<div class="ig-zona-body">' +
+                '<div class="ig-zona-icon" style="background:'+z.grad+'"><i class="'+z.icon+'"></i></div>' +
+                '<div class="ig-zona-text">' +
+                    '<h4>'+z.nombre+'</h4>' +
+                    '<span class="ig-zona-sub">'+z.sub+'</span>' +
+                '</div>' +
+                '<div class="ig-zona-badge">'+z.iglesias.length+'</div>' +
+            '</div>' +
+        '</div>';
+    });
+    grid.innerHTML = html;
+}
+
+// Override openIglesiasDetail and filterIglesiasGrid to use _activeZonasData
+function openIglesiasDetail(zoneId) {
+    var dataToUse = window._activeZonasData || zonasData;
+    var zona = dataToUse.find(function(z){ return z.id === zoneId; });
+    if (!zona) return;
+    document.getElementById('iglesias-detail-title').textContent = zona.nombre;
+    document.getElementById('iglesias-detail-count').textContent = zona.iglesias.length + ' iglesias';
+    document.getElementById('iglesias-detail-count').style.background = zona.grad;
+    var list = document.getElementById('iglesias-detail-list');
+    var html = '<div class="ig-detail-nota" style="border-left: 3px solid '+zona.color+'"><i class="ri-map-pin-fill" style="color:'+zona.color+'"></i> '+zona.sub+'</div>';
+    zona.iglesias.forEach(function(ig) {
+        html += '<div class="ig-detail-item glass">' +
+            '<div class="ig-detail-dot" style="background:'+zona.color+'"></div>' +
+            '<div class="ig-detail-info">' +
+                '<h4>'+ig.n+'</h4>' +
+                '<span class="ig-detail-dir"><i class="ri-map-pin-fill"></i> '+ig.d+'</span>' +
+                '<span class="ig-detail-hora"><i class="ri-time-fill"></i> '+ig.h+'</span>' +
+            '</div>' +
+        '</div>';
+    });
+    list.innerHTML = html;
+    document.getElementById('iglesias-main-view').style.display = 'none';
+    var panel = document.getElementById('iglesias-detail-panel');
+    panel.style.display = 'flex';
+    panel.classList.add('active');
+}
+
+function filterIglesiasGrid(query) {
+    var dataToUse = window._activeZonasData || zonasData;
+    var rawQ = query.trim();
+    var grid = document.getElementById('iglesias-grid');
+    var results = document.getElementById('iglesias-search-results');
+    if (!rawQ) {
+        grid.style.display = '';
+        results.style.display = 'none';
+        results.innerHTML = '';
+        return;
+    }
+    grid.style.display = 'none';
+    results.style.display = '';
+    
+    var normalizeText = function(str) {
+        return (str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    };
+    
+    var words = normalizeText(rawQ).split(/\s+/);
+    var html = '';
+    var count = 0;
+    
+    dataToUse.forEach(function(z) {
+        var zNameNorm = normalizeText(z.nombre);
+        var zSubNorm = normalizeText(z.sub);
+        z.iglesias.forEach(function(ig) {
+            var nNorm = normalizeText(ig.n);
+            var dNorm = normalizeText(ig.d);
+            var hNorm = normalizeText(ig.h);
+            
+            var searchableText = nNorm + " " + dNorm + " " + hNorm + " " + zNameNorm + " " + zSubNorm;
+            var isMatch = words.every(function(w) { return searchableText.indexOf(w) !== -1; });
+            
+            if (isMatch) {
+                count++;
+                html += '<div class="ig-detail-item glass" style="animation-delay:'+(count*0.03)+'s">' +
+                    '<div class="ig-detail-dot" style="background:'+z.color+'"></div>' +
+                    '<div class="ig-detail-info">' +
+                        '<h4>'+ig.n+'</h4>' +
+                        '<span class="ig-detail-dir"><i class="ri-map-pin-fill"></i> '+ig.d+'</span>' +
+                        '<span class="ig-detail-hora"><i class="ri-time-fill"></i> '+ig.h+'</span>' +
+                        '<span class="ig-search-zone" style="color:'+z.color+'"><i class="ri-building-4-fill"></i> '+z.nombre+'</span>' +
+                    '</div>' +
+                '</div>';
+            }
+        });
+    });
+    if (count === 0) {
+        html = '<div class="ig-no-results"><i class="ri-search-line"></i><p>No se encontraron iglesias con "'+query+'"</p></div>';
+    } else {
+        html = '<div class="ig-results-count">'+count+' resultado'+(count!==1?'s':'')+'</div>' + html;
+    }
+    results.innerHTML = html;
+}
+
 // Init on load
 document.addEventListener('DOMContentLoaded', function() {
-    renderIglesiasGrid();
+    // Wait slightly to ensure db object is loaded
+    setTimeout(loadAndRenderIglesias, 500);
 });
-// Also render if DOM already ready
-if (document.readyState !== 'loading') renderIglesiasGrid();
+// If already loaded
+if (document.readyState === 'complete') setTimeout(loadAndRenderIglesias, 500);
 </script>
     </section>
 
