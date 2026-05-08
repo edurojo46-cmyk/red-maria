@@ -5214,6 +5214,30 @@ function toggleRezoHeart(btn, intentionId) {
 
     localStorage.setItem('redmaria_rezo_liked', JSON.stringify(likedIds));
     saveRezoIntenciones(intenciones);
+
+    // Sync to Supabase
+    if (typeof db !== 'undefined' && db.updateIntencionHearts) {
+        var isUnlike = !btn.classList.contains('liked');
+        var inc = isUnlike ? -1 : 1;
+        var int = intenciones.find(function(i) { return i.id === intentionId; });
+        var current = int ? (int.hearts || 0) : 0;
+        if (isUnlike) current = current + 1; // since we already subtracted locally
+        else current = current - 1; // since we already added locally
+
+        // If it's a valid UUID, sync to DB
+        if (intentionId && /^[0-9a-f]{8}-/.test(intentionId)) {
+            db.updateIntencionHearts(intentionId, current, inc).catch(function(e){ console.error(e); });
+        }
+        
+        // Broadcast optimistically for instant UI update on other clients
+        if (window._globalIntencionesChannel) {
+            window._globalIntencionesChannel.send({
+                type: 'broadcast',
+                event: 'heart_update',
+                payload: { id: intentionId, hearts: Math.max(0, current + inc) }
+            }).catch(function(e){});
+        }
+    }
 }
 
 function getTimeAgo(isoDate) {
@@ -5277,14 +5301,19 @@ async function loadCommunityIntenciones() {
             var remote = await db.getIntenciones();
             if (remote && remote.length > 0) {
                 // Convert Supabase format to local format and merge
-                var localIds = {};
-                localIntenciones.forEach(function(i) { localIds[i.text + '|' + (i.name || '')] = true; });
+                var localByKey = {};
+                localIntenciones.forEach(function(i) { localByKey[i.text + '|' + (i.name || '')] = i; });
                 
                 var colors = ['#A8C4DE','#F4D35E','#B5D6A7','#E8A0BF','#C4B5FD','#8FACC5','#FFB4A2','#89CFF0','#FFC6FF','#CAFFBF'];
                 remote.forEach(function(r) {
                     var userName = r.category || 'Anónimo';
                     var key = r.text + '|' + userName;
-                    if (!localIds[key]) {
+                    if (localByKey[key]) {
+                        // Update hearts if remote has them
+                        if (r.hearts !== undefined) localByKey[key].hearts = Math.max(localByKey[key].hearts || 0, r.hearts);
+                        // Also sync ID if local didn't have one
+                        if (!localByKey[key].id && r.id) localByKey[key].id = r.id;
+                    } else {
                         var color = colors[Math.floor(Math.random() * colors.length)];
                         var color2 = colors[(Math.floor(Math.random() * colors.length) + 3) % colors.length];
                         localIntenciones.push({
@@ -5294,9 +5323,10 @@ async function loadCommunityIntenciones() {
                             text: r.text,
                             color: color,
                             color2: color2,
-                            time: r.created_at
+                            time: r.created_at,
+                            hearts: r.hearts || 0
                         });
-                        localIds[key] = true;
+                        localByKey[key] = true;
                     }
                 });
 
@@ -5327,17 +5357,44 @@ async function loadCommunityIntenciones() {
                 console.log('[Intenciones] Received BROADCAST:', payload);
                 _handleRealtimeIntencion(payload.payload);
             });
+            window._globalIntencionesChannel.on('broadcast', { event: 'heart_update' }, function(payload) {
+                _handleRealtimeHeartUpdate(payload.payload);
+            });
             
             // 2. Listen for Database Changes (Reliable, requires replication)
             window._globalIntencionesChannel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'intenciones' }, function(payload) {
-                console.log('[Intenciones] Received POSTGRES_CHANGES:', payload);
+                console.log('[Intenciones] Received POSTGRES_CHANGES (INSERT):', payload);
                 _handleRealtimeIntencion(payload.new);
+            });
+            window._globalIntencionesChannel.on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'intenciones' }, function(payload) {
+                console.log('[Intenciones] Received POSTGRES_CHANGES (UPDATE):', payload);
+                _handleRealtimeHeartUpdate(payload.new);
             });
             
             window._globalIntencionesChannel.subscribe(function(status) {
                 console.log('[Intenciones] Channel status:', status);
             });
         }
+    }
+}
+
+function _handleRealtimeHeartUpdate(r) {
+    if (!r || !r.id || r.hearts === undefined) return;
+    var localInt = getRezoIntenciones();
+    var updated = false;
+    localInt.forEach(function(i) {
+        if (i.id === r.id) {
+            if (i.hearts !== r.hearts) {
+                i.hearts = r.hearts;
+                updated = true;
+            }
+        }
+    });
+    if (updated) {
+        saveRezoIntenciones(localInt);
+        var l = document.getElementById('community-intentions-list');
+        if (l) renderCommunityList(l, localInt);
+        renderRezoIntenciones();
     }
 }
 

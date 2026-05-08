@@ -443,6 +443,16 @@ var db = {
         return data || [];
     },
 
+    async updateIntencionHearts(id, currentHearts, increment) {
+        if (!sbClient || !id) return false;
+        const newHearts = Math.max(0, currentHearts + increment);
+        const { error } = await sbClient.from('intenciones')
+            .update({ hearts: newHearts })
+            .eq('id', id);
+        if (error) { console.error('[DB] Error updating hearts:', error); return false; }
+        return true;
+    },
+
     async deleteAllIntenciones() {
         if (!sbClient) return;
         const { error } = await sbClient.from('intenciones').delete().neq('id', '00000000-0000-0000-0000-000000000000');
