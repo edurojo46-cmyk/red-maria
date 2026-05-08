@@ -2206,7 +2206,18 @@ if (document.readyState === 'complete') setTimeout(loadAndRenderIglesias, 500);
                 <div class="profile-info">
                     <h3 id="profile-user-name">Santiago</h3>
                     <p id="profile-user-city">Buenos Aires</p>
-
+                    <div class="profile-bio-container" style="margin-top:8px;">
+                        <p id="profile-bio-text" class="profile-bio-text" onclick="editProfileBio()" style="font-size:0.85rem;color:var(--clr-text-muted);font-style:italic;cursor:pointer;line-height:1.3;margin:0;word-break:break-word;">
+                            "Toca aquí para agregar una frase que te represente..."
+                        </p>
+                        <div id="profile-bio-editor" style="display:none;flex-direction:column;gap:8px;margin-top:5px;">
+                            <textarea id="profile-bio-input" class="profile-bio-input" placeholder="Escribe tu frase (máx 80 palabras)..." style="width:100%;border-radius:12px;padding:8px;border:2px solid #ffb74d;outline:none;font-size:0.85rem;font-family:inherit;resize:none;background:rgba(255,255,255,0.7);" rows="3"></textarea>
+                            <div style="display:flex;justify-content:flex-end;gap:6px;">
+                                <button class="btn btn-sm" onclick="cancelEditBio()" style="padding:4px 10px;font-size:0.8rem;background:transparent;color:var(--clr-text-muted);border:1px solid var(--clr-text-muted);">Cancelar</button>
+                                <button class="btn btn-sm" onclick="saveProfileBio()" style="padding:4px 10px;font-size:0.8rem;">Guardar</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="glass card devotion-card"><div class="card-title-row"><span>Devoción: Ntra. Sra. de Luján</span><i class="ri-heart-fill heart-icon"></i></div><img src="assets/basilica.png" id="img-devotion" alt="Lujan" class="devotion-img"/></div>
@@ -2239,7 +2250,7 @@ if (document.readyState === 'complete') setTimeout(loadAndRenderIglesias, 500);
                     <span id="rezando-count">0</span> personas rezando ahora
                 </div>
                 
-                <div class="profile-bio-container" style="margin-top:20px; padding:0 16px; margin-bottom:16px;">
+                <div class="profile-intention-container" style="margin-top:20px; padding:0 16px; margin-bottom:16px;">
                     <div style="background:rgba(255,255,255,0.4); border:1px solid rgba(255,255,255,0.6); border-radius:16px; padding:16px; box-shadow:0 4px 15px rgba(0,0,0,0.05); position:relative; overflow:hidden;">
                         <div style="position:absolute; top:-10px; left:-5px; font-size:5rem; color:rgba(243,156,18,0.1); pointer-events:none;"><i class="ri-double-quotes-l"></i></div>
                         
@@ -2248,17 +2259,17 @@ if (document.readyState === 'complete') setTimeout(loadAndRenderIglesias, 500);
                             <span style="font-size:0.8rem; font-weight:700; color:var(--clr-text-title); text-transform:uppercase; letter-spacing:0.5px;">Mi Intención de Oración</span>
                         </div>
 
-                        <p id="profile-bio-text" class="profile-bio-text" onclick="editProfileBio()" style="font-size:0.95rem; color:var(--clr-text-body); font-style:italic; cursor:pointer; line-height:1.5; margin:0; word-break:break-word; text-align:center; font-weight:500; transition:all 0.2s; position:relative; z-index:1;">
+                        <p id="profile-intention-text" class="profile-intention-text" onclick="editProfileIntention()" style="font-size:0.95rem; color:var(--clr-text-body); font-style:italic; cursor:pointer; line-height:1.5; margin:0; word-break:break-word; text-align:center; font-weight:500; transition:all 0.2s; position:relative; z-index:1;">
                             "Toca aquí para escribir una intención por la cual quieres que la comunidad rece..."
                         </p>
                         
-                        <div id="profile-bio-editor" style="display:none;flex-direction:column;gap:12px;margin-top:12px; position:relative; z-index:1;">
-                            <textarea id="profile-bio-input" class="profile-bio-input" placeholder="Escribe tu intención aquí (máx 80 palabras)..." style="width:100%; border-radius:12px; padding:12px; border:2px solid rgba(243,156,18,0.4); outline:none; font-size:0.9rem; font-family:inherit; resize:none; background:rgba(255,255,255,0.8); box-shadow:inset 0 2px 4px rgba(0,0,0,0.02); transition:all 0.2s; box-sizing:border-box;" rows="3" onfocus="this.style.borderColor='#f39c12'; this.style.boxShadow='0 0 0 3px rgba(243,156,18,0.1)';" onblur="this.style.borderColor='rgba(243,156,18,0.4)'; this.style.boxShadow='none';"></textarea>
+                        <div id="profile-intention-editor" style="display:none;flex-direction:column;gap:12px;margin-top:12px; position:relative; z-index:1;">
+                            <textarea id="profile-intention-input" class="profile-intention-input" placeholder="Escribe tu intención aquí (máx 80 palabras)..." style="width:100%; border-radius:12px; padding:12px; border:2px solid rgba(243,156,18,0.4); outline:none; font-size:0.9rem; font-family:inherit; resize:none; background:rgba(255,255,255,0.8); box-shadow:inset 0 2px 4px rgba(0,0,0,0.02); transition:all 0.2s; box-sizing:border-box;" rows="3" onfocus="this.style.borderColor='#f39c12'; this.style.boxShadow='0 0 0 3px rgba(243,156,18,0.1)';" onblur="this.style.borderColor='rgba(243,156,18,0.4)'; this.style.boxShadow='none';"></textarea>
                             <div style="display:flex; justify-content:space-between; align-items:center;">
                                 <span style="font-size:0.7rem; color:var(--clr-text-muted); display:flex; align-items:center; gap:4px;"><i class="ri-global-line"></i> Visible en el mapa</span>
                                 <div style="display:flex; gap:8px;">
-                                    <button class="btn btn-sm" onclick="cancelEditBio()" style="padding:6px 14px; font-size:0.8rem; background:var(--clr-bg-alt); color:var(--clr-text-title); border:1px solid var(--clr-border); border-radius:20px; font-weight:600;">Cancelar</button>
-                                    <button class="btn btn-sm" onclick="saveProfileBio()" style="padding:6px 16px; font-size:0.8rem; background:linear-gradient(135deg,#f39c12,#d35400); color:#fff; border:none; border-radius:20px; box-shadow:0 4px 10px rgba(243,156,18,0.3); font-weight:600; display:flex; align-items:center; gap:4px;"><i class="ri-check-line"></i> Guardar</button>
+                                    <button class="btn btn-sm" onclick="cancelEditIntention()" style="padding:6px 14px; font-size:0.8rem; background:var(--clr-bg-alt); color:var(--clr-text-title); border:1px solid var(--clr-border); border-radius:20px; font-weight:600;">Cancelar</button>
+                                    <button class="btn btn-sm" onclick="saveProfileIntention()" style="padding:6px 16px; font-size:0.8rem; background:linear-gradient(135deg,#f39c12,#d35400); color:#fff; border:none; border-radius:20px; box-shadow:0 4px 10px rgba(243,156,18,0.3); font-weight:600; display:flex; align-items:center; gap:4px;"><i class="ri-check-line"></i> Guardar</button>
                                 </div>
                             </div>
                         </div>
@@ -2495,7 +2506,7 @@ async function toggleRezando() {
 
         var userName = 'Tú';
         var myProfileId = '';
-        var myBio = localStorage.getItem('redmaria_user_bio') || '';
+        var myBio = localStorage.getItem('redmaria_user_intention') || '';
         try {
             var lu = auth.getCurrentUser();
             userName = lu.name || 'Tú';
@@ -2518,7 +2529,7 @@ async function toggleRezando() {
 
         // Heartbeat every 20s
         rezandoInterval = setInterval(function() {
-            var currentBio = localStorage.getItem('redmaria_user_bio') || '';
+            var currentBio = localStorage.getItem('redmaria_user_intention') || '';
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(function(pos) {
                     broadcastRezando(_myRezandoId, userName, pos.coords.latitude, pos.coords.longitude, myProfileId, currentBio);

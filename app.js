@@ -1528,9 +1528,65 @@ function saveProfileBio() {
             bioText.style.fontStyle = 'normal';
             bioText.style.color = 'var(--clr-text-title)';
         } else {
-            bioText.textContent = '"Toca aquí para escribir una intención por la cual quieres que la comunidad rece..."';
+            bioText.textContent = '"Toca aquí para agregar una frase que te represente..."';
             bioText.style.fontStyle = 'italic';
             bioText.style.color = 'var(--clr-text-muted)';
+        }
+    }
+    
+    cancelEditBio();
+    
+    var u = auth.getCurrentUser();
+    if (u && typeof db !== 'undefined' && db.updateProfileBio) {
+        db.updateProfileBio(u.id, bio).catch(function(e) { console.error('Error saving bio:', e); });
+    }
+}
+
+// Profile Intention functions (for map broadcasting)
+function editProfileIntention() {
+    var textEl = document.getElementById('profile-intention-text');
+    var editorEl = document.getElementById('profile-intention-editor');
+    if (textEl) textEl.style.display = 'none';
+    if (editorEl) editorEl.style.display = 'flex';
+    var savedIntention = localStorage.getItem('redmaria_user_intention') || '';
+    var inputEl = document.getElementById('profile-intention-input');
+    if (inputEl) {
+        inputEl.value = savedIntention;
+        inputEl.focus();
+    }
+}
+
+function cancelEditIntention() {
+    var textEl = document.getElementById('profile-intention-text');
+    var editorEl = document.getElementById('profile-intention-editor');
+    if (textEl) textEl.style.display = 'block';
+    if (editorEl) editorEl.style.display = 'none';
+}
+
+function saveProfileIntention() {
+    var inputEl = document.getElementById('profile-intention-input');
+    if (!inputEl) return;
+    var intention = inputEl.value.trim();
+    // check word count
+    var words = intention.match(/\S+/g);
+    var wordCount = words ? words.length : 0;
+    if (wordCount > 80) {
+        if (typeof showMsgToast === 'function') showMsgToast('La intención no puede tener más de 80 palabras.');
+        return;
+    }
+    
+    localStorage.setItem('redmaria_user_intention', intention);
+    
+    var textEl = document.getElementById('profile-intention-text');
+    if (textEl) {
+        if (intention) {
+            textEl.textContent = '"' + intention + '"';
+            textEl.style.fontStyle = 'normal';
+            textEl.style.color = 'var(--clr-text-title)';
+        } else {
+            textEl.textContent = '"Toca aquí para escribir una intención por la cual quieres que la comunidad rece..."';
+            textEl.style.fontStyle = 'italic';
+            textEl.style.color = 'var(--clr-text-muted)';
         }
     }
     
@@ -1540,18 +1596,13 @@ function saveProfileBio() {
         try { userName = auth.getCurrentUser().name || 'Tú'; } catch(e){}
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(function(pos) {
-                broadcastRezando(_myRezandoId, userName, pos.coords.latitude, pos.coords.longitude, '', bio);
-                if (typeof addMyMarker === 'function') addMyMarker(userName, pos.coords.latitude, pos.coords.longitude, bio);
+                broadcastRezando(_myRezandoId, userName, pos.coords.latitude, pos.coords.longitude, '', intention);
+                if (typeof addMyMarker === 'function') addMyMarker(userName, pos.coords.latitude, pos.coords.longitude, intention);
             }, function(){}, {enableHighAccuracy: true, timeout: 8000});
         }
     }
 
-    cancelEditBio();
-    
-    var u = auth.getCurrentUser();
-    if (u && typeof db !== 'undefined' && db.updateProfileBio) {
-        db.updateProfileBio(u.id, bio).catch(function(e) { console.error('Error saving bio:', e); });
-    }
+    cancelEditIntention();
 }
 
 function toggleProfileLike(el) {
