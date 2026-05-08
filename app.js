@@ -1512,7 +1512,7 @@ function saveProfileBio() {
             bioText.style.fontStyle = 'normal';
             bioText.style.color = 'var(--clr-text-title)';
         } else {
-            bioText.textContent = '"Toca aquí para agregar una frase de oración que te represente..."';
+            bioText.textContent = '"Toca aquí para escribir una intención por la cual quieres que la comunidad rece..."';
             bioText.style.fontStyle = 'italic';
             bioText.style.color = 'var(--clr-text-muted)';
         }
