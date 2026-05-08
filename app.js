@@ -244,6 +244,9 @@ var app = {
             modal.remove();
             self.renderProfileMyRosaries();
             self.renderProfileJoined();
+            if (typeof self.loadRosaryCards === 'function') {
+                self.loadRosaryCards();
+            }
         };
     },
 
@@ -653,7 +656,11 @@ var app = {
         
         var shareBtnHtml = '<button class="btn-share-rosary" title="Compartir Rosario" style="background:none; border:none; color:var(--clr-primary); font-size:1.4rem; padding:4px; cursor:pointer; margin-left:auto;"><i class="ri-share-fill"></i></button>';
         
-        card.innerHTML = '<div class="rosary-card-header"><div class="rosary-card-icon"><i class="ri-map-pin-fill"></i></div><div class="rosary-card-info"><h3>' + rosary.place + '</h3><p>' + ds + ' ' + rosary.time + ' hs · Misterios ' + rosary.mystery + '</p></div>' + shareBtnHtml + '</div><div class="rosary-card-details">' + addrHtml + '<div class="rosary-card-detail"><i class="ri-candle-fill"></i> ' + rosary.intention + '</div><div class="rosary-card-detail"><i class="ri-group-fill"></i> ' + (rosary.participants || 1) + ' Participantes</div></div><button class="' + btnClass + '" data-rosary-id="' + rosary.id + '">' + btnLabel + '</button>';
+        var u = (typeof auth !== 'undefined' && auth.isAuthenticated()) ? auth.getCurrentUser() : null;
+        var isCreator = u && rosary.creatorId === u.id;
+        var cancelBtnHtml = isCreator ? '<button class="btn btn-cancel-rosary" style="margin-top:8px; width:100%; padding:10px; font-size:0.9rem; background:transparent; color:#e74c3c; border:1px solid #e74c3c; border-radius:12px; transition:all 0.2s;"><i class="ri-delete-bin-line"></i> Cancelar Rosario</button>' : '';
+        
+        card.innerHTML = '<div class="rosary-card-header"><div class="rosary-card-icon"><i class="ri-map-pin-fill"></i></div><div class="rosary-card-info"><h3>' + rosary.place + '</h3><p>' + ds + ' ' + rosary.time + ' hs · Misterios ' + rosary.mystery + '</p></div>' + shareBtnHtml + '</div><div class="rosary-card-details">' + addrHtml + '<div class="rosary-card-detail"><i class="ri-candle-fill"></i> ' + rosary.intention + '</div><div class="rosary-card-detail"><i class="ri-group-fill"></i> ' + (rosary.participants || 1) + ' Participantes</div></div><button class="' + btnClass + '" data-rosary-id="' + rosary.id + '">' + btnLabel + '</button>' + cancelBtnHtml;
         
         // Attach join handler to button (stopPropagation to not trigger card click)
         var btn = card.querySelector('.btn-join');
@@ -679,6 +686,15 @@ var app = {
             shareBtn.addEventListener('click', function(e) {
                 e.stopPropagation();
                 app.shareRosary(rosary);
+            });
+        }
+        
+        // Attach cancel handler
+        var cancelBtn = card.querySelector('.btn-cancel-rosary');
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                app.cancelRosary(rosary.id, rosary.place || 'Rosario');
             });
         }
         
