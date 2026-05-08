@@ -2656,8 +2656,8 @@ function initRezandoMap() {
 // Init map when profile screen is shown
 var origNavigate = app.navigate.bind(app);
 app.navigate = function(screenId) {
-    // AUTH GATE: require login for all screens
-    var authScreens = ['screen-login', 'screen-register', 'screen-auth'];
+    // AUTH GATE: require login for all screens except login/register, splash and the map (for sharing)
+    var authScreens = ['screen-login', 'screen-register', 'screen-auth', 'screen-splash', 'screen-map'];
     if (authScreens.indexOf(screenId) === -1 && typeof auth !== 'undefined' && !auth.isAuthenticated()) {
         origNavigate('screen-login');
         return;

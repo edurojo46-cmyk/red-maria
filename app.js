@@ -650,11 +650,20 @@ var app = {
         var addrHtml = rosary.address ? '<div class="rosary-card-detail"><i class="ri-road-map-fill"></i> ' + rosary.address + '</div>' : '';
         var btnLabel = isJoined ? '<i class="ri-check-line"></i> Unido' : '<i class="ri-add-circle-line"></i> Unirme';
         var btnClass = isJoined ? 'btn btn-secondary-outline btn-join' : 'btn btn-primary btn-join';
-        card.innerHTML = '<div class="rosary-card-header"><div class="rosary-card-icon"><i class="ri-map-pin-fill"></i></div><div class="rosary-card-info"><h3>' + rosary.place + '</h3><p>' + ds + ' ' + rosary.time + ' hs · Misterios ' + rosary.mystery + '</p></div></div><div class="rosary-card-details">' + addrHtml + '<div class="rosary-card-detail"><i class="ri-candle-fill"></i> ' + rosary.intention + '</div><div class="rosary-card-detail"><i class="ri-group-fill"></i> ' + (rosary.participants || 1) + ' Participantes</div></div><button class="' + btnClass + '" data-rosary-id="' + rosary.id + '">' + btnLabel + '</button>';
+        
+        var shareBtnHtml = '<button class="btn-share-rosary" title="Compartir Rosario" style="background:none; border:none; color:var(--clr-primary); font-size:1.4rem; padding:4px; cursor:pointer; margin-left:auto;"><i class="ri-share-fill"></i></button>';
+        
+        card.innerHTML = '<div class="rosary-card-header"><div class="rosary-card-icon"><i class="ri-map-pin-fill"></i></div><div class="rosary-card-info"><h3>' + rosary.place + '</h3><p>' + ds + ' ' + rosary.time + ' hs · Misterios ' + rosary.mystery + '</p></div>' + shareBtnHtml + '</div><div class="rosary-card-details">' + addrHtml + '<div class="rosary-card-detail"><i class="ri-candle-fill"></i> ' + rosary.intention + '</div><div class="rosary-card-detail"><i class="ri-group-fill"></i> ' + (rosary.participants || 1) + ' Participantes</div></div><button class="' + btnClass + '" data-rosary-id="' + rosary.id + '">' + btnLabel + '</button>';
+        
         // Attach join handler to button (stopPropagation to not trigger card click)
         var btn = card.querySelector('.btn-join');
         btn.addEventListener('click', function(e) {
             e.stopPropagation();
+            if (!auth || !auth.isAuthenticated()) {
+                alert("Debes iniciar sesión para unirte a un rosario.");
+                app.navigate('screen-login');
+                return;
+            }
             app._currentRosary = rosary;
             if (!isJoined) {
                 app.joinRosary(rosary.id, rosary.place || 'Rosario', rosary.time || '', rosary.mystery || '', rosary.intention || '', rosary.participants || 1, rosary.date || '');
@@ -663,7 +672,39 @@ var app = {
             }
             app.navigate('screen-rezo');
         });
+        
+        // Attach share handler
+        var shareBtn = card.querySelector('.btn-share-rosary');
+        if (shareBtn) {
+            shareBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                app.shareRosary(rosary);
+            });
+        }
+        
         list.appendChild(card);
+    },
+
+    shareRosary(rosary) {
+        var url = window.location.origin + window.location.pathname + '?rosary=' + rosary.id;
+        var text = 'Únete al rosario en ' + rosary.place + ' el ' + this.formatDate(rosary.date) + ' a las ' + rosary.time + ' hs.';
+        
+        if (navigator.share) {
+            navigator.share({
+                title: 'Red María - Rosario',
+                text: text,
+                url: url
+            }).catch(function(error) {
+                console.log('Error compartiendo', error);
+            });
+        } else {
+            // Fallback to copy clipboard
+            navigator.clipboard.writeText(text + ' ' + url).then(function() {
+                alert("Enlace copiado al portapapeles. ¡Pégalo donde quieras compartirlo!");
+            }).catch(function(err) {
+                alert("No se pudo copiar: " + url);
+            });
+        }
     },
 
     formatDate(s) {
@@ -1399,6 +1440,30 @@ document.addEventListener('DOMContentLoaded', function() {
     app.init();
     if (typeof loadCommunityIntenciones === 'function') {
         loadCommunityIntenciones();
+    }
+
+    // Check for shared rosary in URL
+    var urlParams = new URLSearchParams(window.location.search);
+    var sharedRosary = urlParams.get('rosary');
+    if (sharedRosary) {
+        setTimeout(function() {
+            app.navigate('screen-map');
+            // Remove the param from URL so it doesn't persist on reload
+            window.history.replaceState({}, document.title, window.location.pathname);
+            
+            // Optionally, scroll to the specific rosary card or highlight it
+            setTimeout(function() {
+                var cardBtn = document.querySelector('.btn-join[data-rosary-id="' + sharedRosary + '"]');
+                if (cardBtn) {
+                    var card = cardBtn.closest('.rosary-card');
+                    if (card) {
+                        card.scrollIntoView({behavior: 'smooth', block: 'center'});
+                        card.style.boxShadow = '0 0 20px rgba(243, 156, 18, 0.8)';
+                        setTimeout(function() { card.style.boxShadow = ''; }, 3000);
+                    }
+                }
+            }, 1000);
+        }, 300);
     }
 });
 
