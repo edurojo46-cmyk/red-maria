@@ -2206,18 +2206,7 @@ if (document.readyState === 'complete') setTimeout(loadAndRenderIglesias, 500);
                 <div class="profile-info">
                     <h3 id="profile-user-name">Santiago</h3>
                     <p id="profile-user-city">Buenos Aires</p>
-                    <div class="profile-bio-container" style="margin-top:8px;">
-                        <p id="profile-bio-text" class="profile-bio-text" onclick="editProfileBio()" style="font-size:0.85rem;color:var(--clr-text-muted);font-style:italic;cursor:pointer;line-height:1.3;margin:0;word-break:break-word;">
-                            "Toca aquí para agregar una frase que te represente..."
-                        </p>
-                        <div id="profile-bio-editor" style="display:none;flex-direction:column;gap:8px;margin-top:5px;">
-                            <textarea id="profile-bio-input" class="profile-bio-input" placeholder="Escribe tu frase (máx 80 palabras)..." style="width:100%;border-radius:12px;padding:8px;border:2px solid #ffb74d;outline:none;font-size:0.85rem;font-family:inherit;resize:none;background:rgba(255,255,255,0.7);" rows="3"></textarea>
-                            <div style="display:flex;justify-content:flex-end;gap:6px;">
-                                <button class="btn btn-sm" onclick="cancelEditBio()" style="padding:4px 10px;font-size:0.8rem;background:transparent;color:var(--clr-text-muted);border:1px solid var(--clr-text-muted);">Cancelar</button>
-                                <button class="btn btn-sm" onclick="saveProfileBio()" style="padding:4px 10px;font-size:0.8rem;">Guardar</button>
-                            </div>
-                        </div>
-                    </div>
+
                 </div>
             </div>
             <div class="glass card devotion-card"><div class="card-title-row"><span>Devoción: Ntra. Sra. de Luján</span><i class="ri-heart-fill heart-icon"></i></div><img src="assets/basilica.png" id="img-devotion" alt="Lujan" class="devotion-img"/></div>
@@ -2248,6 +2237,19 @@ if (document.readyState === 'complete') setTimeout(loadAndRenderIglesias, 500);
                 <div class="rezando-counter" id="rezando-counter">
                     <span class="pulse-dot small"></span>
                     <span id="rezando-count">0</span> personas rezando ahora
+                </div>
+                
+                <div class="profile-bio-container" style="margin-top:16px; padding:0 12px;">
+                    <p id="profile-bio-text" class="profile-bio-text" onclick="editProfileBio()" style="font-size:0.85rem;color:var(--clr-text-muted);font-style:italic;cursor:pointer;line-height:1.3;margin:0;word-break:break-word;text-align:center;">
+                        "Toca aquí para agregar una frase de oración que te represente..."
+                    </p>
+                    <div id="profile-bio-editor" style="display:none;flex-direction:column;gap:8px;margin-top:5px;">
+                        <textarea id="profile-bio-input" class="profile-bio-input" placeholder="Escribe tu frase (máx 80 palabras)..." style="width:100%;border-radius:12px;padding:8px;border:2px solid #ffb74d;outline:none;font-size:0.85rem;font-family:inherit;resize:none;background:rgba(255,255,255,0.7);" rows="3"></textarea>
+                        <div style="display:flex;justify-content:flex-end;gap:6px;">
+                            <button class="btn btn-sm" onclick="cancelEditBio()" style="padding:4px 10px;font-size:0.8rem;background:transparent;color:var(--clr-text-muted);border:1px solid var(--clr-text-muted);">Cancelar</button>
+                            <button class="btn btn-sm" onclick="saveProfileBio()" style="padding:4px 10px;font-size:0.8rem;">Guardar</button>
+                        </div>
+                    </div>
                 </div>
                 <div class="rezando-map-wrapper" id="rezando-map-wrapper">
                     <div id="rezando-map" style="width:100%;height:100%;border-radius:16px;"></div>
@@ -2480,6 +2482,7 @@ async function toggleRezando() {
 
         var userName = 'Tú';
         var myProfileId = '';
+        var myBio = localStorage.getItem('redmaria_user_bio') || '';
         try {
             var lu = auth.getCurrentUser();
             userName = lu.name || 'Tú';
@@ -2491,18 +2494,21 @@ async function toggleRezando() {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(function(pos) {
                 var lat = pos.coords.latitude, lng = pos.coords.longitude;
-                broadcastRezando(_myRezandoId, userName, lat, lng, myProfileId);
-                addMyMarker(userName, lat, lng);
+                broadcastRezando(_myRezandoId, userName, lat, lng, myProfileId, myBio);
+                addMyMarker(userName, lat, lng, myBio);
             }, function() {
-                broadcastRezando(_myRezandoId, userName, -34.6 + Math.random()*0.05, -58.4 + Math.random()*0.05);
+                var lat = -34.6 + Math.random()*0.05, lng = -58.4 + Math.random()*0.05;
+                broadcastRezando(_myRezandoId, userName, lat, lng, myProfileId, myBio);
+                addMyMarker(userName, lat, lng, myBio);
             }, {enableHighAccuracy: true, timeout: 8000});
         }
 
         // Heartbeat every 20s
         rezandoInterval = setInterval(function() {
+            var currentBio = localStorage.getItem('redmaria_user_bio') || '';
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(function(pos) {
-                    broadcastRezando(_myRezandoId, userName, pos.coords.latitude, pos.coords.longitude, myProfileId);
+                    broadcastRezando(_myRezandoId, userName, pos.coords.latitude, pos.coords.longitude, myProfileId, currentBio);
                 }, function() {});
             }
             // Clean stale users (>60s without heartbeat)
@@ -2522,17 +2528,18 @@ function getMyRezandoId() {
     try { return auth.getCurrentUser().email || ('anon_' + Math.random()); } catch(e) { return 'anon_' + Math.random(); }
 }
 
-function broadcastRezando(id, name, lat, lng, pId) {
+function broadcastRezando(id, name, lat, lng, pId, bio) {
     if (!rezandoChannel) return;
     var profileId = pId || '';
+    var phrase = bio || '';
     try {
         rezandoChannel.send({
             type: 'broadcast', event: 'rezando',
-            payload: { action: 'join', id: id, name: name, lat: lat, lng: lng, profileId: profileId }
+            payload: { action: 'join', id: id, name: name, lat: lat, lng: lng, profileId: profileId, bio: phrase }
         });
     } catch(e) { console.warn('Broadcast error:', e); }
     // Also update local
-    rezandoPeople[id] = { name: name, lat: lat, lng: lng, ts: Date.now() };
+    rezandoPeople[id] = { name: name, lat: lat, lng: lng, ts: Date.now(), bio: phrase };
     updateRezandoCount();
 }
 
@@ -2551,8 +2558,8 @@ function ensureRezandoChannel() {
                 delete rezandoMarkers[p.id];
             }
         } else if (p.action === 'join') {
-            rezandoPeople[p.id] = { name: p.name, lat: p.lat, lng: p.lng, ts: Date.now(), profileId: p.profileId };
-            addOtherMarker(p.id, p.name, p.lat, p.lng, p.profileId);
+            rezandoPeople[p.id] = { name: p.name, lat: p.lat, lng: p.lng, ts: Date.now(), profileId: p.profileId, bio: p.bio };
+            addOtherMarker(p.id, p.name, p.lat, p.lng, p.profileId, p.bio);
         }
         updateRezandoCount();
     });
@@ -2561,7 +2568,7 @@ function ensureRezandoChannel() {
     });
 }
 
-function addMyMarker(name, lat, lng) {
+function addMyMarker(name, lat, lng, bio) {
     if (!rezandoMap) return;
     if (myRezandoMarker) rezandoMap.removeLayer(myRezandoMarker);
     var myIcon = L.divIcon({
@@ -2569,14 +2576,15 @@ function addMyMarker(name, lat, lng) {
         html: '<div class="rezando-marker-dot-me"></div>',
         iconSize: [22, 22], iconAnchor: [11, 11]
     });
+    var displayBio = bio ? '<i>"' + bio + '"</i>' : '🙏 ¡Recen x mí!';
     myRezandoMarker = L.marker([lat, lng], {icon: myIcon})
         .addTo(rezandoMap)
-        .bindPopup('<div class="map-user-popup"><div class="map-user-popup-header"><div class="map-user-popup-avatar" style="background:linear-gradient(135deg,#e74c3c,#c0392b)">' + name.charAt(0) + '</div><div><b>' + name + '</b><br><small>🙏 ¡Recen x mí!</small></div></div></div>', {className: 'map-user-leaflet-popup', minWidth: 180})
+        .bindPopup('<div class="map-user-popup"><div class="map-user-popup-header"><div class="map-user-popup-avatar" style="background:linear-gradient(135deg,#e74c3c,#c0392b)">' + name.charAt(0) + '</div><div><b>' + name + '</b><br><small>' + displayBio + '</small></div></div></div>', {className: 'map-user-leaflet-popup', minWidth: 180})
         .openPopup();
     rezandoMap.setView([lat, lng], 12, {animate: true});
 }
 
-function addOtherMarker(id, name, lat, lng, profileId) {
+function addOtherMarker(id, name, lat, lng, profileId, bio) {
     if (!rezandoMap) return;
     if (rezandoMarkers[id]) rezandoMap.removeLayer(rezandoMarkers[id]);
     var prayIcon = L.divIcon({
@@ -2584,12 +2592,13 @@ function addOtherMarker(id, name, lat, lng, profileId) {
         html: '<div class="rezando-marker-dot"></div>',
         iconSize: [16, 16], iconAnchor: [8, 8]
     });
+    var displayBio = bio ? '<i>"' + bio + '"</i>' : '🙏 Rezando · Reza x mí';
     var heartId = 'heart-' + id.replace(/[^a-zA-Z0-9]/g,'');
     var heartBtn = '<div style="display:flex;align-items:center;gap:12px;margin:8px 0 4px"><button class="map-heart-btn" id="' + heartId + '" onclick="toggleMapHeart(this)" style="background:none;border:none;cursor:pointer;font-size:1.3rem;display:flex;align-items:center;gap:4px;color:#ccc;transition:all 0.2s"><i class="ri-heart-3-line"></i><span style="font-size:0.75rem;font-weight:700">0</span></button></div>';
     var msgBtn = profileId ? '<button class="map-user-msg-btn" onclick="openChatFromMap(\'' + profileId + '\',\'' + (name||'').replace(/'/g,'') + '\')"><i class="ri-chat-1-fill"></i> Enviar Mensaje</button>' : '';
     rezandoMarkers[id] = L.marker([lat, lng], {icon: prayIcon})
         .addTo(rezandoMap)
-        .bindPopup('<div class="map-user-popup"><div class="map-user-popup-header"><div class="map-user-popup-avatar">' + (name||'?').charAt(0) + '</div><div><b>' + (name||'Usuario') + '</b><br><small>🙏 Rezando · Reza x mí</small></div></div>' + heartBtn + msgBtn + '</div>', {className: 'map-user-leaflet-popup', minWidth: 200});
+        .bindPopup('<div class="map-user-popup"><div class="map-user-popup-header"><div class="map-user-popup-avatar">' + (name||'?').charAt(0) + '</div><div><b>' + (name||'Usuario') + '</b><br><small>' + displayBio + '</small></div></div>' + heartBtn + msgBtn + '</div>', {className: 'map-user-leaflet-popup', minWidth: 200});
 }
 
 function toggleMapHeart(btn) {

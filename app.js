@@ -1512,12 +1512,24 @@ function saveProfileBio() {
             bioText.style.fontStyle = 'normal';
             bioText.style.color = 'var(--clr-text-title)';
         } else {
-            bioText.textContent = '"Toca aquí para agregar una frase que te represente..."';
+            bioText.textContent = '"Toca aquí para agregar una frase de oración que te represente..."';
             bioText.style.fontStyle = 'italic';
             bioText.style.color = 'var(--clr-text-muted)';
         }
     }
     
+    // Broadcast instantly if active
+    if (typeof _myRezandoId !== 'undefined' && _myRezandoId && typeof broadcastRezando === 'function') {
+        var userName = 'Tú';
+        try { userName = auth.getCurrentUser().name || 'Tú'; } catch(e){}
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function(pos) {
+                broadcastRezando(_myRezandoId, userName, pos.coords.latitude, pos.coords.longitude, '', bio);
+                if (typeof addMyMarker === 'function') addMyMarker(userName, pos.coords.latitude, pos.coords.longitude, bio);
+            }, function(){}, {enableHighAccuracy: true, timeout: 8000});
+        }
+    }
+
     cancelEditBio();
     
     var u = auth.getCurrentUser();
